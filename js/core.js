@@ -2,7 +2,7 @@
 const APP_CONFIG = {
     appName: "E-Ma'had",
     version: "v32",
-    spreadsheetId: "1z-Y9PEFyIeL3wWCzsgrbQ72GiiU2sLifaMoF88gFHyM"
+    spreadsheetId: "1JsUAEHr2Zl5mYEnt2GQHb30QFzqblbEu8drfHygpX1k"
 };
 
 const DB_KEY = 'tahfidz_v32_master';
@@ -235,3 +235,4 @@ function formatDateLong(isoString, timeOverride = null) {
 
     return `${datePart}<br><span class="text-xs text-slate-400 font-normal">${timePart}</span>`;
 }
+
