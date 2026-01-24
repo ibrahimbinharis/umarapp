@@ -73,17 +73,19 @@ function renderLayout(activePage, contentHTML) {
     `;
 
     const isQuran = activePage === 'quran';
+    // Adjusted mainClasses: added pt-20 (header height + spacing) for non-Quran pages to account for fixed header
     const mainClasses = isQuran
         ? "flex-1 overflow-hidden w-full h-full p-0"
-        : "flex-1 overflow-y-auto w-full max-w-7xl mx-auto p-4 pt-20 md:p-8 pb-24 md:pb-8";
+        : "flex-1 overflow-y-auto w-full max-w-7xl mx-auto px-4 pb-24 pt-20 md:p-8 md:pb-8";
 
     return `
     ${sidebar}
     <div class="flex-1 flex flex-col h-full md:pl-64 bg-slate-50 relative">
-        <header class="md:hidden fixed top-0 left-0 right-0 z-40 bg-white/90 backdrop-blur-md border-b border-slate-200 px-4 h-16 flex items-center justify-between shadow-sm ${isQuran ? 'hidden' : ''}">
+        <!-- Header: Fixed, transitions for hide/show -->
+        <header class="md:hidden fixed top-0 left-0 right-0 z-40 bg-white/90 backdrop-blur-md border-b border-slate-200 px-4 h-16 flex items-center justify-between shadow-sm transform transition-transform duration-300 ${isQuran ? 'hidden' : ''}">
             <div class="flex items-center gap-2"><div class="size-8 bg-primary rounded-lg flex items-center justify-center text-white"><span class="material-symbols-outlined text-lg">school</span></div><h2 class="font-bold text-slate-800 text-lg tracking-tight">${APP_CONFIG.appName}</h2></div>
         </header>
-        <main class="${mainClasses}">${contentHTML}</main>
+        <main class="${mainClasses}" onscroll="handleMainScroll(this)">${contentHTML}</main>
         ${isQuran ? '' : mobileNav}
     </div>
     <div id="toast-container" class="fixed top-4 right-4 z-[100] space-y-2"></div>
@@ -94,6 +96,9 @@ function renderLayout(activePage, contentHTML) {
 }
 
 function navigate(pageId) {
+    // Reset Scroll State on Navigation
+    lastScrollTop = 0;
+
     if (pageId === 'logout') { logout(); return; }
 
     if (pageId === 'dashboard') renderDashboard();
@@ -131,3 +136,31 @@ window.toggleMenu = function (id, e) {
 window.addEventListener('click', () => {
     document.querySelectorAll('[id^="menu-"]').forEach(el => el.classList.add('hidden'));
 });
+
+// --- Smart Header Scroll Handler ---
+let lastScrollTop = 0;
+window.handleMainScroll = function (el) {
+    const header = document.querySelector('header');
+    if (!header || header.classList.contains('hidden')) return;
+
+    const st = el.scrollTop;
+    // Helper const for threshold
+    const buffer = 10;
+
+    // Ignore negative scroll (iOS bounce)
+    if (st < 0) return;
+
+    // Threshold check
+    if (Math.abs(st - lastScrollTop) <= buffer) return;
+
+    if (st > lastScrollTop && st > 60) {
+        // Scroll Down -> Hide
+        header.classList.add('-translate-y-full');
+    } else {
+        // Scroll Up -> Show
+        // Ensure we are scrolling up enough or near top
+        header.classList.remove('-translate-y-full');
+    }
+    lastScrollTop = st;
+};
+
