@@ -75,12 +75,12 @@ function renderLayout(activePage, contentHTML) {
     const isQuran = activePage === 'quran';
     const mainClasses = isQuran
         ? "flex-1 overflow-hidden w-full h-full p-0"
-        : "flex-1 overflow-y-auto w-full max-w-7xl mx-auto p-4 md:p-8 pb-24 md:pb-8";
+        : "flex-1 overflow-y-auto w-full max-w-7xl mx-auto p-4 pt-20 md:p-8 pb-24 md:pb-8";
 
     return `
     ${sidebar}
     <div class="flex-1 flex flex-col h-full md:pl-64 bg-slate-50 relative">
-        <header class="md:hidden sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-slate-200 px-4 h-16 flex items-center justify-between shadow-sm ${isQuran ? 'hidden' : ''}">
+        <header class="md:hidden fixed top-0 left-0 right-0 z-40 bg-white/90 backdrop-blur-md border-b border-slate-200 px-4 h-16 flex items-center justify-between shadow-sm ${isQuran ? 'hidden' : ''}">
             <div class="flex items-center gap-2"><div class="size-8 bg-primary rounded-lg flex items-center justify-center text-white"><span class="material-symbols-outlined text-lg">school</span></div><h2 class="font-bold text-slate-800 text-lg tracking-tight">${APP_CONFIG.appName}</h2></div>
         </header>
         <main class="${mainClasses}">${contentHTML}</main>
