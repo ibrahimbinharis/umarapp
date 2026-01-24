@@ -141,24 +141,18 @@ window.addEventListener('click', () => {
 let lastScrollTop = 0;
 window.handleMainScroll = function (el) {
     const header = document.querySelector('header');
-    if (!header || header.classList.contains('hidden')) return;
+    if (!header || header.classList.contains('hidden')) return; // Ignore if hidden (e.g. Quran page)
 
     const st = el.scrollTop;
-    // Helper const for threshold
-    const buffer = 10;
 
-    // Ignore negative scroll (iOS bounce)
-    if (st < 0) return;
+    // Threshold to prevent jitter
+    if (Math.abs(st - lastScrollTop) <= 5) return;
 
-    // Threshold check
-    if (Math.abs(st - lastScrollTop) <= buffer) return;
-
-    if (st > lastScrollTop && st > 60) {
+    if (st > lastScrollTop && st > 50) {
         // Scroll Down -> Hide
         header.classList.add('-translate-y-full');
     } else {
         // Scroll Up -> Show
-        // Ensure we are scrolling up enough or near top
         header.classList.remove('-translate-y-full');
     }
     lastScrollTop = st;
