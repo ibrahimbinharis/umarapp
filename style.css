@@ -118,32 +118,36 @@ textarea {
 /* Floating Action Button Wrapper */
 .floating-btn-wrapper {
     position: absolute;
-    bottom: 24px;
+    bottom: 12px;
     left: 50%;
     transform: translateX(-50%);
-    background: #F8FAFC;
-    /* Match body bg to hide border */
-    padding: 6px;
-    border-radius: 50%;
-    border-top: 1px solid #E2E8F0;
+    background: transparent;
+    padding: 0;
+    border-radius: 0;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .floating-btn {
-    width: 56px;
-    height: 56px;
+    width: 60px;
+    height: 46px;
     background: #1E40AF;
     /* Primary Blue */
-    border-radius: 50%;
+    border-radius: 16px;
+    /* Squircle */
     color: white;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 8px 15px rgba(30, 64, 175, 0.3);
-    transition: transform 0.2s;
+    box-shadow: 0 4px 12px rgba(30, 64, 175, 0.25);
+    transition: all 0.2s;
 }
 
 .floating-btn:active {
-    transform: scale(0.9);
+    transform: scale(0.92);
+    box-shadow: 0 2px 8px rgba(30, 64, 175, 0.2);
 }
 
 /* Sync Indicator */
