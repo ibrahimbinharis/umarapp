@@ -1,7 +1,7 @@
 // --- 1. CONFIG & DATABASE ---
 const APP_CONFIG = {
-    appName: "E-Ma'had",
-    version: "v34-vue",
+    appName: "E-Umar",
+    version: "v34-Beta",
     spreadsheetId: "1XhAgEKyW_fkwIxQcsegqCbC0uUKPcHpv9Q9Sc3Fvj0w"
 };
 
@@ -377,3 +377,4 @@ function formatDateLong(isoString, timeOverride = null) {
 
     return `${datePart}<br><span class="text-xs text-slate-400 font-normal">${timePart}</span>`;
 }
+
