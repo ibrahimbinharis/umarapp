@@ -125,6 +125,20 @@ function useUjian(uiData, DB, userSession, refreshData, quranControls = null, cu
     // ===== METHODS =====
 
     /**
+     * Determine Letter Grade from Score
+     * Consolidated logic for both Semester and Manual input
+     */
+    const getSemesterGrade = (score) => {
+        const s = parseFloat(score) || 0;
+        if (s >= 95) return 'A+';
+        if (s >= 85) return 'A';
+        if (s >= 75) return 'B+';
+        if (s >= 65) return 'B';
+        if (s >= 60) return 'B-';
+        return 'C';
+    };
+
+    /**
      * Calculate Score for Ujian Bulanan
      * Logic: (TotalPoints - Salah) / TotalPoints * 100
      */
@@ -154,19 +168,9 @@ function useUjian(uiData, DB, userSession, refreshData, quranControls = null, cu
         let s = 100 - salah;
 
         ujianForm.s_score = Math.max(0, s);
-    };
-
-    /**
-     * Determine Letter Grade from Score
-     */
-    const getSemesterGrade = (score) => {
-        const s = parseFloat(score) || 0;
-        if (s >= 95) return 'A+';
-        if (s >= 85) return 'A';
-        if (s >= 75) return 'B+';
-        if (s >= 65) return 'B';
-        if (s >= 60) return 'B-';
-        return 'C';
+        // Sync Manual Score & Grade
+        ujianForm.s_score_manual = ujianForm.s_score;
+        ujianForm.s_grade = getSemesterGrade(ujianForm.s_score);
     };
 
     /**
@@ -240,14 +244,10 @@ function useUjian(uiData, DB, userSession, refreshData, quranControls = null, cu
     };
 
     // ===== NEW GRADING LOGIC =====
-    const calcGradeFromScore = (score) => {
-        if (score >= 95) return 'A+';
-        if (score >= 85) return 'A';
-        if (score >= 75) return 'B+';
-        if (score >= 65) return 'B';
-        if (score >= 60) return 'B-';
-        return 'C';
-    };
+    // getSemesterGrade is defined above
+
+    // Alias for backward compatibility if needed, or just use getSemesterGrade everywhere
+    const calcGradeFromScore = getSemesterGrade;
 
     const calcScoreFromGrade = (grade) => {
         switch (grade) {
@@ -266,7 +266,7 @@ function useUjian(uiData, DB, userSession, refreshData, quranControls = null, cu
         ujianForm.s_grade = grade;
         if (grade === 'Centang') {
             ujianForm.s_score_manual = 0;
-            ujianForm.s_score = 100; // Treat as full pass
+            ujianForm.s_score = 100; // Treat as full pass (internal) but displayed as Check
         } else {
             ujianForm.s_score_manual = calcScoreFromGrade(grade);
             ujianForm.s_score = ujianForm.s_score_manual;
@@ -275,9 +275,37 @@ function useUjian(uiData, DB, userSession, refreshData, quranControls = null, cu
 
     // Watchers for Bidirectional Logic
     watch(() => ujianForm.s_score_manual, (newScore) => {
-        // Only update grade if it's a valid number and we are not currently setting score from grade
-        if (ujianForm.s_grade === 'Centang') return; // Don't override Centang automatically
-        ujianForm.s_grade = calcGradeFromScore(newScore);
+        // Automatically calculate grade when manual score changes
+        // Use loose check to allow overriding 'Centang' if user types a number
+        const s = parseFloat(newScore);
+        if (!isNaN(s) && ujianForm.s_grade !== 'Centang') {
+            // If currently Centang, we only override if the user explicitly types meaningful score > 0?
+            // Actually user might want to set 0.
+            // But 'Centang' sets score manual to 0.
+            // If we type 0, it stays Centang?
+            // Let's simpler approach: Always update grade if input changes, UNLESS we are currently 'setting grade' (circular).
+            // But we don't have a flag.
+            // Let's just update it.
+            ujianForm.s_grade = getSemesterGrade(s);
+        } else if (!isNaN(s) && ujianForm.s_grade === 'Centang' && s > 0) {
+            // If was Centang (score 0), and user types > 0, switch to Grade
+            ujianForm.s_grade = getSemesterGrade(s);
+        }
+
+        // Simpler: Just always update if it looks like a score input
+        if (!isNaN(s)) {
+            // Avoid loop if the grade matches the score already?
+            // No, just set it.
+            // But if I clicked 'A' -> score 85. Watcher sees 85 -> Grade A. Stable.
+            // If I type 95 -> Grade A+.
+            // If I was Centang (0) -> Type 95 -> A+.
+            // If I type 0 -> C?
+            // If I intentionally want Centang, I click button.
+            // If I type 0, getSemesterGrade(0) -> C.
+            // That seems correct behavior for "Score 0".
+            ujianForm.s_grade = getSemesterGrade(s);
+        }
+
         ujianForm.s_score = newScore; // Sync legacy score
     });
 
@@ -296,6 +324,86 @@ function useUjian(uiData, DB, userSession, refreshData, quranControls = null, cu
         }
 
         try {
+            // DETECT CONTEXT: Hafalan vs Ujian
+            const isHafalanView = (currentViewRef && (currentViewRef.value === 'hafalan' || currentViewRef.value === 'quran')) && ujianForm.tab === 'semester';
+            // Note: When calling from Hafalan Grid, we set tab='semester' just to reuse the form. 
+            // But we need to distinguish if it's "Monitoring" (Hafalan menu) or "Exam" (Ujian menu).
+            // Actually, best way is to check the View Name directly if passed.
+            // If currentViewRef is 'hafalan', then it is Monitoring Mode.
+
+            const isMonitoringMode = currentViewRef && currentViewRef.value === 'hafalan';
+
+            if (isMonitoringMode) {
+                // --- HAFALAN MONITORING MODE ---
+                // NO Ujian Record. JUST Update Progress + Logs.
+
+                if (!ujianForm.s_juz) throw new Error("Pilih Juz dahulu");
+
+                const grade = ujianForm.s_grade; // Should be 'Centang' mostly, or A-C if teacher grades manually here
+
+                // 1. Update Santri Progress
+                const s = uiData.santri.find(x => x.santri_id === ujianForm.santri_id);
+                if (s) {
+                    let prog = {};
+                    if (s.hafalan_progress && typeof s.hafalan_progress === 'string') {
+                        try { prog = JSON.parse(s.hafalan_progress); } catch (e) { }
+                    } else if (s.hafalan_progress) {
+                        prog = { ...s.hafalan_progress };
+                    }
+
+                    if (grade === null) {
+                        delete prog[ujianForm.s_juz];
+                    } else {
+                        prog[ujianForm.s_juz] = grade;
+                    }
+
+                    // Count
+                    const count = Object.values(prog).filter(v => v).length; // Just count any status
+                    const newManual = `${count} Juz`;
+
+                    await DB.update(s._id, {
+                        hafalan_progress: JSON.stringify(prog),
+                        hafalan_manual: newManual
+                    });
+                }
+
+                // 2. Create History Log (Milestone/Completion - NOT Ujian)
+                // Only if grade is NOT null (not deleting)
+                if (grade) {
+                    const logPayload = {
+                        santri_id: ujianForm.santri_id,
+                        date: ujianForm.date,
+                        time: window.DateUtils.getCurrentTimeString(),
+                        type: 'Hafalan Selesai', // New Type
+                        detail: `Telah menyetorkan hafalan Juz ${ujianForm.s_juz}`,
+                        score: 0, // Ignored
+                        grade: grade, // 'Centang' or actual grade
+                        meta: {
+                            juz: ujianForm.s_juz
+                        }
+                    };
+                    await DB.create('riwayat_hafalan', logPayload); // Use generic collection or 'ujian' with special type? 
+                    // Let's use 'ujian' collection but with distinct type so it shows in Riwayat
+                    // Actually 'ujian' collection is fine, just filter it out from "Exam Reports". 
+                    // But wait, Riwayat menu usually shows 'setoran' or 'ujian'. 
+                    // Let's save as 'setoran' maybe? No, 'setoran' has specific structure.
+                    // Let's save as 'ujian' but with type 'Hafalan Selesai' so it appears in recent history.
+
+                    await DB.create('ujian', {
+                        ...logPayload,
+                        __type: 'ujian' // Ensure it syncs
+                    });
+                }
+
+                alert("Status Hafalan Diupdate");
+
+                if (refreshData) refreshData();
+                ujianForm.s_juz = null;
+                if (modalState) modalState.isOpen = false;
+                return;
+            }
+
+            // --- NORMAL UJIAN MODE ---
             const isSemester = ujianForm.tab === 'semester';
             let payload = {
                 santri_id: ujianForm.santri_id,
@@ -314,34 +422,30 @@ function useUjian(uiData, DB, userSession, refreshData, quranControls = null, cu
                     payload.meta.juz = ujianForm.s_juz;
                     payload.meta.salah = ujianForm.s_salah;
 
-                    // Determine Grade (Allow null for reset)
+                    // Determine Grade
                     let grade = ujianForm.s_grade;
-                    // Only auto-calc grade if not intended to be reset (null)
                     if (!grade && ujianForm.s_grade !== null) {
                         grade = getSemesterGrade(payload.score);
                     }
                     payload.grade = grade;
 
-                    // Update Santri Record (Hafalan Progress)
+                    // Update Santri Record
                     const s = uiData.santri.find(x => x.santri_id === ujianForm.santri_id);
                     if (s) {
                         let prog = {};
-                        // Safely parse existing progress
                         if (s.hafalan_progress && typeof s.hafalan_progress === 'string') {
                             try { prog = JSON.parse(s.hafalan_progress); } catch (e) { }
                         } else if (s.hafalan_progress) {
                             prog = { ...s.hafalan_progress };
                         }
 
-                        // Update juz
                         if (grade === null) {
-                            // If grade is null, REMOVE the key (Uncheck)
                             delete prog[ujianForm.s_juz];
                         } else {
+                            // In Exam Mode, we allow upgrading status
                             prog[ujianForm.s_juz] = grade;
                         }
 
-                        // Count Total passed
                         const count = Object.values(prog).filter(v => v && v !== 'C').length;
                         const newManual = `${count} Juz`;
 
@@ -373,7 +477,7 @@ function useUjian(uiData, DB, userSession, refreshData, quranControls = null, cu
             if (editingId.value) {
                 await DB.update(editingId.value, payload);
                 alert("Data Ujian Berhasil Diupdate");
-                editingId.value = null; // Reset
+                editingId.value = null;
             } else {
                 await DB.create('ujian', payload);
                 alert("Nilai Ujian Berhasil Disimpan");
@@ -381,12 +485,10 @@ function useUjian(uiData, DB, userSession, refreshData, quranControls = null, cu
 
             if (refreshData) refreshData();
 
-            // Reset partial
             ujianForm.s_juz = null;
             ujianForm.s_salah = 0;
             ujianForm.b_salah = 0;
             calcBulananScore();
-            // calcSemesterScore(); 
 
         } catch (e) {
             console.error(e);
@@ -458,3 +560,4 @@ function useUjian(uiData, DB, userSession, refreshData, quranControls = null, cu
         startBulananExam
     };
 }
+
