@@ -697,12 +697,16 @@
                                                             :class="[
                                                               ujianForm.s_juz === j ? 'ring-2 ring-offset-1 ring-primary scale-110 z-10' : '',
                                                               selectedSantriProgress[j] ? 
-                                                                 (['A+','A'].includes(selectedSantriProgress[j]) ? 'bg-blue-500 text-white border-blue-600' : 
+                                                                 (selectedSantriProgress[j] === 'Centang' ? 'bg-orange-500 text-white border-orange-500' :
+                                                                  ['A+','A'].includes(selectedSantriProgress[j]) ? 'bg-blue-500 text-white border-blue-600' : 
                                                                   selectedSantriProgress[j] === 'C' ? 'bg-red-500 text-white border-red-600' : 'bg-emerald-500 text-white border-emerald-600') 
                                                                  : 'bg-white text-slate-300 border-slate-200 hover:bg-slate-100'
                                                           ]">
-                                                            {{ j }}
-                                                            <span v-if="selectedSantriProgress[j]"
+                                                            <span v-if="selectedSantriProgress[j] === 'Centang'"
+                                                                class="material-symbols-outlined text-base">check_circle</span>
+                                                            <span v-else>{{ j }}</span>
+                                                            <span
+                                                                v-if="selectedSantriProgress[j] && selectedSantriProgress[j] !== 'Centang'"
                                                                 class="text-[8px] leading-none opacity-80 mt-[-2px]">{{
                                                                 selectedSantriProgress[j] }}</span>
                                                         </button>
@@ -2253,11 +2257,18 @@
                                             'bg-red-500 text-white shadow-lg shadow-red-200 border-transparent': selectedSantriProgress[j] === 'C',
                                             'bg-orange-400 text-white shadow-lg shadow-orange-200 border-transparent': selectedSantriProgress[j] === 'Centang'
                                         }">
-                                            <span class="text-sm sm:text-lg font-bold">{{ j }}</span>
-                                            <span v-if="selectedSantriProgress[j]"
+                                            <!-- Icon for Centang -->
+                                            <span v-if="selectedSantriProgress[j] === 'Centang'"
+                                                class="material-symbols-outlined text-2xl font-bold">check</span>
+
+                                            <!-- Number for Others -->
+                                            <span v-else class="text-sm sm:text-lg font-bold">{{ j }}</span>
+
+                                            <!-- Grade Label (if not Centang) -->
+                                            <span
+                                                v-if="selectedSantriProgress[j] && selectedSantriProgress[j] !== 'Centang'"
                                                 class="text-[9px] font-black uppercase tracking-tighter opacity-90">
-                                                {{ selectedSantriProgress[j] === 'Centang' ? 'OK' :
-                                                selectedSantriProgress[j] }}
+                                                {{ selectedSantriProgress[j] }}
                                             </span>
                                         </button>
                                     </div>
@@ -2899,8 +2910,8 @@
                                 </button>
                             </div>
 
-                            <!-- Centang Special Case -->
-                            <button @click="setGrade('Centang')"
+                            <!-- Centang Special Case (Only visible in Hafalan mode) -->
+                            <button v-if="currentView === 'hafalan'" @click="setGrade('Centang')"
                                 class="w-full mt-2 p-3 rounded-xl border-2 font-bold transition flex items-center justify-center gap-2"
                                 :class="ujianForm.s_grade === 'Centang' ? 'bg-orange-500 text-white border-orange-500 shadow-lg' : 'bg-white text-orange-500 border-orange-100 hover:border-orange-200 text-sm'">
                                 <span class="material-symbols-outlined text-xl">check_circle</span> Selesai
