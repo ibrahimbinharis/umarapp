@@ -40,7 +40,7 @@ const useAuth = (currentView, loading) => {
                 // Login Success
                 const user = json.user;
                 userSession.value = user;
-                sessionStorage.setItem('tahfidz_session', JSON.stringify(user));
+                localStorage.setItem('tahfidz_session', JSON.stringify(user));
 
                 // Redirect
                 currentView.value = 'dashboard';
@@ -65,7 +65,7 @@ const useAuth = (currentView, loading) => {
 
     const logout = () => {
         if (confirm("Keluar dari aplikasi?")) {
-            sessionStorage.removeItem('tahfidz_session');
+            localStorage.removeItem('tahfidz_session');
             userSession.value = null;
             currentView.value = 'login';
             loginForm.username = '';
@@ -74,7 +74,7 @@ const useAuth = (currentView, loading) => {
     };
 
     const checkSession = () => {
-        const sess = sessionStorage.getItem('tahfidz_session');
+        const sess = localStorage.getItem('tahfidz_session');
         if (sess) {
             try {
                 userSession.value = JSON.parse(sess);
