@@ -48,12 +48,8 @@ function useProfile(uiData, DB, userSession, refreshData) {
             }
 
             if (profileForm.password) {
-                // Determine format
-                if (window.crypto && window.crypto.subtle) {
-                    updates.password = await hashPassword(profileForm.password);
-                } else {
-                    updates.password = "F_" + btoa(profileForm.password).split('').reverse().join('');
-                }
+               // Pass plain text, let DB.update handle hashing
+                updates.password = profileForm.password;
             }
 
             // Update based on Role
@@ -174,3 +170,4 @@ function useProfile(uiData, DB, userSession, refreshData) {
         isUploading: Vue.computed(() => isUploading.value)
     };
 }
+
