@@ -44,6 +44,8 @@ const useAuth = (currentView, loading) => {
 
                 // Redirect
                 currentView.value = 'dashboard';
+                   // PWA: Fix URL state on login to prevent Back -> Login
+                window.history.replaceState({ view: 'dashboard' }, '', '#dashboard');
 
                 // Setup Initial for Wali
                 if (user.role === 'wali') {
@@ -97,3 +99,4 @@ const useAuth = (currentView, loading) => {
         checkSession
     };
 };
+
