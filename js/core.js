@@ -168,7 +168,7 @@ const DB = {
         if (!silent) showLoading(true, 'Sinkronisasi Cloud...');
 
         try {
-            const tables = ['users', 'santri', 'kelas', 'mapel', 'jadwal', 'setoran', 'pelanggaran', 'absensi', 'ujian'];
+            const tables = ['users', 'santri', 'kelas', 'mapel', 'jadwal', 'setoran', 'pelanggaran', 'pelanggaran_type', 'absensi', 'ujian'];
             let cloudData = [];
 
             // Parallel Fetch
@@ -421,3 +421,4 @@ function formatDateLong(isoString, timeOverride = null) {
 
     return `${datePart}<br><span class="text-xs text-slate-400 font-normal">${timePart}</span>`;
 }
+
