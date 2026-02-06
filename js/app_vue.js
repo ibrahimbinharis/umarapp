@@ -745,7 +745,7 @@ createApp({
                 syncStatus.message = 'Menghubungkan ke Cloud...';
 
                 // Parallel Init: Sync & Surah
-                const p1 = DB.syncFromCloud().catch(e => {
+                const p1 = DB.syncFromCloud(true).catch(e => {
                     console.error("Sync failed", e);
                     syncStatus.status = 'error';
                     syncStatus.message = 'Offline';
@@ -812,4 +812,5 @@ createApp({
         };
     }
 }).mount('#app');
+
 
