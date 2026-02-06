@@ -665,8 +665,8 @@ createApp({
 
                         // Show Toast (Native-like)
                         const toast = document.createElement('div');
-                        toast.textContent = "Tekan sekali lagi untuk keluar";
-                        toast.style.cssText = "position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background-color:rgba(0,0,0,0.7);color:white;padding:12px 24px;border-radius:50px;font-size:14px;z-index:9999;backdrop-filter:blur(4px);pointer-events:none;animation:fadeIn 0.2s ease-out;";
+                        toast.textContent = "Tekan sekali lagi...";
+                        toast.style.cssText = "position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background-color:rgba(0,0,0,0.8);color:white;padding:10px 20px;border-radius:12px;font-size:14px;z-index:9999;backdrop-filter:blur(4px);pointer-events:none;animation:fadeIn 0.2s ease-out;white-space:nowrap;text-align:center;box-shadow:0 4px 6px -1px rgba(0, 0, 0, 0.1);";
                         document.body.appendChild(toast);
 
                         setTimeout(() => {
@@ -812,5 +812,6 @@ createApp({
         };
     }
 }).mount('#app');
+
 
 
