@@ -294,7 +294,6 @@ function initRealtime() {
             'postgres_changes',
             { event: '*', schema: 'public' },
             (payload) => {
-                console.log('🔔 Realtime Update Received:', payload);
                 // Trigger auto-pull logic or selectively update
                 // For safety V1, trigger full pull (debounce)
                 if (DB._realtimeTimer) clearTimeout(DB._realtimeTimer);
@@ -419,3 +418,4 @@ function formatDateLong(isoString, timeOverride = null) {
 
     return `${datePart}<br><span class="text-xs text-slate-400 font-normal">${timePart}</span>`;
 }
+
