@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>E-Umar</title>
+    <title>Sistem E-Umar</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -34,7 +34,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.1/jspdf.plugin.autotable.min.js"></script>
-      <!-- PWA -->
+
+    <!-- PWA -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#1E40AF">
     <link rel="apple-touch-icon" href="image/logo_new.png">
@@ -151,12 +152,14 @@
             <aside v-if="isSidebarVisible"
                 class="hidden md:flex flex-col w-64 bg-white border-r border-slate-200 h-full fixed left-0 top-0 z-30 shadow-sm">
                 <div class="p-6 border-b border-slate-100 flex items-center gap-3">
-                    <div class="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white shadow-lg">
-                        <span class="material-symbols-outlined">school</span>
+                    <div
+                        class="w-12 h-12 bg-white rounded-xl flex items-center justify-center border border-slate-100 shadow-sm overflow-hidden p-1">
+                        <img src="image/logo_new.png" alt="Logo" class="w-full h-full object-contain">
                     </div>
                     <div>
-                        <h1 class="text-slate-900 font-bold text-lg leading-none">{{ appName }}</h1>
-                        <p class="text-slate-500 text-xs mt-1">Ver. {{ appVersion }}</p>
+                        <h1 class="text-slate-900 font-bold text-lg leading-none">E-Umar</h1>
+                        <p class="text-slate-500 text-[10px] mt-1 pr-2 leading-tight">Aplikasi Akademik<br>Umar Bin
+                            Khattab</p>
                     </div>
                 </div>
                 <div class="flex-1 p-4 space-y-1 overflow-y-auto">
@@ -196,9 +199,13 @@
                 <!-- MOBILE HEADER -->
                 <header v-if="isHeaderVisible"
                     class="md:hidden fixed top-0 left-0 right-0 z-40 bg-white/90 backdrop-blur-md border-b border-slate-200 px-4 h-16 flex items-center justify-between shadow-sm">
-                    <div class="flex items-center gap-2">
-                        <!-- Logo Removed -->
-                        <h2 class="font-bold text-slate-800 text-lg tracking-tight">{{ appName }}</h2>
+                    <div class="flex items-center gap-3">
+                        <img src="image/logo_new.png" alt="Logo" class="w-8 h-8 object-contain">
+                        <div class="flex flex-col">
+                            <h2 class="font-bold text-slate-800 text-sm leading-none tracking-tight">E-Umar</h2>
+                            <p class="text-[9px] text-slate-500 font-medium leading-none mt-0.5">Aplikasi
+                                Akademik<br>Umar Bin Khattab</p>
+                        </div>
                     </div>
                     <!-- Optional: Right Header Items (e.g. Profile) -->
                     <!-- Sync Indicator & Profile -->
@@ -3005,8 +3012,17 @@
 
     <!-- Main App -->
     <script src="js/app_vue.js"></script>
+
+    <!-- Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                    .then(reg => console.log('SW Registered!', reg))
+                    .catch(err => console.log('SW Fail', err));
+            });
+        }
+    </script>
 </body>
 
 </html>
-
-
