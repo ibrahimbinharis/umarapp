@@ -588,22 +588,16 @@ createApp({
 
         // --- DATA REPAIR WATCHER ---
         // Automatically parse 'details' JSON string if it comes from raw DB/Sheet
+        // Automatically parse 'details' JSON string if it comes from raw DB/Sheet
         watch(() => uiData.absensi, (newVal) => {
             if (newVal && newVal.length > 0) {
                 newVal.forEach(item => {
                     if (typeof item.details === 'string') {
-                        // Detect corrupted Google Script object references
-                        if (item.details.startsWith('[Ljava') || item.details.includes('java.lang')) {
-                            item.details = []; // Reset corrupted data
-                            return;
-                        }
-
                         try {
                             const parsed = JSON.parse(item.details);
                             item.details = parsed; // Auto-fix in place
                         } catch (e) {
-                            // Only warn if it's NOT a known corruption
-                            console.warn("Failed to auto-parse absensi details:", item.details);
+                            console.warn("Failed to parse absensi details:", item.details);
                             item.details = [];
                         }
                     }
@@ -611,17 +605,12 @@ createApp({
             }
         }, { deep: true });
 
-        // Fix Ujian Meta
+        // Parse Ujian Meta
         watch(() => uiData.ujian, (newVal) => {
             if (newVal && newVal.length > 0) {
                 newVal.forEach(item => {
                     if (typeof item.meta === 'string') {
                         try {
-                            // Detect corrupted Google Script object references
-                            if (item.meta.startsWith('[Ljava') || item.meta.includes('java.lang')) {
-                                item.meta = {};
-                                return;
-                            }
                             item.meta = JSON.parse(item.meta);
                         } catch (e) {
                             item.meta = {};
@@ -631,16 +620,12 @@ createApp({
             }
         }, { deep: true });
 
-        // Fix Santri Hafalan Progress
+        // Parse Santri Hafalan Progress
         watch(() => uiData.santri, (newVal) => {
             if (newVal && newVal.length > 0) {
                 newVal.forEach(item => {
                     if (typeof item.hafalan_progress === 'string') {
                         try {
-                            if (item.hafalan_progress.startsWith('[Ljava') || item.hafalan_progress.includes('java.lang')) {
-                                item.hafalan_progress = {};
-                                return;
-                            }
                             item.hafalan_progress = JSON.parse(item.hafalan_progress);
                         } catch (e) {
                             item.hafalan_progress = {};
@@ -665,7 +650,7 @@ createApp({
 
                         // Show Toast (Native-like)
                         const toast = document.createElement('div');
-                        toast.textContent = "Tekan sekali lagi...";
+                        toast.textContent = "Tekan sekali lagi untuk keluar";
                         toast.style.cssText = "position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background-color:rgba(0,0,0,0.8);color:white;padding:10px 20px;border-radius:12px;font-size:14px;z-index:9999;backdrop-filter:blur(4px);pointer-events:none;animation:fadeIn 0.2s ease-out;white-space:nowrap;text-align:center;box-shadow:0 4px 6px -1px rgba(0, 0, 0, 0.1);";
                         document.body.appendChild(toast);
 
@@ -812,6 +797,4 @@ createApp({
         };
     }
 }).mount('#app');
-
-
 
