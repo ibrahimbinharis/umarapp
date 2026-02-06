@@ -225,3 +225,4 @@ const useRiwayat = (uiData, DB, refreshData, modules = {}, currentView) => {
         closeActionMenu
     };
 };
+
