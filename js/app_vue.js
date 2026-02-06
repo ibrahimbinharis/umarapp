@@ -535,6 +535,7 @@ createApp({
 
         // Expose to global for composables to use
         window.refreshData = refreshData;
+        window.loadData = loadData; // Fix for core.js silent sync calling loadData()
 
         // Create Ujian Composable
 
@@ -811,3 +812,4 @@ createApp({
         };
     }
 }).mount('#app');
+
