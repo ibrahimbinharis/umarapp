@@ -4,7 +4,7 @@ const useRiwayat = (uiData, DB, refreshData, modules = {}, currentView) => {
     // --- STATE ---
     const riwayatState = reactive({
         page: 1,
-        perPage: 20,
+        perPage: 50,
         search: '',
         startDate: '',
         endDate: '',
@@ -224,3 +224,4 @@ const useRiwayat = (uiData, DB, refreshData, modules = {}, currentView) => {
         closeActionMenu
     };
 };
+
