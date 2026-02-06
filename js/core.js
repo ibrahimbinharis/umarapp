@@ -208,27 +208,11 @@ const DB = {
     // --- AUTHENTICATION & LOGIN (v36: Plain Text Support for Legacy Data) ---
     login: async (username, password) => {
         try {
-            // 1. Coba Hash SHA-256 (Standard)
-            // Cek Login: Username OR Custom Username
-            // Syntax: .or('username.eq.VALUE,custom_username.eq.VALUE')
+            // 1. Hash SHA-256 (Standard)
             let hash = await hashPassword(password);
             let queryFilter = `username.eq.${username},custom_username.eq.${username}`;
 
-            // A. Attempt Hash
             let { data, error } = await sb.from('users').select('*').or(queryFilter).eq('password', hash).maybeSingle();
-
-            // 2. Fallback: Coba Plain Text Check (Legacy Data Import)
-            if (!data) {
-                let resPlain = await sb.from('users').select('*').or(queryFilter).eq('password', password).maybeSingle();
-                data = resPlain.data;
-            }
-
-            // 3. Fallback: Coba Hash Base64 (Legacy v34)
-            if (!data) {
-                const fallbackHash = "F_" + btoa(password).split('').reverse().join('');
-                const res2 = await sb.from('users').select('*').or(queryFilter).eq('password', fallbackHash).maybeSingle();
-                data = res2.data;
-            }
 
             if (!data) return { success: false, message: "Username atau Password salah" };
             return { success: true, user: data };
@@ -421,4 +405,3 @@ function formatDateLong(isoString, timeOverride = null) {
 
     return `${datePart}<br><span class="text-xs text-slate-400 font-normal">${timePart}</span>`;
 }
-
