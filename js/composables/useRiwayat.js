@@ -54,14 +54,15 @@ const useRiwayat = (uiData, DB, refreshData, modules = {}, currentView) => {
 
         // Filter / Search (Optional future implementation, currently just sort)
         merged.sort((a, b) => {
-            const getDateObj = (item) => {
-                const d = item.date || '2000-01-01';
-                // If date is already full ISO or contains time info, use it directly
-                if (d.includes('T') || d.length > 10) return new Date(d);
-                // Otherwise combine with time
-                return new Date(d + 'T' + (item.time || '00:00'));
-            };
-            return getDateObj(b) - getDateObj(a);
+            // Sort by Date (Descending)
+            const dateA = a.date || '2000-01-01';
+            const dateB = b.date || '2000-01-01';
+            if (dateA !== dateB) return dateB.localeCompare(dateA);
+
+            // Same Date? Sort by Time (Descending)
+            const timeA = a.time || '00:00';
+            const timeB = b.time || '00:00';
+            return timeB.localeCompare(timeA);
         });
 
         return merged;
@@ -224,4 +225,3 @@ const useRiwayat = (uiData, DB, refreshData, modules = {}, currentView) => {
         closeActionMenu
     };
 };
-
