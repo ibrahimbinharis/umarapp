@@ -372,7 +372,10 @@ function showLoading(show, msg = '') {
         if (el) el.remove();
         return;
     }
-    const html = `<div id="loader-overlay" class="fixed inset-0 z-[200] bg-white/80 backdrop-blur flex items-center justify-center"><div class="size-10 border-4 border-blue-200 border-t-primary rounded-full animate-spin"></div></div>`;
+    const html = `<div id="loader-overlay" class="fixed inset-0 z-[200] bg-white/80 backdrop-blur flex flex-col gap-3 items-center justify-center">
+        <div class="size-10 border-4 border-blue-200 border-t-primary rounded-full animate-spin"></div>
+        <p class="text-sm font-bold text-slate-600 animate-pulse">${msg}</p>
+    </div>`;
     document.body.insertAdjacentHTML('beforeend', html);
 }
 
@@ -418,4 +421,3 @@ function formatDateLong(isoString, timeOverride = null) {
 
     return `${datePart}<br><span class="text-xs text-slate-400 font-normal">${timePart}</span>`;
 }
-
