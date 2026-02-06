@@ -460,6 +460,9 @@ createApp({
 
             currentView.value = view;
 
+            // PWA History Push
+            window.history.pushState({ view: view }, '', '#' + view);
+
             // Sync profile form when navigating to profile
             if (view === 'profile') {
                 profile.initProfileForm();
@@ -648,7 +651,51 @@ createApp({
         }, { deep: true });
 
         // --- LIFECYCLE ---
+        const exitAttempt = ref(false); // Double back state
+
         onMounted(async () => {
+            // 1. PWA History Listener
+            window.addEventListener('popstate', (event) => {
+                // Special handling for Double Back on Dashboard
+                if (currentView.value === 'dashboard') {
+                    if (!exitAttempt.value) {
+                        // First attempt: Cancel 'back' by pushing state again
+                        window.history.pushState({ view: 'dashboard' }, '', '#dashboard');
+                        exitAttempt.value = true;
+
+                        // Show Toast (Native-like)
+                        const toast = document.createElement('div');
+                        toast.textContent = "Tekan sekali lagi untuk keluar";
+                        toast.style.cssText = "position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background-color:rgba(0,0,0,0.7);color:white;padding:12px 24px;border-radius:50px;font-size:14px;z-index:9999;backdrop-filter:blur(4px);pointer-events:none;animation:fadeIn 0.2s ease-out;";
+                        document.body.appendChild(toast);
+
+                        setTimeout(() => {
+                            toast.style.opacity = '0';
+                            toast.style.transition = 'opacity 0.5s';
+                            setTimeout(() => toast.remove(), 500);
+                            exitAttempt.value = false;
+                        }, 2000);
+                        return;
+                    } else {
+                        // Second attempt: Let it go (Exit)
+                        return;
+                    }
+                }
+
+                // Normal Navigation
+                if (event.state && event.state.view) {
+                    currentView.value = event.state.view;
+                } else if (window.location.hash) {
+                    const view = window.location.hash.replace('#', '');
+                    if (view) currentView.value = view;
+                }
+            });
+
+            // Ensure initial history state
+            if (!window.history.state) {
+                window.history.replaceState({ view: 'login' }, '', '#login');
+            }
+
             loading.value = true;
             try {
                 await initSurahData();
