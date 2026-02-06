@@ -83,6 +83,7 @@ const useAuth = (currentView, loading) => {
                 // If on login page, go to dashboard
                 if (currentView.value === 'login') {
                     currentView.value = 'dashboard';
+                    window.history.replaceState({ view: 'dashboard' }, '', '#dashboard');
                 }
             } catch (e) {
                 console.error("Invalid session", e);
@@ -99,4 +100,5 @@ const useAuth = (currentView, loading) => {
         checkSession
     };
 };
+
 
