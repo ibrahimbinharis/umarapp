@@ -1,4 +1,4 @@
-const CACHE_NAME = "v37";
+const CACHE_NAME = "v38";
 const ASSETS_TO_CACHE = [
     "./",
     "./index.html",
@@ -87,4 +87,5 @@ self.addEventListener("fetch", (event) => {
         })
     );
 });
+
 
