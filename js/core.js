@@ -177,7 +177,12 @@ const DB = {
                 // Add internal type so we know what table it belongs to
                 // Fix: Frontend expects 'user' (singular), but table is 'users'
                 const type = table === 'users' ? 'user' : table;
-                return res.data.map(d => ({ ...d, __type: type }));
+                return res.data.map(d => {
+                    // Normalize boolean fields (fixes 'false' string issue)
+                    if (d._deleted === 'false') d._deleted = false;
+                    if (d._deleted === 'true') d._deleted = true;
+                    return { ...d, __type: type };
+                });
             }));
 
             const results = await Promise.all(promises);
