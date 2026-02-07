@@ -1,4 +1,4 @@
-const CACHE_NAME = "e-umar-v36-cache";
+const CACHE_NAME = "V40";
 const ASSETS_TO_CACHE = [
     "./",
     "./index.html",
@@ -93,3 +93,4 @@ self.addEventListener("fetch", (event) => {
         })
     );
 });
+
