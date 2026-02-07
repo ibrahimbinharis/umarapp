@@ -1,4 +1,4 @@
-const CACHE_NAME = "V40";
+const CACHE_NAME = "e-umar-v36-cache";
 const ASSETS_TO_CACHE = [
     "./",
     "./index.html",
@@ -30,14 +30,7 @@ const ASSETS_TO_CACHE = [
     "./js/composables/useRiwayat.js",
     "./js/composables/usePelanggaran.js",
     "./js/composables/useProfile.js",
-    "./js/composables/useRekap.js",
-
-    // External Libs (CDNs) - Cached for offline availability
-    "https://unpkg.com/vue@3/dist/vue.global.js",
-    "https://cdn.tailwindcss.com",
-    "https://cdnjs.cloudflare.com/ajax/libs/chart.js/3.9.1/chart.min.js",
-    "https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap",
-    "https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0"
+    "./js/composables/useRekap.js"
 ];
 
 // Install Event: Cache all static assets
@@ -93,4 +86,3 @@ self.addEventListener("fetch", (event) => {
         })
     );
 });
-
