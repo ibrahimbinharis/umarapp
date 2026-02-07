@@ -509,7 +509,8 @@ createApp({
             buildIndexes();
 
             // Update UI Lists (Filter out Soft Deleted items)
-            const activeData = rawData.filter(d => !d._deleted);
+            // Handle boolean true, string 'true', and existing logic
+            const activeData = rawData.filter(d => d._deleted !== true && d._deleted !== 'true');
 
             uiData.santri = activeData.filter(d => d.__type === 'santri');
             uiData.guru = activeData.filter(d => d.__type === 'user' && d.role === 'guru');
@@ -797,4 +798,3 @@ createApp({
         };
     }
 }).mount('#app');
-
