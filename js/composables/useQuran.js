@@ -145,6 +145,32 @@ function useQuran(uiData) {
         jumpToSurahStart,
         jumpToPage,
         goToJuz,
-        jumpToAyat
+        jumpToAyat,
+
+        // Swipe Handlers
+        handleTouchStart: (e) => {
+            quranState.touchStartX = e.changedTouches[0].screenX;
+        },
+        handleTouchMove: (e) => {
+            quranState.touchEndX = e.changedTouches[0].screenX;
+        },
+        handleTouchEnd: () => {
+            if (!quranState.touchStartX || !quranState.touchEndX) return;
+            const threshold = 50; // min distance
+            const diff = quranState.touchStartX - quranState.touchEndX;
+
+            if (Math.abs(diff) > threshold) {
+                if (diff > 0) {
+                    // Swipe Left (drag R->L) -> Prev Page (Mundur) because RTL
+                    if (quranState.page > 1) quranState.page--;
+                } else {
+                    // Swipe Right (drag L->R) -> Next Page (Maju) because RTL
+                    if (quranState.page < 604) quranState.page++;
+                }
+            }
+            // Reset
+            quranState.touchStartX = 0;
+            quranState.touchEndX = 0;
+        }
     };
 }

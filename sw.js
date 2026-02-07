@@ -1,4 +1,4 @@
-const CACHE_NAME = "v39";
+const CACHE_NAME = "e-umar-v36-cache";
 const ASSETS_TO_CACHE = [
     "./",
     "./index.html",
@@ -42,6 +42,9 @@ const ASSETS_TO_CACHE = [
 
 // Install Event: Cache all static assets
 self.addEventListener("install", (event) => {
+    // Force the waiting service worker to become the active service worker
+    self.skipWaiting();
+
     event.waitUntil(
         caches.open(CACHE_NAME).then((cache) => {
             console.log("[Service Worker] Caching all: app shell and content");
@@ -62,6 +65,9 @@ self.addEventListener("activate", (event) => {
                     }
                 })
             );
+        }).then(() => {
+            // Force the active service worker to take control of the page immediately
+            return self.clients.claim();
         })
     );
 });
@@ -87,6 +93,3 @@ self.addEventListener("fetch", (event) => {
         })
     );
 });
-
-
-

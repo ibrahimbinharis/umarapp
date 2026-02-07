@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="id">
 
 <head>
@@ -125,7 +125,7 @@
                                         class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors text-[20px]">lock</span>
                                     <input type="password" v-model="loginForm.password"
                                         class="w-full pl-11 pr-4 py-3.5 rounded-2xl border border-slate-200 focus:outline-none focus:border-primary focus:ring-4 focus:ring-blue-500/10 bg-slate-50/50 font-bold text-slate-700 transition-all placeholder:font-normal placeholder:text-slate-400"
-                                        placeholder="••••••••">
+                                        placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;">
                                 </div>
                             </div>
 
@@ -236,8 +236,42 @@
                         isHeaderVisible ? (currentView === 'quran' ? 'pt-20 md:pt-0' : 'pt-20') : ''
                     ]">
 
+                    <!-- DASHBOARD SKELETON -->
+                    <div v-if="loading && currentView === 'dashboard'" class="fade-in space-y-6 animate-pulse">
+                        <!-- Greeting Card Skeleton -->
+                        <div
+                            class="bg-white p-5 rounded-3xl border border-slate-100 card-shadow flex items-center gap-4">
+                            <div class="size-12 rounded-full bg-slate-200"></div>
+                            <div class="space-y-2 flex-1">
+                                <div class="h-4 bg-slate-200 rounded w-1/3"></div>
+                                <div class="h-3 bg-slate-200 rounded w-1/4"></div>
+                            </div>
+                        </div>
+
+                        <!-- Menu Grid Skeleton -->
+                        <div class="grid grid-cols-4 gap-3">
+                            <div v-for="i in 8" :key="i" class="flex flex-col items-center gap-2">
+                                <div class="size-14 rounded-2xl bg-slate-200"></div>
+                                <div class="h-2 bg-slate-200 rounded w-10"></div>
+                            </div>
+                        </div>
+
+                        <!-- Recent Activity Skeleton -->
+                        <div class="space-y-3">
+                            <div class="h-4 bg-slate-200 rounded w-1/3 mb-2"></div>
+                            <div v-for="i in 3" :key="i"
+                                class="bg-white p-4 rounded-xl border border-slate-100 flex gap-3">
+                                <div class="size-10 rounded-full bg-slate-200"></div>
+                                <div class="flex-1 space-y-2">
+                                    <div class="h-3 bg-slate-200 rounded w-3/4"></div>
+                                    <div class="h-2 bg-slate-200 rounded w-1/2"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- DASHBOARD VIEW -->
-                    <div v-if="currentView === 'dashboard'" class="fade-in">
+                    <div v-if="!loading && currentView === 'dashboard'" class="fade-in">
 
                         <!-- Greeting Card -->
                         <div @click="navigateTo('profile')"
@@ -411,8 +445,25 @@
 
                     </div>
 
+                    <!-- SANTRI VIEW SKELETON -->
+                    <div v-if="loading && currentView === 'santri'" class="animate-pulse px-4 space-y-4 pt-4">
+                        <div class="h-8 bg-slate-200 rounded-lg w-full mb-4"></div>
+                        <div class="flex gap-2 mb-4">
+                            <div class="h-8 bg-slate-200 rounded-lg flex-1"></div>
+                            <div class="h-8 bg-slate-200 rounded-lg flex-1"></div>
+                        </div>
+                        <div v-for="i in 6" :key="i"
+                            class="bg-white p-4 rounded-xl border border-slate-100 flex items-center gap-4">
+                            <div class="size-12 rounded-full bg-slate-200"></div>
+                            <div class="flex-1 space-y-2">
+                                <div class="h-4 bg-slate-200 rounded w-1/2"></div>
+                                <div class="h-3 bg-slate-200 rounded w-1/3"></div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- SANTRI VIEW -->
-                    <div v-if="currentView === 'santri'" class="fade-in">
+                    <div v-if="!loading && currentView === 'santri'" class="fade-in">
                         <div class="flex justify-between items-center mb-6">
                             <h2 class="text-2xl font-bold">Data Santri</h2>
                             <button @click="openSantriModal()"
@@ -455,7 +506,7 @@
                                         <p class="font-bold text-slate-900 group-hover:text-primary transition">{{
                                             item.full_name }}</p>
                                         <p class="text-xs text-slate-500">{{ item.santri_id }} <span
-                                                class="mx-1">•</span> {{
+                                                class="mx-1">&bull;</span> {{
                                             item.kelas || '-' }}</p>
                                     </div>
                                 </div>
@@ -522,9 +573,9 @@
                                     <p class="font-bold text-slate-900">{{ user.full_name }}</p>
                                     <p class="text-[10px] text-slate-500 uppercase font-mono tracking-wider">
                                         {{ user.username }}
-                                        <span v-if="user.custom_username" class="text-blue-600"> • {{
+                                        <span v-if="user.custom_username" class="text-blue-600"> &bull; {{
                                             user.custom_username }}</span>
-                                        • {{ user.role }}
+                                        &bull; {{ user.role }}
                                     </p>
                                 </div>
                                 <div class="flex items-center gap-1">
@@ -794,7 +845,7 @@
                                                 <p class="font-bold text-slate-800 text-xs">{{
                                                     getSantriName(u.santri_id) }}
                                                 </p>
-                                                <p class="text-[10px] text-slate-500">{{ formatDate(u.date) }} • {{
+                                                <p class="text-[10px] text-slate-500">{{ formatDate(u.date) }} &bull; {{
                                                     u.detail
                                                     ||
                                                     u.type }}</p>
@@ -818,189 +869,7 @@
                             </div>
                         </div>
 
-                        <!-- PELANGGARAN VIEW -->
-                        <div v-if="currentView === 'pelanggaran'" class="fade-in">
-                            <h2 class="text-2xl font-bold mb-4">Pelanggaran & Kedisiplinan</h2>
-
-                            <!-- Tabs -->
-                            <div class="bg-white p-2 rounded-xl border border-slate-100 card-shadow flex gap-2 mb-6">
-                                <button @click="pelanggaranForm.tab = 'input'"
-                                    :class="pelanggaranForm.tab === 'input' ? 'bg-primary text-white shadow' : 'text-slate-500 hover:bg-slate-50'"
-                                    class="flex-1 py-3 rounded-xl text-sm font-bold transition-all">Input
-                                    Pelanggaran</button>
-                                <button @click="pelanggaranForm.tab = 'jenis'"
-                                    :class="pelanggaranForm.tab === 'jenis' ? 'bg-primary text-white shadow' : 'text-slate-500 hover:bg-slate-50'"
-                                    class="flex-1 py-3 rounded-xl text-sm font-bold transition-all">Input Jenis
-                                    Pelanggaran</button>
-                            </div>
-
-                            <div class="grid md:grid-cols-3 gap-6">
-
-                                <!-- TAB 1: INPUT PELANGGARAN -->
-                                <template v-if="pelanggaranForm.tab === 'input'">
-                                    <!-- Input Form -->
-                                    <div class="md:col-span-2 space-y-4">
-                                        <div
-                                            class="bg-white p-5 rounded-2xl border border-slate-100 card-shadow space-y-4">
-                                            <h3 class="font-bold text-slate-800 border-b pb-2 mb-2">Input Pelanggaran
-                                                Baru
-                                            </h3>
-
-                                            <!-- Santri Select -->
-                                            <div>
-                                                <label
-                                                    class="block text-xs font-bold text-slate-700 mb-1">Santri</label>
-                                                <select v-model="pelanggaranForm.santri_id"
-                                                    class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white font-bold text-sm focus:outline-none focus:border-primary">
-                                                    <option value="">Pilih Santri</option>
-                                                    <option v-for="s in uiData.santri" :value="s.santri_id">{{
-                                                        s.full_name
-                                                        }}
-                                                    </option>
-                                                </select>
-                                            </div>
-
-                                            <!-- Date & Points -->
-                                            <div class="grid grid-cols-2 gap-4">
-                                                <div>
-                                                    <label
-                                                        class="block text-xs font-bold text-slate-700 mb-1">Tanggal</label>
-                                                    <input v-model="pelanggaranForm.date" type="date"
-                                                        class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 font-bold text-sm">
-                                                </div>
-                                                <div>
-                                                    <label class="block text-xs font-bold text-slate-700 mb-1">Poin
-                                                        Pengurangan</label>
-                                                    <input v-model="pelanggaranForm.points" type="number"
-                                                        class="w-full px-4 py-3 rounded-xl border border-slate-200 font-bold text-sm text-red-500">
-                                                </div>
-                                            </div>
-
-                                            <!-- Description / Type (Dropdown) -->
-                                            <div>
-                                                <label class="block text-xs font-bold text-slate-700 mb-1">Jenis
-                                                    Pelanggaran</label>
-                                                <select v-model="pelanggaranForm.description"
-                                                    @change="updatePelanggaranPoints"
-                                                    class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white font-bold text-sm focus:outline-none focus:border-primary">
-                                                    <option value="">Pilih Jenis Pelanggaran...</option>
-                                                    <option v-for="m in uiData.master_pelanggaran" :value="m.name">{{
-                                                        m.name
-                                                        }}
-                                                        ({{ m.points }} Poin)</option>
-                                                </select>
-                                            </div>
-
-                                            <!-- Submit -->
-                                            <button @click="submitPelanggaran"
-                                                class="w-full bg-red-500 text-white py-3 rounded-xl font-bold shadow-lg shadow-red-900/20 hover:bg-red-600 transition active:scale-95 flex items-center justify-center gap-2 mt-2">
-                                                <span class="material-symbols-outlined">warning</span> Simpan
-                                                Pelanggaran
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    <!-- Sidebar Column (Master & History) -->
-                                    <div class="space-y-4">
-                                        <!-- Master Data Moved to Tab 2 -->
-
-                                        <!-- History Sidebar -->
-                                        <div class="bg-white p-4 rounded-2xl border border-slate-100 card-shadow h-fit">
-                                            <h3
-                                                class="font-bold border-b border-slate-100 pb-3 mb-3 text-sm flex items-center gap-2">
-                                                <span
-                                                    class="material-symbols-outlined text-slate-400 text-sm">history</span>
-                                                Riwayat Terbaru
-                                            </h3>
-                                            <div class="space-y-3">
-                                                <div v-for="p in filteredPelanggaran" :key="p._id"
-                                                    class="flex justify-between items-start text-sm border-b border-slate-50 pb-2 last:border-0 hover:bg-slate-50 p-1 rounded transition">
-                                                    <div class="flex-1 pr-2">
-                                                        <p class="font-bold text-slate-800 text-xs">{{
-                                                            getSantriName(p.santri_id) }}
-                                                        </p>
-                                                        <p class="text-[10px] text-slate-400">{{ formatDate(p.date) }}
-                                                        </p>
-                                                        <p class="text-[11px] text-slate-600 italic line-clamp-2 mt-1">
-                                                            {{
-                                                            p.description }}</p>
-                                                    </div>
-                                                    <div class="flex flex-col items-end gap-1">
-                                                        <div class="font-bold text-red-500 text-xs whitespace-nowrap">
-                                                            -{{
-                                                            p.points
-                                                            }}</div>
-                                                        <button @click="deletePelanggaran(p._id)"
-                                                            class="text-slate-300 hover:text-red-500">
-                                                            <span
-                                                                class="material-symbols-outlined text-[16px]">delete</span>
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                                <div v-if="filteredPelanggaran.length === 0"
-                                                    class="text-center py-4 text-slate-400 text-xs">
-                                                    Belum ada data.
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </template>
-
-                                <!-- TAB 2: INPUT JENIS PELANGGARAN -->
-                                <template v-if="pelanggaranForm.tab === 'jenis'">
-                                    <div class="md:col-span-3">
-                                        <div class="bg-white p-5 rounded-2xl border border-slate-100 card-shadow h-fit">
-                                            <h3
-                                                class="font-bold border-b border-slate-100 pb-3 mb-3 text-lg flex items-center gap-2">
-                                                <span class="material-symbols-outlined text-slate-600">settings</span>
-                                                Kelola Jenis Pelanggaran Master
-                                            </h3>
-
-                                            <!-- Add Form -->
-                                            <div
-                                                class="space-y-4 mb-6 p-4 bg-slate-50 rounded-xl border border-slate-200">
-                                                <h4 class="font-bold text-sm text-slate-600 mb-2">Tambah Baru</h4>
-                                                <div class="flex flex-col md:flex-row gap-4">
-                                                    <input v-model="masterPelanggaranForm.name"
-                                                        placeholder="Nama Pelanggaran Baru (Contoh: Tidak Piket)"
-                                                        class="flex-1 px-4 py-3 rounded-xl border border-slate-200 text-sm">
-                                                    <input v-model="masterPelanggaranForm.points" type="number"
-                                                        placeholder="Poin"
-                                                        class="w-full md:w-32 px-4 py-3 rounded-xl border border-slate-200 text-sm text-center">
-                                                    <button @click="saveMasterPelanggaran"
-                                                        class="bg-slate-800 text-white px-6 py-3 rounded-xl font-bold hover:bg-slate-700 shadow-lg">Tambah</button>
-                                                </div>
-                                            </div>
-
-                                            <!-- List -->
-                                            <div class="space-y-1">
-                                                <h4 class="font-bold text-sm text-slate-600 mb-3">Daftar Jenis
-                                                    Pelanggaran
-                                                </h4>
-                                                <div v-for="m in uiData.master_pelanggaran" :key="m._id"
-                                                    class="flex justify-between items-center text-sm border-b border-slate-50 py-3 first:pt-0 last:border-0 hover:bg-slate-50 px-2 rounded transition">
-                                                    <span class="font-bold text-slate-700">{{ m.name }}</span>
-                                                    <div class="flex items-center gap-4">
-                                                        <span
-                                                            class="font-bold text-red-500 bg-red-50 px-3 py-1 rounded-full text-xs">-{{
-                                                            m.points }} Poin</span>
-                                                        <button @click="deleteMasterPelanggaran(m._id)"
-                                                            class="text-slate-300 hover:text-red-500 bg-white border border-slate-200 p-1 rounded-lg">
-                                                            <span
-                                                                class="material-symbols-outlined text-[16px]">close</span>
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                                <div v-if="uiData.master_pelanggaran.length === 0"
-                                                    class="text-center text-slate-400 text-sm py-8 bg-slate-50 rounded-xl border border-dashed border-slate-200">
-                                                    Belum ada jenis pelanggaran yang dibuat.
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </template>
-                            </div>
-                        </div>
+                        <!-- DUPLICATE PELANGGARAN VIEW REMOVED -->
 
 
 
@@ -1057,7 +926,7 @@
                                                 {{
                                                 j.mapel }}</h3>
                                             <p class="text-xs text-slate-500 font-bold mt-1">Kelas {{
-                                                j.class_name }} •
+                                                j.class_name }} &bull;
                                                 {{
                                                 j.teacher }}</p>
                                         </div>
@@ -1144,7 +1013,8 @@
                                                 <h4
                                                     class="font-bold text-slate-900 text-lg group-hover:text-blue-600 transition-colors">
                                                     {{ j.mapel }}</h4>
-                                                <p class="text-xs text-slate-500 font-mono mt-0.5">{{ j.class_name }} •
+                                                <p class="text-xs text-slate-500 font-mono mt-0.5">{{ j.class_name }}
+                                                    &bull;
                                                     {{ j.teacher }}</p>
                                             </div>
                                             <div
@@ -1214,16 +1084,63 @@
                             <h2 class="text-2xl font-bold mb-5">Input Setoran</h2>
 
                             <div class="bg-white p-6 rounded-3xl border shadow-sm space-y-5">
-                                <!-- Santri Dropdown -->
-                                <div>
+                                <!-- Santri Custom Searchable Dropdown -->
+                                <div class="relative">
                                     <label class="text-xs font-bold text-slate-600 mb-1 block">Santri</label>
-                                    <select v-model="setoranForm.santri_id"
-                                        class="w-full p-2 border rounded-xl text-sm font-bold">
-                                        <option value="">-- Pilih Santri --</option>
-                                        <option v-for="s in santriOptions" :key="s._id" :value="s.santri_id">
-                                            {{ s.full_name }}
-                                        </option>
-                                    </select>
+
+                                    <!-- Trigger Button -->
+                                    <button @click="isSetoranSantriDropdownOpen = !isSetoranSantriDropdownOpen"
+                                        class="w-full p-3 border rounded-xl text-sm font-bold bg-white text-left flex justify-between items-center transition"
+                                        :class="isSetoranSantriDropdownOpen ? 'ring-2 ring-primary/20 border-primary' : 'border-slate-200'">
+                                        <span :class="setoranForm.santri_id ? 'text-slate-900' : 'text-slate-400'">
+                                            {{ setoranForm.santri_id ? setoranSelectedSantriName : '-- Pilih Santri --'
+                                            }}
+                                        </span>
+                                        <span class="material-symbols-outlined text-slate-400">expand_more</span>
+                                    </button>
+
+                                    <!-- Dropdown Content -->
+                                    <div v-if="isSetoranSantriDropdownOpen"
+                                        class="absolute left-0 right-0 top-full mt-2 bg-white border border-slate-100 rounded-xl shadow-xl z-30 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+
+                                        <!-- Search Input -->
+                                        <div class="p-2 border-b border-slate-50">
+                                            <div
+                                                class="flex items-center gap-2 bg-slate-50 px-3 py-2 rounded-lg border border-slate-100">
+                                                <span
+                                                    class="material-symbols-outlined text-slate-400 text-lg">search</span>
+                                                <input ref="setoranSantriSearchInput" v-model="setoranSantriSearch"
+                                                    type="text" placeholder="Cari nama..."
+                                                    class="bg-transparent w-full text-sm font-bold outline-none placeholder:font-normal text-slate-700"
+                                                    @click.stop>
+                                            </div>
+                                        </div>
+
+                                        <!-- Lists -->
+                                        <div class="max-h-60 overflow-y-auto custom-scrollbar">
+                                            <div v-for="s in setoranFilteredSantriOptions" :key="s._id"
+                                                @click="selectSetoranSantri(s)"
+                                                class="px-4 py-3 hover:bg-blue-50 cursor-pointer border-b border-slate-50 last:border-0 transition-colors group">
+                                                <p class="text-sm font-bold text-slate-800 group-hover:text-primary">{{
+                                                    s.full_name }}</p>
+                                                <p class="text-[10px] text-slate-500">{{ s.santri_id }} &bull; {{
+                                                    s.kelas
+                                                    ||
+                                                    '-' }}</p>
+                                            </div>
+
+                                            <!-- Empty State -->
+                                            <div v-if="setoranFilteredSantriOptions.length === 0"
+                                                class="p-4 text-center text-slate-400 text-xs italic">
+                                                Tidak ditemukan
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Backdrop -->
+                                    <div v-if="isPelanggaranSantriDropdownOpen"
+                                        @click="isPelanggaranSantriDropdownOpen = false"
+                                        class="fixed inset-0 z-20 cursor-default"></div>
                                 </div>
 
                                 <!-- Type Tabs -->
@@ -1418,14 +1335,14 @@
                                         class="bg-white p-3 rounded-xl border shadow-sm flex justify-between items-center">
                                         <div class="overflow-hidden flex-1">
                                             <div class="text-xs text-slate-400 font-bold mb-0.5">
-                                                {{ formatDateLong(r.setoran_date) }} • {{ formatTime(r.setoran_time)
-                                                }}
+                                                {{ formatDateLong(r.setoran_date) }} &bull; {{
+                                                formatTime(r.setoran_time) }}
                                             </div>
                                             <div class="font-bold text-slate-800 text-sm truncate">
                                                 {{ getSantriName(r.santri_id) }}
                                             </div>
                                             <div class="text-xs text-slate-500 font-medium truncate">
-                                                {{ r.setoran_type }} • {{ formatSetoranDetail(r) }}
+                                                {{ r.setoran_type }} &bull; {{ formatSetoranDetail(r) }}
                                             </div>
                                         </div>
                                         <div class="flex items-center gap-2 flex-shrink-0">
@@ -1490,7 +1407,7 @@
                                     class="bg-white p-4 rounded-2xl border shadow-sm flex justify-between items-center group relative hover:border-blue-100 transition">
                                     <div>
                                         <h4 class="font-bold text-slate-900">{{ s.full_name }}</h4>
-                                        <p class="text-xs text-slate-500 font-mono mb-2">{{ s.kelas || '-' }} •
+                                        <p class="text-xs text-slate-500 font-mono mb-2">{{ s.kelas || '-' }} &bull;
                                             Hafalan:
                                             {{
                                             s.hafalan_manual || '0 Juz' }}</p>
@@ -1558,15 +1475,67 @@
                                             <option value="pelanggaran">Pelanggaran</option>
                                         </select>
                                     </div>
-                                    <div class="space-y-1">
+                                    <div class="space-y-1 relative">
                                         <label class="text-[10px] font-bold text-slate-400 uppercase">Santri</label>
-                                        <select v-model="riwayatState.santriId"
-                                            class="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm font-bold bg-white">
-                                            <option value="">Semua Santri</option>
-                                            <option v-for="s in uiData.santri" :value="s.santri_id">{{ s.full_name
-                                                }}
-                                            </option>
-                                        </select>
+
+                                        <!-- Trigger Button -->
+                                        <button
+                                            @click="riwayatState.isSantriDropdownOpen = !riwayatState.isSantriDropdownOpen"
+                                            class="w-full px-3 py-2 border rounded-lg text-sm font-bold bg-white text-left flex justify-between items-center transition"
+                                            :class="riwayatState.isSantriDropdownOpen ? 'ring-2 ring-primary/20 border-primary' : 'border-slate-200'">
+                                            <span :class="riwayatState.santriId ? 'text-slate-900' : 'text-slate-400'">
+                                                {{ riwayatState.santriId ? riwayatSelectedSantriName : 'Semua Santri' }}
+                                            </span>
+                                            <span
+                                                class="material-symbols-outlined text-slate-400 text-lg">expand_more</span>
+                                        </button>
+
+                                        <!-- Dropdown Content -->
+                                        <div v-if="riwayatState.isSantriDropdownOpen"
+                                            class="absolute left-0 right-0 top-full mt-2 bg-white border border-slate-100 rounded-xl shadow-xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+
+                                            <!-- Search Input -->
+                                            <div class="p-2 border-b border-slate-50">
+                                                <div
+                                                    class="flex items-center gap-2 bg-slate-50 px-3 py-2 rounded-lg border border-slate-100">
+                                                    <span
+                                                        class="material-symbols-outlined text-slate-400 text-lg">search</span>
+                                                    <input v-model="riwayatState.santriSearch" type="text"
+                                                        placeholder="Cari nama..."
+                                                        class="bg-transparent w-full text-sm font-bold outline-none placeholder:font-normal text-slate-700"
+                                                        @click.stop>
+                                                </div>
+                                            </div>
+
+                                            <!-- Lists -->
+                                            <div class="max-h-60 overflow-y-auto custom-scrollbar">
+                                                <!-- Clear Filter Option -->
+                                                <div @click="selectRiwayatSantri({ santri_id: '' })"
+                                                    class="px-4 py-3 hover:bg-blue-50 cursor-pointer border-b border-slate-50 transition-colors group">
+                                                    <p
+                                                        class="text-sm font-bold text-slate-500 group-hover:text-primary italic">
+                                                        Semua Santri</p>
+                                                </div>
+
+                                                <!-- Santri List -->
+                                                <div v-for="s in riwayatFilteredSantriOptions" :key="s._id"
+                                                    @click="selectRiwayatSantri(s)"
+                                                    class="px-4 py-3 hover:bg-blue-50 cursor-pointer border-b border-slate-50 last:border-0 transition-colors group">
+                                                    <p
+                                                        class="text-sm font-bold text-slate-800 group-hover:text-primary">
+                                                        {{ s.full_name }}</p>
+                                                    <p class="text-[10px] text-slate-500">{{ s.santri_id }} &bull; {{
+                                                        s.kelas
+                                                        || '-' }}</p>
+                                                </div>
+
+                                                <!-- Empty State -->
+                                                <div v-if="riwayatFilteredSantriOptions.length === 0"
+                                                    class="p-4 text-center text-slate-400 text-xs italic">
+                                                    Tidak ditemukan
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -1639,30 +1608,55 @@
                                                 <!-- Detail -->
                                                 <td class="px-4 py-3">
                                                     <div v-if="item.__cat === 'setoran'">
-                                                        <div
-                                                            class="font-bold text-slate-700 text-xs truncate max-w-[150px]">
-                                                            {{ item.surah_from_latin ?
-                                                            item.surah_from_latin.replace(/^\d+\.\s*/, '') :
-                                                            (item.juz ?
-                                                            'Juz ' + item.juz : (item.page_from ? 'Hal ' +
-                                                            item.page_from :
-                                                            'Manzil')) }}</div>
-                                                        <div class="text-[10px] text-slate-500">{{ item.pages }} Hal
+                                                        <!-- Sabaq: Show Surah name + pages -->
+                                                        <div v-if="item.setoran_type === 'Sabaq'">
+                                                            <div
+                                                                class="font-bold text-slate-700 text-xs truncate max-w-[150px]">
+                                                                {{ item.surah_from_latin ?
+                                                                item.surah_from_latin.replace(/^\d+\.\s*/, '') : '-' }}
+                                                            </div>
+                                                            <div class="text-[10px] text-slate-500">{{ item.pages }} Hal
+                                                            </div>
+                                                        </div>
+                                                        <!-- Manzil: Show page range and Juz range -->
+                                                        <div v-else-if="item.setoran_type === 'Manzil'">
+                                                            <div class="font-bold text-slate-700 text-xs">
+                                                                {{ item.page_from || '-' }} - {{ item.page_to || '-' }}
+                                                            </div>
+                                                            <div class="text-[10px] text-slate-500">
+                                                                Juz {{ getJuzFromPage(item.page_from) }} -
+                                                                Juz {{ getJuzFromPage(item.page_to) }}
+                                                            </div>
+                                                        </div>
+                                                        <!-- Robt / Sabqi: Show only pages -->
+                                                        <div v-else>
+                                                            <div class="font-bold text-slate-700 text-xs">{{ item.pages
+                                                                }} Hal</div>
                                                         </div>
                                                     </div>
                                                     <div v-else-if="item.__cat === 'ujian'">
-                                                        <div class="font-bold text-slate-700 text-xs">{{ item.type
-                                                            }}
+                                                        <!-- Show Juz if Al-Qur'an -->
+                                                        <div
+                                                            v-if="item.type && item.type.toLowerCase().includes('al-qur')">
+                                                            <div class="font-bold text-slate-700 text-xs">{{ item.type
+                                                                }}</div>
+                                                            <div class="text-[10px] text-slate-500">
+                                                                Juz {{ item.juz || (item.detail ?
+                                                                item.detail.replace(/[^\d]/g, '') : '-') }}
+                                                            </div>
                                                         </div>
-                                                        <div class="text-[10px] text-slate-500 truncate max-w-[150px]">
-                                                            {{
-                                                            item.detail || '-' }}</div>
+                                                        <!-- Otherwise show detail -->
+                                                        <div v-else>
+                                                            <div class="font-bold text-slate-700 text-xs">{{ item.type
+                                                                }}</div>
+                                                            <div
+                                                                class="text-[10px] text-slate-500 truncate max-w-[150px]">
+                                                                {{ item.detail || '-' }}</div>
+                                                        </div>
                                                     </div>
                                                     <div v-else-if="item.__cat === 'pelanggaran'">
                                                         <div
                                                             class="font-bold text-red-600 text-xs truncate max-w-[150px]">
-                                                            PELANGGARAN</div>
-                                                        <div class="text-[10px] text-slate-500 truncate max-w-[150px]">
                                                             {{ item.description || '-' }}</div>
                                                     </div>
                                                 </td>
@@ -2031,7 +2025,8 @@
                             <!-- Main Viewer Area -->
                             <div
                                 class="flex-1 relative overflow-y-auto overflow-x-hidden bg-[#fdfaf7] flex flex-col items-center justify-start">
-                                <div
+                                <div @touchstart="handleTouchStart" @touchmove="handleTouchMove"
+                                    @touchend="handleTouchEnd"
                                     class="w-full min-h-full flex items-start justify-center relative p-0 md:p-0 md:h-full">
                                     <img :src="quranImageSrc"
                                         class="w-full h-auto shadow-lg transition-opacity duration-200 select-none border border-[#f0e6d2] md:max-h-full md:max-w-full md:object-contain md:h-full md:w-auto mt-0"
@@ -2177,7 +2172,7 @@
                                                     <div class="flex-1">
                                                         <p class="font-bold text-sm text-slate-800">{{ s.latin }}
                                                         </p>
-                                                        <p class="text-[10px] text-slate-400 italic">{{ s.arti }} •
+                                                        <p class="text-[10px] text-slate-400 italic">{{ s.arti }} &bull;
                                                             {{
                                                             s.ayat }} Ayat</p>
                                                     </div>
@@ -2234,7 +2229,7 @@
                                                     s.full_name }}</h4>
                                                 <p class="text-xs text-slate-500 font-mono">{{ s.kelas || 'No Kelas'
                                                     }}
-                                                    • {{
+                                                    &bull; {{
                                                     s.hafalan_manual || '0 Juz' }}</p>
                                             </div>
                                         </div>
@@ -2287,6 +2282,241 @@
                                 </div>
                             </div>
                         </div>
+
+                        <!-- PELANGGARAN VIEW -->
+                        <div v-if="currentView === 'pelanggaran'" class="fade-in space-y-4 pb-24">
+                            <div class="flex justify-between items-center px-2">
+                                <h2 class="text-2xl font-bold text-slate-900">Data Pelanggaran</h2>
+                            </div>
+
+                            <!-- Tab Switcher -->
+                            <div class="flex p-1 bg-slate-100 rounded-xl mx-2">
+                                <button @click="pelanggaranForm.tab = 'input'"
+                                    :class="pelanggaranForm.tab === 'input' ? 'bg-white text-slate-900 shadow-sm font-bold' : 'text-slate-500 hover:text-slate-700'"
+                                    class="flex-1 py-2 text-xs rounded-lg transition-all">
+                                    Input / Riwayat
+                                </button>
+                                <button @click="pelanggaranForm.tab = 'jenis'"
+                                    :class="pelanggaranForm.tab === 'jenis' ? 'bg-white text-slate-900 shadow-sm font-bold' : 'text-slate-500 hover:text-slate-700'"
+                                    class="flex-1 py-2 text-xs rounded-lg transition-all">
+                                    Jenis Pelanggaran
+                                </button>
+                            </div>
+
+                            <!-- TAB 1: INPUT & RIWAYAT -->
+                            <div v-if="pelanggaranForm.tab === 'input'" class="space-y-6">
+                                <!-- Input Form -->
+                                <div class="bg-white p-5 rounded-3xl border shadow-sm mx-2 space-y-4">
+                                    <h3 class="font-bold text-slate-800 border-b pb-2">Catat Pelanggaran</h3>
+
+                                    <!-- 1. Select Santri -->
+                                    <div class="space-y-1 relative">
+                                        <label class="text-xs font-bold text-slate-500 uppercase">Santri</label>
+
+                                        <!-- Trigger Button -->
+                                        <button
+                                            @click="isPelanggaranSantriDropdownOpen = !isPelanggaranSantriDropdownOpen"
+                                            class="w-full p-3 border rounded-xl text-sm font-bold bg-white text-left flex justify-between items-center transition"
+                                            :class="isPelanggaranSantriDropdownOpen ? 'ring-2 ring-primary/20 border-primary' : 'border-slate-200'">
+                                            <span
+                                                :class="pelanggaranForm.santri_id ? 'text-slate-900' : 'text-slate-400'">
+                                                {{ pelanggaranForm.santri_id ? pelanggaranSelectedSantriName : '-- Pilih Santri --' }}
+                                            </span>
+                                            <span class="material-symbols-outlined text-slate-400">expand_more</span>
+                                        </button>
+
+                                        <!-- Dropdown Content -->
+                                        <div v-if="isPelanggaranSantriDropdownOpen"
+                                            class="absolute left-0 right-0 top-full mt-2 bg-white border border-slate-100 rounded-xl shadow-xl z-30 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+
+                                            <!-- Search Input -->
+                                            <div class="p-2 border-b border-slate-50">
+                                                <div
+                                                    class="flex items-center gap-2 bg-slate-50 px-3 py-2 rounded-lg border border-slate-100">
+                                                    <span
+                                                        class="material-symbols-outlined text-slate-400 text-lg">search</span>
+                                                    <input v-model="pelanggaranSantriSearch" type="text"
+                                                        placeholder="Cari nama..."
+                                                        class="bg-transparent w-full text-sm font-bold outline-none placeholder:font-normal text-slate-700"
+                                                        @click.stop>
+                                                </div>
+                                            </div>
+
+                                            <!-- Lists -->
+                                            <div class="max-h-60 overflow-y-auto custom-scrollbar">
+                                                <div v-for="s in pelanggaranFilteredSantriOptions" :key="s._id"
+                                                    @click="selectPelanggaranSantri(s)"
+                                                    class="px-4 py-3 hover:bg-blue-50 cursor-pointer border-b border-slate-50 last:border-0 transition-colors group">
+                                                    <p
+                                                        class="text-sm font-bold text-slate-800 group-hover:text-primary">
+                                                        {{
+                                                        s.full_name }}</p>
+                                                    <p class="text-[10px] text-slate-500">{{ s.santri_id }} &bull; {{
+                                                        s.kelas
+                                                        ||
+                                                        '-' }}</p>
+                                                </div>
+
+                                                <!-- Empty State -->
+                                                <div v-if="pelanggaranFilteredSantriOptions.length === 0"
+                                                    class="p-4 text-center text-slate-400 text-xs italic">
+                                                    Tidak ditemukan
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- 2. Select Jenis -->
+                                    <div class="space-y-1">
+                                        <label class="text-xs font-bold text-slate-500 uppercase">Jenis
+                                            Pelanggaran</label>
+                                        <select v-model="pelanggaranForm.description" @change="updatePelanggaranPoints"
+                                            class="w-full p-3 bg-slate-50 rounded-xl font-bold text-sm border focus:outline-none focus:border-primary">
+                                            <option value="">Pilih Pelanggaran...</option>
+                                            <option v-for="m in uiData.master_pelanggaran" :key="m._id" :value="m.name">
+                                                {{ m.name }} ({{ m.points }} Poin)
+                                            </option>
+                                        </select>
+                                    </div>
+
+                                    <!-- 3. Points & Date -->
+                                    <div class="flex gap-3">
+                                        <div class="flex-1 space-y-1">
+                                            <label class="text-xs font-bold text-slate-500 uppercase">Poin</label>
+                                            <input v-model="pelanggaranForm.points" type="number"
+                                                class="w-full p-3 bg-slate-50 rounded-xl font-bold text-sm border focus:outline-none focus:border-primary">
+                                        </div>
+                                        <div class="flex-1 space-y-1">
+                                            <label class="text-xs font-bold text-slate-500 uppercase">Tanggal</label>
+                                            <input v-model="pelanggaranForm.date" type="date"
+                                                class="w-full p-3 bg-slate-50 rounded-xl font-bold text-sm border focus:outline-none focus:border-primary">
+                                        </div>
+                                    </div>
+
+                                    <!-- Actions -->
+                                    <div class="flex gap-2 pt-2">
+                                        <button v-if="editingId" @click="cancelEditPelanggaran"
+                                            class="flex-1 py-3 bg-slate-100 text-slate-600 rounded-xl font-bold">Batal</button>
+                                        <button @click="submitPelanggaran"
+                                            class="flex-1 py-3 bg-red-500 text-white rounded-xl font-bold shadow-lg shadow-red-200 active:scale-95 transition">
+                                            {{ editingId ? 'Update Data' : 'Simpan Data' }}
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- History List -->
+                                <div class="px-2 space-y-3">
+                                    <h3 class="font-bold text-slate-800 px-1">Riwayat Terbaru</h3>
+                                    <div v-for="p in filteredPelanggaran" :key="p._id"
+                                        class="bg-white p-4 rounded-xl border shadow-sm flex justify-between items-start relative">
+                                        <div class="flex-1">
+                                            <p class="text-xs text-slate-400 font-bold mb-1">{{ formatDate(p.date) }}
+                                            </p>
+                                            <p class="font-bold text-slate-900">{{ getSantriName(p.santri_id) }}</p>
+                                            <p class="text-sm text-red-500">{{ p.description }}</p>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <span
+                                                class="bg-red-50 text-red-600 px-2 py-1 rounded-lg text-xs font-black">-{{
+                                                p.points }}</span>
+
+                                            <!-- 3-Dot Menu -->
+                                            <div class="relative">
+                                                <button @click.stop="toggleMenu(p._id)"
+                                                    class="size-8 flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition">
+                                                    <span class="material-symbols-outlined">more_vert</span>
+                                                </button>
+
+                                                <!-- Dropdown Menu -->
+                                                <div v-if="isMenuOpen(p._id)" @click.stop
+                                                    class="absolute right-0 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden z-50 min-w-[140px] animate-in fade-in zoom-in-95 duration-100">
+                                                    <button @click="editPelanggaran(p); toggleMenu(p._id)"
+                                                        class="w-full px-4 py-2.5 flex items-center gap-2 hover:bg-blue-50 text-blue-600 transition text-sm font-bold">
+                                                        <span class="material-symbols-outlined text-lg">edit</span>
+                                                        Edit
+                                                    </button>
+                                                    <button @click="deletePelanggaran(p._id); toggleMenu(p._id)"
+                                                        class="w-full px-4 py-2.5 flex items-center gap-2 hover:bg-red-50 text-red-600 transition text-sm font-bold border-t border-slate-100">
+                                                        <span class="material-symbols-outlined text-lg">delete</span>
+                                                        Hapus
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Empty State -->
+                                    <div v-if="filteredPelanggaran.length === 0"
+                                        class="text-center py-8 text-slate-400">
+                                        <span class="material-symbols-outlined text-4xl opacity-30">history</span>
+                                        <p class="text-xs mt-2">Belum ada data pelanggaran</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- TAB 2: MASTER DATA (JENIS) -->
+                            <div v-if="pelanggaranForm.tab === 'jenis'" class="px-2 space-y-4">
+                                <button @click="() => { 
+                                    const props = openMasterPelanggaranModal(null); 
+                                    modalState.view = 'master_pelanggaran'; 
+                                    modalState.title = props.title; 
+                                    modalState.isEdit = props.isEdit; 
+                                    modalState.isOpen = true; 
+                                }"
+                                    class="w-full py-3 bg-red-500 text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-red-600 active:scale-95 transition shadow-lg shadow-red-200">
+                                    <span class="material-symbols-outlined text-lg">add</span> Tambah Jenis Pelanggaran
+                                </button>
+
+                                <div class="space-y-3">
+                                    <div v-for="m in uiData.master_pelanggaran" :key="m._id"
+                                        class="bg-white p-4 rounded-xl border shadow-sm flex justify-between items-center relative">
+                                        <div class="flex-1">
+                                            <p class="font-bold text-slate-900">{{ m.name }}</p>
+                                            <p class="text-xs text-slate-500">Poin Pengurang: <span
+                                                    class="text-red-500 font-bold">{{ m.points }}</span></p>
+                                        </div>
+
+                                        <!-- 3-Dot Menu -->
+                                        <div class="relative">
+                                            <button @click.stop="toggleMasterMenu(m._id)"
+                                                class="size-8 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-600 transition">
+                                                <span class="material-symbols-outlined text-xl">more_vert</span>
+                                            </button>
+
+                                            <!-- Dropdown Menu -->
+                                            <div v-if="isMasterMenuOpen(m._id)" @click.stop
+                                                class="absolute right-0 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden z-50 min-w-[140px] animate-in fade-in zoom-in-95 duration-100">
+                                                <button @click="() => { 
+                                                    const props = openMasterPelanggaranModal(m); 
+                                                    modalState.view = 'master_pelanggaran'; 
+                                                    modalState.title = props.title; 
+                                                    modalState.isEdit = props.isEdit; 
+                                                    modalState.isOpen = true;
+                                                    toggleMasterMenu(m._id);
+                                                }"
+                                                    class="w-full px-4 py-2.5 flex items-center gap-2 hover:bg-blue-50 text-blue-600 transition text-sm font-bold">
+                                                    <span class="material-symbols-outlined text-lg">edit</span>
+                                                    Edit
+                                                </button>
+                                                <button @click="deleteMasterPelanggaran(m._id); toggleMasterMenu(m._id)"
+                                                    class="w-full px-4 py-2.5 flex items-center gap-2 hover:bg-red-50 text-red-600 transition text-sm font-bold border-t border-slate-100">
+                                                    <span class="material-symbols-outlined text-lg">delete</span>
+                                                    Hapus
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Empty State -->
+                                    <div v-if="!uiData.master_pelanggaran || uiData.master_pelanggaran.length === 0"
+                                        class="text-center py-10 text-slate-400">
+                                        <p class="text-sm">Belum ada jenis pelanggaran.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+
 
                 </main>
 
@@ -2385,13 +2615,13 @@
                             {{ absensiState.activeJadwal.mapel || 'Absensi' }}
                         </h3>
                         <p class="text-xs text-slate-500 font-bold">
-                            {{ absensiState.dateFilter }} • {{ absensiState.activeJadwal.time || '' }} •
+                            {{ absensiState.dateFilter }} &bull; {{ absensiState.activeJadwal.time || '' }} &bull;
                             {{ absensiState.activeJadwal.class_name || 'Semua Kelas' }}
                         </p>
                     </div>
                     <button @click="absensiState.activeJadwal = null"
                         class="size-8 flex items-center justify-center rounded-full hover:bg-slate-100 text-slate-400 font-bold">
-                        ✕
+                        âœ&bull;
                     </button>
                 </div>
 
@@ -2780,7 +3010,7 @@
                                 <div>
                                     <h4 class="font-bold text-slate-900">{{ absensiState.activeJadwal.mapel }}</h4>
                                     <p class="text-xs text-slate-500 font-mono">{{ absensiState.activeJadwal.class_name
-                                        }} • {{ absensiState.activeJadwal.time }}</p>
+                                        }} &bull; {{ absensiState.activeJadwal.time }}</p>
                                     <p class="text-xs text-slate-500 mt-1">{{ absensiState.activeJadwal.teacher }}</p>
                                 </div>
                                 <div
@@ -2896,6 +3126,30 @@
                         </div>
                     </div>
 
+                    <!-- FORM MASTER PELANGGARAN -->
+                    <div v-if="modalState.view === 'master_pelanggaran'" class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">Nama Pelanggaran</label>
+                            <input v-model="masterPelanggaranForm.name" type="text"
+                                class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-primary bg-white"
+                                placeholder="Contoh: Terlambat, Tidak Piket" required>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">Poin Pengurang</label>
+                            <input v-model="masterPelanggaranForm.points" type="number"
+                                class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-primary bg-white"
+                                required>
+                        </div>
+
+                        <div class="pt-4 flex gap-3">
+                            <button type="button" @click="closeModal"
+                                class="flex-1 py-3 rounded-xl border border-slate-200 font-bold text-slate-600 hover:bg-slate-50 transition">Batal</button>
+                            <button type="button"
+                                @click="saveMasterPelanggaran().then(res => { if(res && res.success) closeModal(); })"
+                                class="flex-1 py-3 rounded-xl bg-primary text-white font-bold hover:bg-blue-800 shadow-lg shadow-blue-900/20 transition">Simpan</button>
+                        </div>
+                    </div>
+
                     <!-- GRADING MODAL -->
                     <div v-if="modalState.view === 'grading'" class="space-y-6">
                         <!-- Manual Score Input -->
@@ -2968,7 +3222,7 @@
                 <div class="p-4 bg-white flex justify-between items-center border-b z-10">
                     <h3 class="font-bold text-lg text-slate-800">Sesuaikan Foto</h3>
                     <button @click="cancelCrop"
-                        class="size-8 rounded-full hover:bg-slate-100 text-slate-400 font-bold flex items-center justify-center">✕</button>
+                        class="size-8 rounded-full hover:bg-slate-100 text-slate-400 font-bold flex items-center justify-center">âœ&bull;</button>
                 </div>
                 <div class="flex-1 overflow-hidden bg-black flex items-center justify-center relative">
                     <img ref="cropperImage" :src="cropModal.imageSrc"
@@ -2990,8 +3244,10 @@
     <script src="js/core.js"></script>
     <script src="js/utils_date.js"></script>
     <script src="js/utils_password.js"></script>
-    <script src="js/composables/useAuth.js"></script>
+    <script src="js/utils_quran.js"></script>
+
     <!-- Composables (load before main app) -->
+    <script src="js/composables/useAuth.js"></script>
     <script src="js/composables/usePelanggaran.js"></script>
     <script src="js/composables/useSantri.js"></script> <!-- PDF & Excel Libs (v34) -->
 

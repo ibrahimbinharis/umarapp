@@ -67,7 +67,14 @@ function useSetoran(uiData, DB, refreshData) {
     /**
      * Track editing mode (null = create, id = edit)
      */
+    /**
+     * Track editing mode (null = create, id = edit)
+     */
     const editingId = ref(null);
+
+    // Search State for Santri Dropdown
+    const setoranSantriSearch = ref('');
+    const isSetoranSantriDropdownOpen = ref(false);
 
     // Caches for page calculation
     const surahPageCache = {};
@@ -130,10 +137,35 @@ function useSetoran(uiData, DB, refreshData) {
     /**
      * Santri options for dropdown
      */
-    const santriOptions = computed(() => {
-        return (uiData.santri || [])
-            .slice()
-            .sort((a, b) => (a.full_name || '').localeCompare(b.full_name || ''));
+    /**
+     * Santri options for dropdown (Filtered by Search)
+     */
+    const setoranFilteredSantriOptions = computed(() => {
+        let items = uiData.santri || [];
+        if (setoranSantriSearch.value) {
+            const q = setoranSantriSearch.value.toLowerCase();
+            items = items.filter(s =>
+                (s.full_name || '').toLowerCase().includes(q) ||
+                String(s.santri_id || '').toLowerCase().includes(q)
+            );
+        }
+        return items.slice().sort((a, b) => (a.full_name || '').localeCompare(b.full_name || ''));
+    });
+
+    /**
+     * Helpers for Custom Dropdown
+     */
+    const selectSetoranSantri = (santri) => {
+        setoranForm.santri_id = santri.santri_id;
+        setoranSantriSearch.value = ''; // Reset search logic if needed, or keep for UX
+        isSetoranSantriDropdownOpen.value = false;
+    };
+
+    // Get selected santri name for display
+    const setoranSelectedSantriName = computed(() => {
+        if (!setoranForm.santri_id) return '';
+        const s = (uiData.santri || []).find(x => String(x.santri_id) === String(setoranForm.santri_id));
+        return s ? s.full_name : '';
     });
 
     /**
@@ -545,7 +577,9 @@ function useSetoran(uiData, DB, refreshData) {
                 refreshData();
             }
 
-            // Reset form (keep santri and type)
+            // Reset form
+            setoranForm.santri_id = '';
+            setoranSantriSearch.value = ''; // Reset search text
             setoranForm.pages = setoranForm.setoran_type === 'Manzil' ? 20 : 1;
             setoranForm.errors = 0;
             updateGrade();
@@ -636,7 +670,7 @@ function useSetoran(uiData, DB, refreshData) {
      * Get santri name by ID
      */
     const getSantriName = (santriId) => {
-        const santri = santriOptions.value.find(s => s.santri_id === santriId);
+        const santri = (uiData.santri || []).find(s => s.santri_id === santriId);
         return santri ? santri.full_name : 'Unknown';
     };
 
@@ -676,37 +710,47 @@ function useSetoran(uiData, DB, refreshData) {
         document.removeEventListener('click', closeAllMenus);
     });
 
-    // ===== RETURN =====
+    // Return everything needed for template
     return {
-        // State
         setoranForm,
         autoCalcInfo,
         surahHints,
         editingId,
 
-        // Computed
+        // Search State
+        setoranSantriSearch,
+        isSetoranSantriDropdownOpen,
+        setoranFilteredSantriOptions,
+        selectSetoranSantri,
+        setoranSelectedSantriName,
+
         surahList,
-        santriOptions,
         recentSetoran,
+        menuStates,
 
         // Methods
+        toggleMenu,
+        isMenuOpen,
+
         changeSetoranType,
         updateGrade,
         adjustValue,
-        toggleManzilMode,
-        calcPagesFromRange,
         syncSurah,
         validateAyat,
-        autoCalcPages,
-        handleAutoCalc,
-        saveSetoran,
-        deleteSetoran,
+        toggleManzilMode,
+        calcPagesFromRange,
+
         editSetoran,
         cancelEdit,
-        toggleMenu,
-        isMenuOpen,
+        saveSetoran,
+        deleteSetoran,
+
+        // Helpers
         getSantriName,
-        formatSetoranDetail
+        formatSetoranDetail,
+        formatDate: window.DateUtils.formatDate,
+        formatDateFriendly: window.DateUtils.formatDateFriendly,
+        formatDateLong: window.DateUtils.formatDateLong,
+        formatTime: window.DateUtils.formatTime
     };
 }
-

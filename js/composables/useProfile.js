@@ -48,7 +48,7 @@ function useProfile(uiData, DB, userSession, refreshData) {
             }
 
             if (profileForm.password) {
-               // Pass plain text, let DB.update handle hashing
+                // Pass plain text, let DB.update handle hashing
                 updates.password = profileForm.password;
             }
 
@@ -170,4 +170,3 @@ function useProfile(uiData, DB, userSession, refreshData) {
         isUploading: Vue.computed(() => isUploading.value)
     };
 }
-

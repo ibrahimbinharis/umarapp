@@ -28,6 +28,15 @@ function usePelanggaran(uiData, DB, refreshData) {
         points: 10
     });
 
+    // State for managing dropdown menus (object-based for reactivity)
+    const menuStates = Vue.ref({}); // Tracks menu state for each pelanggaran record
+    const masterMenuStates = Vue.ref({}); // Tracks menu state for each master data
+
+    // Search State for Santri Dropdown
+    // Search State for Santri Dropdown
+    const pelanggaranSantriSearch = Vue.ref('');
+    const isPelanggaranSantriDropdownOpen = Vue.ref(false);
+
     // ===== COMPUTED =====
 
     /**
@@ -46,6 +55,27 @@ function usePelanggaran(uiData, DB, refreshData) {
             .slice(0, 10);
     });
 
+    const pelanggaranFilteredSantriOptions = computed(() => {
+        let items = uiData.santri || [];
+        if (pelanggaranSantriSearch.value) {
+            const q = pelanggaranSantriSearch.value.toLowerCase();
+            items = items.filter(s =>
+                (s.full_name || '').toLowerCase().includes(q) ||
+                String(s.santri_id || '').toLowerCase().includes(q)
+            );
+        }
+        return items.slice().sort((a, b) => (a.full_name || '').localeCompare(b.full_name || ''));
+    });
+
+    /**
+     * Get selected santri name
+     */
+    const pelanggaranSelectedSantriName = computed(() => {
+        if (!pelanggaranForm.santri_id) return '';
+        const s = (uiData.santri || []).find(x => String(x.santri_id) === String(pelanggaranForm.santri_id));
+        return s ? s.full_name : '';
+    });
+
     // ===== METHODS =====
 
     /**
@@ -60,6 +90,15 @@ function usePelanggaran(uiData, DB, refreshData) {
         if (selectedType) {
             pelanggaranForm.points = selectedType.points;
         }
+    };
+
+    /**
+     * Select santri from dropdown
+     */
+    const selectPelanggaranSantri = (santri) => {
+        pelanggaranForm.santri_id = santri.santri_id;
+        pelanggaranSantriSearch.value = '';
+        isPelanggaranSantriDropdownOpen.value = false;
     };
 
     /**
@@ -126,6 +165,14 @@ function usePelanggaran(uiData, DB, refreshData) {
         pelanggaranForm.description = item.description;
         pelanggaranForm.points = item.points;
         pelanggaranForm.date = item.date;
+
+        // Scroll to form
+        setTimeout(() => {
+            const pelanggaranView = document.querySelector('[v-if="currentView === \'pelanggaran\'"]');
+            if (pelanggaranView) {
+                pelanggaranView.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }, 100);
     };
 
     const cancelEditPelanggaran = () => {
@@ -253,15 +300,71 @@ function usePelanggaran(uiData, DB, refreshData) {
         }
     };
 
+    /**
+     * Toggle 3-dot menu for pelanggaran records
+     */
+    const toggleMenu = (id) => {
+        // Close all other menus first
+        Object.keys(menuStates.value).forEach(key => {
+            if (key !== id) {
+                menuStates.value[key] = false;
+            }
+        });
+        // Toggle current menu
+        menuStates.value[id] = !menuStates.value[id];
+    };
+
+    /**
+     * Check if menu is open for pelanggaran records
+     */
+    const isMenuOpen = (id) => {
+        return menuStates.value[id] || false;
+    };
+
+    /**
+     * Toggle 3-dot menu for master pelanggaran
+     */
+    const toggleMasterMenu = (id) => {
+        // Close all other menus first
+        Object.keys(masterMenuStates.value).forEach(key => {
+            if (key !== id) {
+                masterMenuStates.value[key] = false;
+            }
+        });
+        // Toggle current menu
+        masterMenuStates.value[id] = !masterMenuStates.value[id];
+    };
+
+    /**
+     * Check if master menu is open
+     */
+    const isMasterMenuOpen = (id) => {
+        return masterMenuStates.value[id] || false;
+    };
+
+    /**
+     * Close all dropdown menus
+     */
+    const closeAllMenus = () => {
+        menuStates.value = {};
+        masterMenuStates.value = {};
+    };
+
     // ===== PUBLIC API =====
     return {
         // State
         pelanggaranForm,
         masterPelanggaranForm,
         editingId,
+        menuStates,
+        masterMenuStates,
+        pelanggaranSantriSearch,
+        isPelanggaranSantriDropdownOpen,
 
         // Computed
         filteredPelanggaran,
+        pelanggaranFilteredSantriOptions,
+        pelanggaranSelectedSantriName,
 
         // Methods
         updatePelanggaranPoints,
@@ -269,8 +372,14 @@ function usePelanggaran(uiData, DB, refreshData) {
         deletePelanggaran,
         editPelanggaran,
         cancelEditPelanggaran,
+        selectPelanggaranSantri,
         openMasterPelanggaranModal,
         saveMasterPelanggaran,
-        deleteMasterPelanggaran
+        deleteMasterPelanggaran,
+        toggleMenu,
+        toggleMasterMenu,
+        closeAllMenus,
+        isMenuOpen,
+        isMasterMenuOpen
     };
 }

@@ -30,5 +30,40 @@ const isToday = (dateString) => {
 window.DateUtils = {
     getTodayDateString,
     getCurrentTimeString,
-    isToday
+    isToday,
+
+    // Formatter Wrappers (Aliases to global or new impl)
+    formatDateLong: (date, time) => window.formatDateLong ? window.formatDateLong(date, time) : date,
+
+    formatDate: (date) => {
+        if (!date) return '-';
+        const d = new Date(date);
+        if (isNaN(d.getTime())) return date;
+        return d.toLocaleDateString('id-ID'); // DD/MM/YYYY
+    },
+
+    formatTime: (time) => {
+        if (!time) return '-';
+        // If it's full ISO string
+        if (time.includes('T')) {
+            const d = new Date(time);
+            const h = String(d.getHours()).padStart(2, '0');
+            const m = String(d.getMinutes()).padStart(2, '0');
+            return `${h}:${m}`;
+        }
+        // If HH:mm:ss
+        const parts = time.split(':');
+        if (parts.length >= 2) return `${parts[0]}:${parts[1]}`;
+        return time;
+    },
+
+    formatDateFriendly: (date) => {
+        if (!date) return '-';
+        const dStr = getTodayDateString();
+        // Simple check
+        if (date.startsWith(dStr)) return 'Hari ini';
+        // Return normal short date
+        const d = new Date(date);
+        return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+    }
 };

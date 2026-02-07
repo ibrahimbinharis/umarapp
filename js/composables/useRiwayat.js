@@ -9,11 +9,12 @@ const useRiwayat = (uiData, DB, refreshData, modules = {}, currentView) => {
         startDate: '',
         endDate: '',
         category: '',
-        endDate: '',
-        category: '',
         santriId: '',
         selectedIds: [],
-        activeActionId: null
+        activeActionId: null,
+        // Santri Dropdown
+        santriSearch: '',
+        isSantriDropdownOpen: false
     });
 
     // --- COMPUTED ---
@@ -75,6 +76,44 @@ const useRiwayat = (uiData, DB, refreshData, modules = {}, currentView) => {
 
     const riwayatTotalPages = computed(() => Math.ceil(riwayatList.value.length / riwayatState.perPage));
 
+    // Santri Dropdown
+    // Note: State properties inside riwayatState (santriSearch, isSantriDropdownOpen)
+    // are naturally namespaced by riwayatState, but the COMPUTED properties below were colliding.
+
+    /**
+     * Santri options for dropdown (Filtered by Search)
+     */
+    const riwayatFilteredSantriOptions = computed(() => {
+        let items = uiData.santri || [];
+        if (riwayatState.santriSearch) {
+            const q = riwayatState.santriSearch.toLowerCase();
+            items = items.filter(s =>
+                (s.full_name || '').toLowerCase().includes(q) ||
+                String(s.santri_id || '').toLowerCase().includes(q)
+            );
+        }
+        return items.slice().sort((a, b) => (a.full_name || '').localeCompare(b.full_name || ''));
+    });
+
+    /**
+     * Get selected santri name for display
+     */
+    const riwayatSelectedSantriName = computed(() => {
+        if (!riwayatState.santriId) return '';
+        const s = (uiData.santri || []).find(x => String(x.santri_id) === String(riwayatState.santriId));
+        return s ? s.full_name : '';
+    });
+
+    /**
+     * Get Juz number from page number (safe wrapper for Vue templates)
+     */
+    const getJuzFromPage = (page) => {
+        if (window.QuranUtils && window.QuranUtils.getJuzFromPage) {
+            return window.QuranUtils.getJuzFromPage(page);
+        }
+        return '-';
+    };
+
     // --- ACTIONS ---
     const toggleSelect = (id) => {
         if (riwayatState.selectedIds.includes(id)) {
@@ -123,6 +162,15 @@ const useRiwayat = (uiData, DB, refreshData, modules = {}, currentView) => {
 
     const closeActionMenu = () => {
         riwayatState.activeActionId = null;
+    };
+
+    /**
+     * Select santri from dropdown
+     */
+    const selectRiwayatSantri = (santri) => {
+        riwayatState.santriId = santri.santri_id;
+        riwayatState.santriSearch = '';
+        riwayatState.isSantriDropdownOpen = false;
     };
 
     const deleteRiwayat = async (arg, type) => {
@@ -214,6 +262,9 @@ const useRiwayat = (uiData, DB, refreshData, modules = {}, currentView) => {
         riwayatList,
         paginatedRiwayat,
         riwayatTotalPages,
+        riwayatFilteredSantriOptions,
+        riwayatSelectedSantriName,
+        getJuzFromPage,
         deleteRiwayat,
         editRiwayat,
         formatDateLong,
@@ -222,7 +273,7 @@ const useRiwayat = (uiData, DB, refreshData, modules = {}, currentView) => {
         toggleSelectAll,
         deleteSelected,
         toggleActionMenu,
-        closeActionMenu
+        closeActionMenu,
+        selectRiwayatSantri
     };
 };
-
