@@ -217,6 +217,37 @@ const DB = {
             let mergedData = [...cloudData];
             const queue = DB.getQueue();
 
+            // --- DEFENSIVE MERGE: Anti-Blink Protection ---
+            // If we just uploaded an item, it might be removed from queue but NOT YET visible in the query result (race condition).
+            // We must KEEP local items that are:
+            // 1. Not in Cloud Result
+            // 2. Not in Queue (because already uploaded or just created)
+            // 3. Recently created (< 2 minutes ago)
+            const cloudIds = new Set(mergedData.map(c => c._id));
+            const queueIds = new Set(queue.map(q => q.payload._id));
+
+            const recentLocalItems = allData.filter(local => {
+                // If present in cloud, server version wins (handled by mergedData init)
+                if (cloudIds.has(local._id)) return false;
+
+                // If present in queue, queue logic below handles it
+                if (queueIds.has(local._id)) return false;
+
+                // If explicitly deleted locally, let it die
+                if (local._deleted) return false;
+
+                // Check age
+                if (!local.created_at) return false;
+                const age = Date.now() - new Date(local.created_at).getTime();
+                // Keep items created in last 5 mins to survive the "Consistency Delay"
+                return age < (5 * 60 * 1000);
+            });
+
+            if (recentLocalItems.length > 0) {
+                console.log(`[Defensive Sync] Keeping ${recentLocalItems.length} recent items not yet in cloud.`);
+                mergedData = [...mergedData, ...recentLocalItems];
+            }
+
             if (queue.length > 0) {
                 // 1. Identification Ops
                 const deleteIds = new Set(queue.filter(q => q.action === 'delete').map(q => q.payload._id));
