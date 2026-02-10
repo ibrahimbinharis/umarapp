@@ -1,4 +1,4 @@
-const CACHE_NAME = "e-umar-v3.4";
+const CACHE_NAME = "e-umar-v3.5";
 const ASSETS_TO_CACHE = [
     "./",
     "./index.html",
@@ -77,23 +77,35 @@ self.addEventListener('message', (event) => {
 
 // Fetch Event: Cache First, then Network (Stale-while-revalidate for some, strictly cache for others)
 self.addEventListener("fetch", (event) => {
-    // 1. (Legacy Google Scripts handler removed)
 
+    // 🚫 Supabase API = Network Only
+    if (event.request.url.includes("supabase.co")) {
+        event.respondWith(fetch(event.request));
+        return;
+    }
 
-    // 2. Static Assets -> Cache First, fall back to Network
+    // ✅ Static assets = Cache First
     event.respondWith(
-        caches.match(event.request).then((response) => {
-            return response || fetch(event.request).then((networkResponse) => {
-                // Cache new resources dynamically (runtime caching)
-                if (event.request.method === 'GET' && networkResponse.status === 200) {
-                    return caches.open(CACHE_NAME).then((cache) => {
-                        cache.put(event.request, networkResponse.clone());
-                        return networkResponse;
+        caches.match(event.request).then((cached) => {
+            if (cached) return cached;
+
+            return fetch(event.request).then((response) => {
+                if (
+                    event.request.method === "GET" &&
+                    response.status === 200 &&
+                    (
+                        event.request.destination === "script" ||
+                        event.request.destination === "style" ||
+                        event.request.destination === "image" ||
+                        event.request.destination === "document"
+                    )
+                ) {
+                    caches.open(CACHE_NAME).then((cache) => {
+                        cache.put(event.request, response.clone());
                     });
                 }
-                return networkResponse;
+                return response;
             });
         })
     );
 });
-
