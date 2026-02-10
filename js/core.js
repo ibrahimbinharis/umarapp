@@ -462,6 +462,3 @@ function formatDateLong(isoString, timeOverride = null) {
 
     return `${datePart}<br><span class="text-xs text-slate-400 font-normal">${timePart}</span>`;
 }
-
-
-
