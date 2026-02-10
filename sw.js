@@ -35,8 +35,11 @@ const ASSETS_TO_CACHE = [
 
 // Install Event: Cache all static assets
 self.addEventListener("install", (event) => {
-    // Note: self.skipWaiting() REMOVED to allow "Update Available" notification flow.
-    // The new SW will wait in 'installed' state until user clicks "Update".
+    // FORCE UPDATE STRATEGY (Bridge to v3.2)
+    // We explicitly call skipWaiting() here to ensuring users on old versions (without the 'Update' UI)
+    // get updated to this version automatically. 
+    // FUTURE VERSIONS: Remove this line to enable the manual 'Update' button flow.
+    self.skipWaiting();
 
     event.waitUntil(
         caches.open(CACHE_NAME).then((cache) => {
@@ -93,5 +96,3 @@ self.addEventListener("fetch", (event) => {
         })
     );
 });
-
-
