@@ -28,8 +28,8 @@ const useRekap = () => {
      * Formula: (SabaqSco * 0.5) + (ManzilSco * 0.3) + (UjianSco * 0.2) - Pelanggaran
      */
     const rekapHafalanData = computed(() => {
-        // 1. Filter Santri by Kelas & Gender
-        let santris = window.allData.filter(d => d.__type === 'santri');
+        // 1. Filter Santri by Kelas & Gender (and exclude deleted)
+        let santris = window.allData.filter(d => d.__type === 'santri' && d._deleted !== true && d._deleted !== 'true');
         if (rekapKelas.value) {
             santris = santris.filter(s => s.kelas === rekapKelas.value);
         }
