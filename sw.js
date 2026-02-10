@@ -1,4 +1,4 @@
-const CACHE_NAME = "e-umar-v3.0";
+const CACHE_NAME = "e-umar-v3.1";
 const ASSETS_TO_CACHE = [
     "./",
     "./index.html",
@@ -35,8 +35,8 @@ const ASSETS_TO_CACHE = [
 
 // Install Event: Cache all static assets
 self.addEventListener("install", (event) => {
-    // Force the waiting service worker to become the active service worker
-    self.skipWaiting();
+    // Note: self.skipWaiting() REMOVED to allow "Update Available" notification flow.
+    // The new SW will wait in 'installed' state until user clicks "Update".
 
     event.waitUntil(
         caches.open(CACHE_NAME).then((cache) => {
@@ -63,6 +63,13 @@ self.addEventListener("activate", (event) => {
             return self.clients.claim();
         })
     );
+});
+
+// Message Event: Listen for 'SKIP_WAITING' signal from UI
+self.addEventListener('message', (event) => {
+    if (event.data && event.data.type === 'SKIP_WAITING') {
+        self.skipWaiting();
+    }
 });
 
 // Fetch Event: Cache First, then Network (Stale-while-revalidate for some, strictly cache for others)
