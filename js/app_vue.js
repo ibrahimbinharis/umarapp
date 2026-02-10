@@ -113,6 +113,9 @@ createApp({
         // Initialize Profile Composable
         const profile = useProfile(uiData, DB, userSession, refreshData);
 
+        // Initialize Monitoring Composable
+        const monitoring = useMonitoring(uiData, userSession);
+
         // --- PAGE CALC Caches (Non-reactive for performance) ---
         const surahPageCache = {};
         const pageDensityCache = {};
@@ -830,6 +833,8 @@ createApp({
             // Riwayat
             ...riwayat,
             ...useRekap(), // ADD REKAP
+            // Monitoring
+            ...monitoring,
             // Dashboard
             initCharts, activityFilter, filteredActivities, topSantriFilter, filteredTopSantri
         };

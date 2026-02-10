@@ -1,7 +1,7 @@
 // --- 1. CONFIG & DATABASE (SUPABASE v36) ---
 const APP_CONFIG = {
     appName: "E-Umar",
-    version: "v3.2",
+    version: "v3.3",
     supabaseUrl: "https://fxtmilqvxomuvkxxzjli.supabase.co",
     supabaseKey: "sb_publishable_aXcK3znrtRo0d3gH-Wg1Ew_-0Z3262O"
 };
@@ -156,14 +156,20 @@ const DB = {
     delete: async (id) => {
         const idx = allData.findIndex(d => d._id === id);
         if (idx !== -1) {
-            const collection = allData[idx].__type;
+            const item = allData[idx];
+            const collection = item.__type;
 
-            // 1. Optimistic Update
-            allData.splice(idx, 1);
+            // 1. Optimistic Update (Soft Delete)
+            item._deleted = true;
+            item.updated_at = new Date().toISOString();
+
+            // We keep it in allData (as a tombstone) but UI filters it out via loadData()
+            allData[idx] = item;
             DB.saveAll(allData);
 
-            // 2. Queue
-            DB.addToQueue('delete', collection, { _id: id });
+            // 2. Queue as UPDATE (to set _deleted=true on server)
+            // We use 'update' action instead of 'delete' action to avoid FK constraints
+            DB.addToQueue('update', collection, { _id: id, _deleted: true });
             DB.triggerAutoSync();
         }
     },
@@ -191,7 +197,7 @@ const DB = {
             let cloudData = [];
 
             // Parallel Fetch
-            const promises = tables.map(table => sb.from(table).select('*').then(res => {
+            const promises = tables.map(table => sb.from(table).select('*').range(0, 9999).then(res => {
                 if (res.error) throw res.error;
                 // Add internal type so we know what table it belongs to
                 // Fix: Frontend expects 'user' (singular), but table is 'users'

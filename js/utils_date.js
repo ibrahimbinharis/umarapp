@@ -60,10 +60,26 @@ window.DateUtils = {
     formatDateFriendly: (date) => {
         if (!date) return '-';
         const dStr = getTodayDateString();
-        // Simple check
-        if (date.startsWith(dStr)) return 'Hari ini';
-        // Return normal short date
-        const d = new Date(date);
-        return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+
+        // Handle string input (ISO or YYYY-MM-DD)
+        if (typeof date === 'string') {
+            if (date.startsWith(dStr)) return 'Hari ini';
+            const d = new Date(date);
+            if (isNaN(d.getTime())) return date;
+            return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+        }
+
+        // Handle Date object
+        if (date instanceof Date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const isoLocal = `${year}-${month}-${day}`;
+
+            if (isoLocal === dStr) return 'Hari ini';
+            return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+        }
+
+        return '-';
     }
 };
