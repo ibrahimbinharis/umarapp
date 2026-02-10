@@ -1394,11 +1394,63 @@
             deferredPrompt = null;
         };
 
+        // UI Toast for Update
+        function showUpdateNotification() {
+            const toast = document.createElement('div');
+            toast.id = 'pwa-update-toast';
+            toast.className = 'fixed bottom-4 left-4 right-4 md:left-auto md:right-8 md:w-96 bg-slate-900 text-white p-4 rounded-xl shadow-2xl flex items-center justify-between z-[100] animate-in slide-in-from-bottom duration-300';
+            toast.innerHTML = `
+                <div class="flex items-center gap-3">
+                    <span class="material-symbols-outlined text-yellow-400">system_update</span>
+                    <div>
+                        <p class="font-bold text-sm">Versi Baru Tersedia</p>
+                        <p class="text-xs text-slate-300">Aplikasi akan diperbarui.</p>
+                    </div>
+                </div>
+                <button id="pwa-update-btn" class="px-3 py-1.5 bg-primary text-white text-xs font-bold rounded-lg hover:bg-blue-600 transition">
+                    Update
+                </button>
+            `;
+            document.body.appendChild(toast);
+
+            document.getElementById('pwa-update-btn').addEventListener('click', () => {
+                if (newWorker) {
+                    newWorker.postMessage({ type: 'SKIP_WAITING' });
+                }
+                toast.remove();
+            });
+        }
+
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js?v=3.0')
-                    .then(reg => console.log('SW Registered!', reg))
-                    .catch(err => console.log('SW Fail', err));
+                navigator.serviceWorker.register('sw.js?v=3.0').then(reg => {
+                    console.log('SW Registered!', reg);
+
+                    // 1. Check if update is already waiting (e.g. from previous visit)
+                    if (reg.waiting) {
+                        newWorker = reg.waiting;
+                        showUpdateNotification();
+                    }
+
+                    // 2. Listen for new updates found
+                    reg.addEventListener('updatefound', () => {
+                        newWorker = reg.installing;
+                        newWorker.addEventListener('statechange', () => {
+                            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                // New content is available; please refresh.
+                                showUpdateNotification();
+                            }
+                        });
+                    });
+                }).catch(err => console.log('SW Fail', err));
+
+                // 3. Reload page when new SW takes control
+                let refreshing;
+                navigator.serviceWorker.addEventListener('controllerchange', () => {
+                    if (refreshing) return;
+                    window.location.reload();
+                    refreshing = true;
+                });
             });
         }
     </script>
