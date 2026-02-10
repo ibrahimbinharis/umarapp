@@ -1,4 +1,4 @@
-const CACHE_NAME = "v2.2";
+const CACHE_NAME = "e-umar-v3.0";
 const ASSETS_TO_CACHE = [
     "./",
     "./index.html",
