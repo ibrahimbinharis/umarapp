@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="id">
 
 <head>
@@ -1396,7 +1396,7 @@
 
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js?v=2')
+                navigator.serviceWorker.register('sw.js?v=3.0')
                     .then(reg => console.log('SW Registered!', reg))
                     .catch(err => console.log('SW Fail', err));
             });
