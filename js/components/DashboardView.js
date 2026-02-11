@@ -19,9 +19,26 @@ const DashboardView = {
         const getInitials = window.getInitials || ((name) => name ? name.substring(0, 2).toUpperCase() : '??');
         const formatDate = window.formatDate || ((d) => d);
 
+        // Collapsible Menu Logic
+        const { ref, computed } = Vue;
+        const isMenuExpanded = ref(false);
+
+        const displayedMenus = computed(() => {
+            const menus = props.myMenus.filter(m => m.id !== 'logout');
+            if (isMenuExpanded.value) return menus;
+            return menus.slice(0, 8); // Show 2 rows (4 cols x 2 rows = 8 items)
+        });
+
+        const hasMoreMenus = computed(() => {
+            return props.myMenus.filter(m => m.id !== 'logout').length > 8;
+        });
+
         return {
             getInitials,
-            formatDate
+            formatDate,
+            isMenuExpanded,
+            displayedMenus,
+            hasMoreMenus
         };
     },
     template: `
@@ -46,19 +63,30 @@ const DashboardView = {
             </div>
         </div>
 
-        <!-- Menu Grid -->
-        <div class="grid grid-cols-4 gap-3 mb-6">
-            <button v-for="menu in myMenus.filter(m => m.id !== 'logout')" :key="menu.id"
-                @click="$emit('navigate', menu.id)" class="flex flex-col items-center gap-2 group">
-                <div class="menu-icon-box w-14 h-14 flex items-center justify-center rounded-2xl transition-all shadow-sm border border-slate-100 bg-white group-hover:shadow-md group-active:scale-95"
-                    :class="menu.id === 'input' ? 'bg-blue-50 border-blue-200' : ''">
-                    <span class="material-symbols-outlined text-2xl"
-                        :class="menu.id === 'input' ? 'text-primary' : 'text-slate-600'">{{ menu.icon
-                        }}</span>
-                </div>
-                <span class="text-[11px] font-medium text-slate-600 text-center leading-tight">{{
-                    menu.label }}</span>
-            </button>
+        <!-- Menu Grid Container -->
+        <div class="bg-white px-5 pt-5 pb-8 rounded-3xl border border-slate-100 card-shadow mb-6 relative transition-all duration-300">
+            <div class="grid grid-cols-4 gap-3 transition-all duration-500 ease-in-out">
+                <button v-for="menu in displayedMenus" :key="menu.id"
+                    @click="$emit('navigate', menu.id)" class="flex flex-col items-center gap-2 group animate-fade-in-up">
+                    <div class="menu-icon-box w-14 h-14 flex items-center justify-center rounded-2xl transition-all shadow-sm border border-slate-100 bg-white group-hover:shadow-md group-active:scale-95"
+                        :class="menu.id === 'input' ? 'bg-blue-50 border-blue-200' : ''">
+                        <span class="material-symbols-outlined text-2xl"
+                            :class="menu.id === 'input' ? 'text-primary' : 'text-slate-600'">{{ menu.icon
+                            }}</span>
+                    </div>
+                    <span class="text-[11px] font-medium text-slate-600 text-center leading-tight">{{
+                        menu.label }}</span>
+                </button>
+            </div>
+
+            <!-- Expand/Collapse Toggle -->
+            <div v-if="hasMoreMenus" class="absolute bottom-1 left-1/2 transform -translate-x-1/2">
+                <button @click="isMenuExpanded = !isMenuExpanded" 
+                    class="flex items-center justify-center w-8 h-8 rounded-full text-slate-400 hover:bg-slate-50 transition active:scale-90">
+                    <span class="material-symbols-outlined transition-transform duration-300"
+                        :class="{'rotate-180': isMenuExpanded}">expand_more</span>
+                </button>
+            </div>
         </div>
 
         <!-- Wali View -->
@@ -224,3 +252,4 @@ const DashboardView = {
     </div>
     `
 };
+
