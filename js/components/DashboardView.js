@@ -44,7 +44,7 @@ const DashboardView = {
     template: `
     <div class="fade-in pb-24 relative">
         <!-- DECORS: Blue Curved Background -->
-        <div class="absolute top-0 left-0 right-0 h-[20rem] bg-primary rounded-b-[15px] -mx-4 md:-mx-6 -mt-20 md:-mt-24 -z-0 overflow-hidden shadow-xl">
+        <div class="absolute top-0 left-0 right-0 h-[20rem] bg-primary rounded-b-[35px] -mx-4 md:-mx-6 -mt-20 md:-mt-24 -z-0 overflow-hidden shadow-xl">
             <!-- Decorative Circles for Effect -->
             <div class="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-16 -mt-16 blur-3xl"></div>
             <div class="absolute bottom-0 left-0 w-48 h-48 bg-white/10 rounded-full -ml-12 -mb-12 blur-3xl"></div>
