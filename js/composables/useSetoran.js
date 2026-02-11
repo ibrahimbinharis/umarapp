@@ -42,7 +42,7 @@ function useSetoran(uiData, DB, refreshData) {
         surah_to_latin: '',
 
         // Manzil specific
-        manzil_mode: 'juz', // juz | page
+        manzil_mode: 'page', // juz | page
         juz: 1,
         page_from: 1,
         page_to: 20
@@ -246,9 +246,10 @@ function useSetoran(uiData, DB, refreshData) {
 
         // Reset fields based on type
         if (type === 'Manzil') {
-            setoranForm.pages = 20; // Default 1 Juz
-            setoranForm.manzil_mode = 'juz';
-            setoranForm.juz = 1;
+            setoranForm.pages = 20; // Default 1 Juz (approx)
+            setoranForm.manzil_mode = 'page';
+            setoranForm.page_from = 1;
+            setoranForm.page_to = 20;
         } else if (type === 'Sabaq') {
             setoranForm.pages = 1;
             autoCalcInfo.value.visible = false;
@@ -553,6 +554,38 @@ function useSetoran(uiData, DB, refreshData) {
     });
 
     /**
+     * Reset Form to Defaults
+     */
+    const resetSetoranForm = () => {
+        // Reset Common
+        setoranForm.santri_id = '';
+        setoranSantriSearch.value = '';
+        setoranForm.setoran_date = window.DateUtils.getTodayDateString();
+        setoranForm.setoran_time = window.DateUtils.getCurrentTimeString();
+        setoranForm.errors = 0;
+
+        // Reset Type Specifics
+        if (setoranForm.setoran_type === 'Sabaq') {
+            setoranForm.surah_from = 1;
+            setoranForm.surah_to = 1;
+            setoranForm.ayat_from = 1;
+            setoranForm.ayat_to = 10;
+            setoranForm.pages = 1;
+        } else if (setoranForm.setoran_type === 'Manzil') {
+            setoranForm.manzil_mode = 'page';
+            setoranForm.page_from = 1;
+            setoranForm.page_to = 20;
+            setoranForm.pages = 20;
+        } else {
+            // Sabqi / Robt
+            setoranForm.pages = 1;
+        }
+
+        editingId.value = null;
+        updateGrade();
+    };
+
+    /**
      * Save setoran (CREATE or UPDATE)
      */
     const saveSetoran = async () => {
@@ -602,7 +635,6 @@ function useSetoran(uiData, DB, refreshData) {
                 // UPDATE mode
                 await DB.update(editingId.value, payload);
                 alert('Setoran berhasil diupdate!');
-                editingId.value = null; // Reset edit mode
             } else {
                 // CREATE mode
                 await DB.create('setoran', payload);
@@ -614,12 +646,8 @@ function useSetoran(uiData, DB, refreshData) {
                 refreshData();
             }
 
-            // Reset form
-            setoranForm.santri_id = '';
-            setoranSantriSearch.value = ''; // Reset search text
-            setoranForm.pages = setoranForm.setoran_type === 'Manzil' ? 20 : 1;
-            setoranForm.errors = 0;
-            updateGrade();
+            // FULL RESET
+            resetSetoranForm();
 
             return true;
         } catch (error) {
@@ -766,6 +794,7 @@ function useSetoran(uiData, DB, refreshData) {
         cancelEdit,
         saveSetoran,
         deleteSetoran,
+        resetSetoranForm,
 
         // Helpers
         getSantriName,

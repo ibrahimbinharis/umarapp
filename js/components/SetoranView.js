@@ -25,7 +25,8 @@ const SetoranView = {
         'save-setoran',
         'edit-setoran',
         'delete-setoran',
-        'toggle-menu'
+        'toggle-menu',
+        'reset-setoran'
     ],
     setup(props, { emit }) {
         // Helper to emit search update
@@ -268,7 +269,11 @@ const SetoranView = {
                     class="w-full p-2 border rounded-xl text-xs font-bold">
             </div>
 
-            <!-- Save Button -->
+            <!-- Actions -->
+            <button @click="$emit('reset-setoran')"
+                class="w-full bg-slate-100 text-slate-600 py-3 rounded-xl font-bold shadow-sm text-lg hover:bg-slate-200 transition mb-3">
+                Reset
+            </button>
             <button @click="$emit('save-setoran')"
                 class="w-full bg-primary text-white py-4 rounded-xl font-bold shadow-lg text-lg hover:bg-blue-800 transition">
                 Simpan Setoran

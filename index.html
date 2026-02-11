@@ -292,7 +292,8 @@
                             @validate-ayat="validateAyat" @toggle-manzil-mode="toggleManzilMode"
                             @calc-pages-from-range="calcPagesFromRange" @adjust-value="adjustValue"
                             @update-grade="updateGrade" @save-setoran="saveSetoran" @edit-setoran="editSetoran"
-                            @delete-setoran="deleteSetoran" @toggle-menu="toggleMenu"></setoran-view>
+                            @delete-setoran="deleteSetoran" @toggle-menu="toggleMenu"
+                            @reset-setoran="resetSetoranForm"></setoran-view>
                     </div>
                     <!-- TARGET VIEW (Component) -->
                     <div v-if="currentView === 'target'" class="fade-in">
@@ -307,7 +308,6 @@
                         <riwayat-view :riwayat-state="riwayatState" :paginated-riwayat="paginatedRiwayat"
                             :riwayat-total-pages="riwayatTotalPages"
                             :riwayat-filtered-santri-options="riwayatFilteredSantriOptions"
-                            :riwayat-filtered-santri-options="riwayatFilteredSantriOptions"
                             :riwayat-selected-santri-name="riwayatSelectedSantriName" :filter-counts="filterCounts"
                             :active-filter-count="activeFilterCount" :user-session="userSession"
                             :format-date-long="formatDateLong" :format-time="formatTime"
@@ -315,7 +315,9 @@
                             :select-riwayat-santri="selectRiwayatSantri" :toggle-select="toggleSelect"
                             :toggle-select-all="toggleSelectAll" :delete-selected="deleteSelected"
                             :toggle-action-menu="toggleActionMenu" :close-action-menu="closeActionMenu"
-                            :edit-riwayat="editRiwayat" :delete-riwayat="deleteRiwayat"></riwayat-view>
+                            :edit-riwayat="editRiwayat" :delete-riwayat="deleteRiwayat"
+                            :set-quick-date-filter="setQuickDateFilter" :reset-all-filters="resetAllFilters"
+                            :remove-filter="removeFilter"></riwayat-view>
                     </div>
 
                     <!-- REKAP VIEW (New v34) -->
@@ -1494,7 +1496,7 @@
 
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js?v=3.9').then(reg => {
+                navigator.serviceWorker.register('sw.js?v=4.0').then(reg => {
                     console.log('SW Registered!', reg);
 
                     // 1. Check if update is already waiting (e.g. from previous visit)
@@ -1527,7 +1529,4 @@
     </script>
 </body>
 
-
 </html>
-
-
