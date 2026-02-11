@@ -1496,8 +1496,7 @@
 
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                // Add timestamp to bypass browser HTTP cache for the sw.js file itself
-                navigator.serviceWorker.register('sw.js?t=' + new Date().getTime()).then(reg => {
+                navigator.serviceWorker.register('sw.js?v=4.2').then(reg => {
                     console.log('SW Registered!', reg);
 
                     // 1. Check if update is already waiting (e.g. from previous visit)
