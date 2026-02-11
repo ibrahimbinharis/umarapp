@@ -271,11 +271,11 @@ const SetoranView = {
 
             <!-- Actions -->
             <button @click="$emit('reset-setoran')"
-                class="w-full bg-slate-100 text-slate-600 py-3 rounded-xl font-bold shadow-sm text-lg hover:bg-slate-200 transition mb-3">
+                class="w-full bg-slate-100 text-slate-600 py-2 rounded-xl font-bold shadow-sm text-sm hover:bg-slate-200 transition mb-3">
                 Reset
             </button>
             <button @click="$emit('save-setoran')"
-                class="w-full bg-primary text-white py-4 rounded-xl font-bold shadow-lg text-lg hover:bg-blue-800 transition">
+                class="w-full bg-primary text-white py-3 rounded-xl font-bold shadow-lg text-base hover:bg-blue-800 transition">
                 Simpan Setoran
             </button>
         </div>
