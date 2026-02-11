@@ -79,13 +79,9 @@ const DashboardView = {
                 </button>
             </div>
 
-            <!-- Expand/Collapse Toggle -->
-            <div v-if="hasMoreMenus" class="absolute bottom-1 left-1/2 transform -translate-x-1/2">
-                <button @click="isMenuExpanded = !isMenuExpanded" 
-                    class="flex items-center justify-center w-8 h-8 rounded-full text-slate-400 hover:bg-slate-50 transition active:scale-90">
-                    <span class="material-symbols-outlined transition-transform duration-300"
-                        :class="{'rotate-180': isMenuExpanded}">expand_more</span>
-                </button>
+            <!-- Expand/Collapse Handle -->
+            <div v-if="hasMoreMenus" class="absolute bottom-2 left-1/2 transform -translate-x-1/2 w-full flex justify-center pb-2 cursor-pointer" @click="isMenuExpanded = !isMenuExpanded">
+                <div class="w-10 h-1 bg-slate-200 rounded-full hover:bg-slate-300 transition-colors"></div>
             </div>
         </div>
 
