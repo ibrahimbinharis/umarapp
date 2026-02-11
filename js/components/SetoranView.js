@@ -39,7 +39,7 @@ const SetoranView = {
     },
     template: `
     <div class="fade-in pb-48">
-        <h2 class="text-2xl font-bold mb-5">Input Setoran</h2>
+        <!-- Header Removed -->
 
         <div class="bg-white p-6 rounded-3xl border shadow-sm space-y-5">
             <!-- Santri Custom Searchable Dropdown -->

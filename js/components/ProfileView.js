@@ -10,11 +10,8 @@ const ProfileView = {
         appVersion: { type: String, default: '1.0.0' }
     },
     template: `
-    <div class="fade-in space-y-6 pb-24">
-        <div class="px-2">
-            <h2 class="text-2xl font-bold text-slate-900">Pengaturan Profil</h2>
-            <p class="text-xs text-slate-500">Perbarui informasi akun Anda</p>
-        </div>
+    <div class="fade-in space-y-6 pb-8">
+        <!-- Header Removed -->
 
         <div class="bg-white p-6 rounded-3xl border shadow-sm mx-2">
             <div class="flex flex-col items-center mb-6">

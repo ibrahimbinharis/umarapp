@@ -125,11 +125,26 @@ function useKelas(uiData, DB) {
         }
     };
 
+    // FAB Click State
+    const isKelasFabClicked = Vue.ref(false);
+
+    // Reset FAB state when modal closes
+    Vue.watch(() => kelasModalState.isOpen, (newVal) => {
+        if (!newVal) {
+            isKelasFabClicked.value = false;
+        }
+    });
+
+    const handleKelasFabClick = () => {
+        isKelasFabClicked.value = true;
+    };
+
     // ===== RETURN =====
     return {
         // State
         kelasForm,
         kelasModalState,
+        isKelasFabClicked, // Renamed
 
         // Computed
         filteredKelas,
@@ -138,6 +153,7 @@ function useKelas(uiData, DB) {
         openKelasModal,
         closeKelasModal,
         saveKelas,
-        deleteKelas
+        deleteKelas,
+        handleKelasFabClick // Renamed
     };
 }

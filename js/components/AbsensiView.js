@@ -12,12 +12,27 @@ const AbsensiView = {
     },
     emits: ['update:genderFilter'],
     setup(props) {
-        // Simple date formatter for display (e.g., DD MMM YYYY)
-        const formatDisplayDate = (dateStr) => {
+        const { computed } = Vue;
+
+        // Formatter Logic
+        const displayDate = computed(() => {
+            const dateStr = props.absensiState.dateFilter;
             if (!dateStr) return '';
+
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            const todayStr = `${year}-${month}-${day}`;
+
+            if (dateStr === todayStr) {
+                return "Hari ini";
+            }
+
             const date = new Date(dateStr);
-            return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
-        };
+            const dateFormatted = date.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+            return `${props.absensiDayName}, ${dateFormatted}`;
+        });
 
         // Set date to today
         const setToday = () => {
@@ -29,7 +44,7 @@ const AbsensiView = {
         };
 
         return {
-            formatDisplayDate,
+            displayDate,
             setToday
         };
     },
@@ -37,12 +52,7 @@ const AbsensiView = {
     <div class="space-y-4 pb-15 fade-in">
         <!-- Header & Date Nav -->
         <div class="bg-white p-4 rounded-xl border border-slate-100 shadow-sm space-y-4 sticky top-0 z-20">
-            <div class="flex justify-between items-center">
-                <div>
-                    <h2 class="text-2xl font-bold text-slate-800">Absensi Kelas</h2>
-                    <p class="text-xs text-slate-500">Pilih jadwal untuk mengisi kehadiran</p>
-                </div>
-            </div>
+            <!-- Header Removed -->
 
             <!-- Date Navigator -->
             <div class="flex items-center justify-between bg-slate-50 p-1 rounded-xl border border-slate-100">
@@ -51,9 +61,8 @@ const AbsensiView = {
                     <span class="material-symbols-outlined">chevron_left</span>
                 </button>
                 
-                <div class="text-center">
-                    <h3 class="font-bold text-slate-800 text-sm">{{ absensiDayName }}</h3>
-                    <p class="text-[10px] text-slate-500 font-mono">{{ formatDisplayDate(absensiState.dateFilter) }}</p>
+                <div class="text-center flex-1">
+                    <span class="font-bold text-slate-800 text-sm block">{{ displayDate }}</span>
                 </div>
 
                 <button @click="changeAbsensiDate(1)" 
@@ -61,12 +70,6 @@ const AbsensiView = {
                     <span class="material-symbols-outlined">chevron_right</span>
                 </button>
             </div>
-
-            <!-- Today Button -->
-            <button @click="setToday" 
-                class="w-full py-2 rounded-lg bg-white shadow-sm flex items-center justify-center text-slate-500 hover:text-primary transition active:scale-95 border border-slate-100">
-                <span class="text-xs font-bold">Hari Ini</span>
-            </button>
 
             <!-- Gender Filter -->
             <div class="flex p-1 bg-slate-100 rounded-lg">
@@ -81,6 +84,12 @@ const AbsensiView = {
                     Putri
                 </button>
             </div>
+
+            <!-- Today Button -->
+            <button @click="setToday" 
+                class="w-full py-2 rounded-lg bg-white shadow-sm flex items-center justify-center text-slate-500 hover:text-primary transition active:scale-95 border border-slate-100">
+                <span class="text-xs font-bold">Hari Ini</span>
+            </button>
         </div>
 
         <!-- Schedule List -->

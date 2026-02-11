@@ -1,7 +1,7 @@
 // --- 1. CONFIG & DATABASE (SUPABASE v36) ---
 const APP_CONFIG = {
     appName: "E-Umar",
-    version: "v3.5",
+    version: "v3.6",
     supabaseUrl: "https://fxtmilqvxomuvkxxzjli.supabase.co",
     supabaseKey: "sb_publishable_aXcK3znrtRo0d3gH-Wg1Ew_-0Z3262O"
 };

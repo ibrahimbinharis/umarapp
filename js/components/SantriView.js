@@ -7,7 +7,8 @@ const SantriView = {
         'activeDropdown',
         'uiData',
         'loading',
-        'showTrash' // New Prop
+        'showTrash', // New Prop
+        'isModalOpen' // New Prop
     ],
     emits: [
         'update:santriGenderFilter',
@@ -19,38 +20,54 @@ const SantriView = {
         'restore'       // New Emit
     ],
     setup(props) {
+        const { ref, watch } = Vue;
         // Helpers
         const getInitials = window.getInitials || ((name) => name ? name.substring(0, 2).toUpperCase() : '??');
         const formatWANumber = window.formatWANumber || ((phone) => phone);
 
+        // FAB Click State
+        const isFabClicked = ref(false);
+
+        // Reset FAB state when modal closes
+        watch(() => props.isModalOpen, (newVal) => {
+            if (!newVal) {
+                isFabClicked.value = false;
+            }
+        });
+
+        const onSantriFabClick = () => {
+            isFabClicked.value = true;
+        };
+
         return {
             getInitials,
-            formatWANumber
+            formatWANumber,
+            isFabClicked,
+            onSantriFabClick
         };
     },
     template: `
     <div class="fade-in">
-        <div class="flex justify-between items-center mb-6">
-            <h2 class="text-2xl font-bold flex items-center gap-2">
-                Data Santri 
-                <span v-if="showTrash" class="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full">Sampah</span>
-            </h2>
-            <div class="flex gap-2">
-                <!-- Trash Toggle -->
+        <!-- Header Removed -->
+
+        <!-- Floating Action Buttons -->
+        <teleport to="body">
+            <div class="fixed bottom-24 right-4 flex flex-col gap-3 z-[9999]" v-if="uiData.santri && !isModalOpen"> <!-- Hide when modal is open -->
+                <!-- Trash Toggle (Restore Mode) -->
                 <button @click="$emit('toggle-trash')"
-                    :class="showTrash ? 'bg-red-50 text-red-600 border-red-200' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'"
-                    class="size-10 flex items-center justify-center rounded-xl border shadow-sm transition"
-                    title="Tong Sampah">
-                    <span class="material-symbols-outlined">{{ showTrash ? 'delete_forever' : 'delete' }}</span>
+                    :class="showTrash ? 'bg-red-500 text-white shadow-xl' : 'bg-white text-slate-400 shadow-lg'"
+                    class="size-12 rounded-full flex items-center justify-center transition hover:scale-110 active:scale-95 border border-slate-100"
+                    :title="showTrash ? 'Keluar Mode Sampah' : 'Lihat Sampah'">
+                    <span class="material-symbols-outlined text-xl">{{ showTrash ? 'close' : 'restore_from_trash' }}</span>
                 </button>
 
-                <!-- Add Button (Hidden in Trash Mode) -->
-                <button v-if="!showTrash" @click="$emit('open-modal')"
-                    class="bg-primary text-white px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-bold shadow-lg shadow-blue-900/20 hover:bg-blue-800 transition">
-                    <span class="material-symbols-outlined text-lg">add</span> Tambah
+                <!-- Add Button (Main FAB) -->
+                <button v-if="!showTrash && !isFabClicked" @click="onSantriFabClick(); $emit('open-modal')"
+                    class="size-14 rounded-full bg-primary text-white shadow-xl flex items-center justify-center transition hover:scale-110 active:scale-95 hover:bg-blue-700">
+                    <span class="material-symbols-outlined text-3xl">add</span>
                 </button>
             </div>
-        </div>
+        </teleport>
 
         <!-- Search -->
         <div

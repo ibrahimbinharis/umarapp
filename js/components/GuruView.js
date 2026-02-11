@@ -1,21 +1,41 @@
 const GuruView = {
     props: [
         'filteredGuru',
-        'activeDropdown'
+        'activeDropdown',
+        'isModalOpen' // New Prop
     ],
     emits: [
         'open-modal',
         'delete',
         'toggle-dropdown'
     ],
+    setup(props) {
+        const { ref, watch } = Vue;
+
+        // FAB Click State
+        const isFabClicked = ref(false);
+
+        // Reset FAB state when modal closes
+        watch(() => props.isModalOpen, (newVal) => {
+            if (!newVal) {
+                isFabClicked.value = false;
+            }
+        });
+
+        const onGuruFabClick = () => {
+            isFabClicked.value = true;
+        };
+
+        return {
+            isFabClicked,
+            onGuruFabClick
+        };
+    },
     template: `
     <div class="fade-in space-y-4 pb-32">
         <div class="flex justify-between items-center px-2">
             <h2 class="text-2xl font-bold text-slate-900">Data Guru</h2>
-            <button @click="$emit('open-modal')"
-                class="bg-primary text-white px-4 py-2 rounded-xl text-sm font-bold shadow flex items-center gap-2 hover:bg-blue-800 transition">
-                <span class="material-symbols-outlined text-lg">add</span> Tambah
-            </button>
+            <!-- Header Button Removed -->
         </div>
 
         <!-- Guru List -->
@@ -63,6 +83,16 @@ const GuruView = {
                 <p class="text-slate-400 text-sm">Belum ada data guru</p>
             </div>
         </div>
+
+        <!-- Floating Action Button (Admin Only - Implicit check via parent view logic if needed, but here just UI) -->
+        <teleport to="body">
+            <div class="fixed bottom-24 right-4 z-[9999]" v-if="!isModalOpen"> <!-- Ensure parent passes isModalOpen correctly -->
+                <button v-if="!isFabClicked" @click="onGuruFabClick(); $emit('open-modal')"
+                    class="size-14 rounded-full bg-primary text-white shadow-xl flex items-center justify-center transition hover:scale-110 active:scale-95 hover:bg-blue-700">
+                    <span class="material-symbols-outlined text-3xl">add</span>
+                </button>
+            </div>
+        </teleport>
     </div>
     `
 };

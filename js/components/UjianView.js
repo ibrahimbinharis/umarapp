@@ -17,6 +17,35 @@ const UjianView = {
         'submit-ujian'
     ],
     setup(props) {
+        const { ref, computed } = Vue;
+
+        // --- Searchable Dropdown State ---
+        const searchQuery = ref('');
+        const isDropdownOpen = ref(false);
+
+        // Filter Logic
+        const filteredSantriList = computed(() => {
+            if (!props.uiData.santri) return [];
+            const q = searchQuery.value.toLowerCase();
+            return props.uiData.santri.filter(s =>
+                s.full_name.toLowerCase().includes(q)
+            );
+        });
+
+        // Computed Label
+        const selectedSantriLabel = computed(() => {
+            const id = props.ujianForm.santri_id;
+            if (!id) return 'Pilih Santri';
+            const s = props.uiData.santri.find(x => x.santri_id === id);
+            return s ? s.full_name : 'Santri tidak ditemukan';
+        });
+
+        const selectSantri = (s) => {
+            props.ujianForm.santri_id = s.santri_id;
+            isDropdownOpen.value = false;
+            searchQuery.value = '';
+        };
+
         // Local Helpers
         const getSantriName = (id) => {
             if (!id || !props.uiData.santri) return '-';
@@ -32,12 +61,17 @@ const UjianView = {
 
         return {
             getSantriName,
-            formatDate
+            formatDate,
+            searchQuery,
+            isDropdownOpen,
+            filteredSantriList,
+            selectedSantriLabel,
+            selectSantri
         };
     },
     template: `
     <div class="fade-in">
-        <h2 class="text-2xl font-bold mb-4">Ujian & Evaluasi</h2>
+        <!-- Header Removed -->
 
         <!-- Tabs -->
         <div class="bg-white p-2 rounded-xl border border-slate-100 card-shadow flex gap-2 mb-6">
@@ -72,14 +106,51 @@ const UjianView = {
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-slate-700 mb-1">Santri</label>
-                            <select v-model="ujianForm.santri_id"
-                                class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white font-bold text-sm focus:outline-none focus:border-primary">
-                                <option value="">Pilih Santri</option>
-                                <option v-for="s in uiData.santri" :value="s.santri_id">{{
-                                    s.full_name
-                                    }}
-                                </option>
-                            </select>
+                            <!-- Custom Searchable Dropdown (Setoran Style) -->
+                            <div class="relative">
+                                <!-- Trigger Button -->
+                                <button @click="isDropdownOpen = !isDropdownOpen"
+                                     class="w-full px-4 py-3 rounded-xl border text-sm font-bold bg-white text-left flex justify-between items-center transition"
+                                     :class="isDropdownOpen ? 'ring-2 ring-primary/20 border-primary' : 'border-slate-200'">
+                                    <span :class="!ujianForm.santri_id ? 'text-slate-400' : 'text-slate-900'">
+                                        {{ selectedSantriLabel }}
+                                    </span>
+                                    <span class="material-symbols-outlined text-slate-400">expand_more</span>
+                                </button>
+
+                                <!-- Backdrop (Click Outside) -->
+                                <div v-if="isDropdownOpen" @click="isDropdownOpen = false" class="fixed inset-0 z-10 bg-transparent cursor-default"></div>
+
+                                <!-- Dropdown Body -->
+                                <div v-if="isDropdownOpen" 
+                                     class="absolute z-20 top-full left-0 right-0 mt-2 bg-white border border-slate-100 rounded-xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+                                    
+                                    <!-- Search Input -->
+                                    <div class="p-2 border-b border-slate-50">
+                                        <div class="flex items-center gap-2 bg-slate-50 px-3 py-2 rounded-lg border border-slate-100">
+                                            <span class="material-symbols-outlined text-slate-400 text-lg">search</span>
+                                            <input v-model="searchQuery" 
+                                                   autofocus
+                                                   placeholder="Cari nama..." 
+                                                   class="bg-transparent w-full text-sm font-bold outline-none placeholder:font-normal text-slate-700"
+                                                   @click.stop>
+                                        </div>
+                                    </div>
+
+                                    <!-- List -->
+                                    <div class="max-h-60 overflow-y-auto custom-scrollbar">
+                                        <div v-for="s in filteredSantriList" :key="s.santri_id"
+                                             @click="selectSantri(s)"
+                                             class="px-4 py-3 hover:bg-blue-50 cursor-pointer border-b border-slate-50 last:border-0 transition-colors group">
+                                            <p class="text-sm font-bold text-slate-800 group-hover:text-primary">{{ s.full_name }}</p>
+                                            <p class="text-[10px] text-slate-500">{{ s.santri_id }} &bull; {{ s.kelas || '-' }}</p>
+                                        </div>
+                                        <div v-if="filteredSantriList.length === 0" class="p-4 text-center text-slate-400 text-xs italic">
+                                            Tidak ditemukan "{{ searchQuery }}"
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -250,8 +321,8 @@ const UjianView = {
                     </div>
 
                     <button @click="$emit('submit-ujian')"
-                        class="w-full bg-primary text-white py-3 rounded-xl font-bold shadow-lg shadow-blue-900/20 hover:bg-blue-800 transition active:scale-95 flex items-center justify-center gap-2 mt-4">
-                        <span class="material-symbols-outlined">save</span> Simpan Nilai {{
+                        class="w-full bg-primary text-white py-3 rounded-xl font-bold shadow-lg shadow-blue-900/20 hover:bg-blue-800 transition active:scale-95 flex items-center justify-center mt-4">
+                        Simpan Nilai {{
                         ujianForm.tab ===
                         'bulanan' ? 'Bulanan' : 'Semester' }}
                     </button>
@@ -266,7 +337,7 @@ const UjianView = {
                     Riwayat {{
                     ujianForm.tab === 'bulanan' ? 'Bulanan' : 'Semester' }}
                 </h3>
-                <div class="space-y-3">
+                <div class="space-y-3 max-h-[500px] overflow-y-auto pr-1 pb-[50px] custom-scrollbar">
                     <div v-for="u in filteredUjian" :key="u._id"
                         class="flex justify-between items-center text-sm border-b border-slate-50 pb-2 last:border-0 hover:bg-slate-50 p-1 rounded transition">
                         <div>

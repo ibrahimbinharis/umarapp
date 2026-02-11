@@ -63,7 +63,13 @@ function useAbsensi(uiData, DB, modalState) {
         const jadwalData = uiData.jadwal || [];
         return jadwalData
             .filter(j => j.day === absensiDayName.value)
-            .filter(j => (j.gender || 'L') === genderFilter.value) // Filter by gender
+            .filter(j => {
+                // Special Case: 'Kelas Umum' appears for BOTH genders
+                if (j.class_name === 'Umum') return true;
+
+                // Default: Strict gender match
+                return (j.gender || 'L') === genderFilter.value;
+            })
             .sort((a, b) => (a.time || '').localeCompare(b.time || ''));
     });
 
@@ -145,12 +151,17 @@ function useAbsensi(uiData, DB, modalState) {
         );
 
         // Filter by Kelas
-        if (jadwal.class_name) {
+        if (jadwal.class_name && jadwal.class_name !== 'Umum') {
             santriData = santriData.filter(s => s.kelas === jadwal.class_name);
         }
 
-        // Filter by Gender (Enforce strict gender separation based on schedule)
-        const targetGender = jadwal.gender || genderFilter.value || 'L';
+        // Filter by Gender
+        // If 'Kelas Umum', respect the UI Filter. Otherwise use Schedule Gender.
+        let targetGender = jadwal.gender || genderFilter.value || 'L';
+        if (jadwal.class_name === 'Umum') {
+            targetGender = genderFilter.value || 'L'; // Force use UI filter
+        }
+
         santriData = santriData.filter(s => (s.gender || 'L') === targetGender);
 
         // Initialize form state for each santri

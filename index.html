@@ -233,7 +233,8 @@
                         <santri-view :user-session="userSession" :santri-gender-filter="santriGenderFilter"
                             :search-text="searchText" :filtered-santri="filteredSantri"
                             :active-dropdown="activeDropdown" :ui-data="uiData" :loading="loading"
-                            :show-trash="showTrash" @update:santri-gender-filter="santriGenderFilter = $event"
+                            :show-trash="showTrash" :is-modal-open="modalState.isOpen"
+                            @update:santri-gender-filter="santriGenderFilter = $event"
                             @update:search-text="searchText = $event" @open-modal="openSantriModal"
                             @delete="deleteSantri" @restore="restoreSantri" @toggle-dropdown="toggleDropdown"
                             @toggle-trash="toggleTrash"></santri-view>
@@ -243,7 +244,7 @@
                     <!-- GURU VIEW (Component) -->
                     <div v-if="currentView === 'guru'" class="h-full w-full">
                         <guru-view :filtered-guru="filteredGuru" :active-dropdown="activeDropdown"
-                            @open-modal="openGuruModal" @delete="deleteGuru"
+                            :is-modal-open="modalState.isOpen" @open-modal="openGuruModal" @delete="deleteGuru"
                             @toggle-dropdown="toggleDropdown"></guru-view>
                     </div>
                     <!-- UJIAN VIEW -->
@@ -265,6 +266,15 @@
 
 
                     <!-- JADWAL VIEW -->
+                    <div v-if="currentView === 'jadwal'" class="h-full w-full">
+                        <jadwal-view :filtered-jadwal-list="filteredJadwalList" :day-filter="dayFilter"
+                            :set-day-filter="setDayFilter" :jadwal-gender-filter="jadwalGenderFilter"
+                            :open-jadwal-modal="openJadwalModal" :delete-jadwal="deleteJadwal"
+                            :user-session="userSession" :active-dropdown="activeDropdown"
+                            :is-modal-open="modalState.isOpen"
+                            @update:jadwal-gender-filter="jadwalGenderFilter = $event"
+                            @toggle-dropdown="toggleDropdown"></jadwal-view>
+                    </div>
 
 
 
@@ -318,14 +328,7 @@
                             @export-to-pdf="exportToPDF"></rekap-view>
                     </div>
 
-                    <!-- JADWAL VIEW (Component) -->
-                    <div v-if="currentView === 'jadwal'">
-                        <jadwal-view :filtered-jadwal-list="filteredJadwalList" :day-filter="dayFilter"
-                            :set-day-filter="setDayFilter" :jadwal-gender-filter="jadwalGenderFilter"
-                            :active-dropdown="activeDropdown" @update:jadwal-gender-filter="jadwalGenderFilter = $event"
-                            :open-jadwal-modal="openJadwalModal" :delete-jadwal="deleteJadwal"
-                            :user-session="userSession" @toggle-dropdown="toggleDropdown"></jadwal-view>
-                    </div>
+
 
                     <!-- ABSENSI VIEW (Component) -->
                     <div v-if="currentView === 'absensi'">
@@ -348,14 +351,6 @@
 
                     <!-- MAPEL VIEW -->
                     <div v-if="currentView === 'mapel'" class="fade-in space-y-4 pb-24">
-                        <div class="flex justify-between items-center">
-                            <h2 class="text-2xl font-bold text-slate-900">Mata Pelajaran</h2>
-                            <button @click="openMapelModal()"
-                                class="bg-primary text-white px-4 py-2 rounded-xl text-sm font-bold shadow-lg shadow-primary/30 active:scale-95 transition">
-                                + Tambah
-                            </button>
-                        </div>
-
                         <!-- Mapel List -->
                         <div class="space-y-3">
                             <div v-for="mapel in filteredMapel" :key="mapel._id"
@@ -393,18 +388,21 @@
                                 <p class="mt-2 text-sm">Belum ada mata pelajaran</p>
                             </div>
                         </div>
+
+                        <!-- Floating Action Button (Admin Only) -->
+                        <teleport to="body">
+                            <div class="fixed bottom-24 right-4 z-[9999]"
+                                v-if="currentView === 'mapel' && !mapelModalState.isOpen">
+                                <button v-if="!isMapelFabClicked" @click="handleMapelFabClick(); openMapelModal(null)"
+                                    class="size-14 rounded-full bg-primary text-white shadow-xl flex items-center justify-center transition hover:scale-110 active:scale-95 hover:bg-blue-700">
+                                    <span class="material-symbols-outlined text-3xl">add</span>
+                                </button>
+                            </div>
+                        </teleport>
                     </div>
 
                     <!-- KELAS VIEW -->
                     <div v-if="currentView === 'kelas'" class="fade-in space-y-4 pb-24">
-                        <div class="flex justify-between items-center px-2">
-                            <h2 class="text-2xl font-bold text-slate-900">Data Kelas</h2>
-                            <button @click="openKelasModal()"
-                                class="bg-primary text-white px-4 py-2 rounded-xl text-sm font-bold shadow-lg shadow-primary/30 active:scale-95 transition">
-                                + Tambah
-                            </button>
-                        </div>
-
                         <!-- Kelas List -->
                         <div class="space-y-3 px-2">
                             <div v-for="kelas in filteredKelas" :key="kelas._id"
@@ -442,6 +440,17 @@
                                 <p class="mt-2 text-sm">Belum ada data kelas</p>
                             </div>
                         </div>
+
+                        <!-- Floating Action Button (Admin Only) -->
+                        <teleport to="body">
+                            <div class="fixed bottom-24 right-4 z-[9999]"
+                                v-if="currentView === 'kelas' && !kelasModalState.isOpen">
+                                <button v-if="!isKelasFabClicked" @click="handleKelasFabClick(); openKelasModal(null)"
+                                    class="size-14 rounded-full bg-primary text-white shadow-xl flex items-center justify-center transition hover:scale-110 active:scale-95 hover:bg-blue-700">
+                                    <span class="material-symbols-outlined text-3xl">add</span>
+                                </button>
+                            </div>
+                        </teleport>
                     </div>
 
                     <!-- QURAN VIEW -->
@@ -622,10 +631,7 @@
 
                         <!-- List Santri (Monitoring) -->
                         <div v-if="!ujianForm.santri_id" class="px-4 pt-4 space-y-4">
-                            <div>
-                                <h2 class="text-2xl font-bold text-slate-900">Monitoring Hafalan</h2>
-                                <p class="text-xs text-slate-500">Pantau progres 30 Juz santri.</p>
-                            </div>
+                            <!-- Header Removed -->
 
                             <div class="bg-white p-3 rounded-xl border shadow-sm sticky top-0 z-20">
                                 <input v-model="searchText" type="text" placeholder="Cari Nama Santri..."
@@ -1488,7 +1494,7 @@
 
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js?v=3.5').then(reg => {
+                navigator.serviceWorker.register('sw.js?v=3.6').then(reg => {
                     console.log('SW Registered!', reg);
 
                     // 1. Check if update is already waiting (e.g. from previous visit)

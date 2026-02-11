@@ -431,7 +431,7 @@ createApp({
                 const type = (u.type || '').toLowerCase();
                 return isSemester ? type.includes('semester') : !type.includes('semester');
             });
-            return list.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 5);
+            return list.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 50);
         });
 
         const filteredPelanggaran = computed(() => {

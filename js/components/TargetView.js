@@ -44,12 +44,7 @@ const TargetView = {
     },
     template: `
     <div class="fade-in">
-        <div class="flex justify-between items-center mb-6">
-            <div>
-                <h2 class="text-2xl font-bold">Target Bulanan</h2>
-                <p class="text-xs text-slate-500">Atur target hafalan baru & murojaah.</p>
-            </div>
-        </div>
+        <!-- Header Removed -->
 
         <!-- Search -->
         <div class="bg-white p-3 rounded-xl border shadow-sm sticky top-0 z-20 mb-4">

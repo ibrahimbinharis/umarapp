@@ -125,11 +125,26 @@ function useMapel(uiData, DB) {
         }
     };
 
+    // FAB Click State
+    const isMapelFabClicked = Vue.ref(false);
+
+    // Reset FAB state when modal closes
+    Vue.watch(() => mapelModalState.isOpen, (newVal) => {
+        if (!newVal) {
+            isMapelFabClicked.value = false;
+        }
+    });
+
+    const handleMapelFabClick = () => {
+        isMapelFabClicked.value = true;
+    };
+
     // ===== RETURN =====
     return {
         // State
         mapelForm,
         mapelModalState,
+        isMapelFabClicked, // Renamed
 
         // Computed
         filteredMapel,
@@ -138,6 +153,7 @@ function useMapel(uiData, DB) {
         openMapelModal,
         closeMapelModal,
         saveMapel,
-        deleteMapel
+        deleteMapel,
+        handleMapelFabClick // Renamed
     };
 }

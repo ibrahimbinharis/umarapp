@@ -8,34 +8,39 @@ const JadwalView = {
         openJadwalModal: Function,
         deleteJadwal: Function,
         userSession: Object,
-        activeDropdown: [String, Number, null]
+        activeDropdown: [String, Number, null],
+        isModalOpen: Boolean // New Prop
     },
     emits: ['update:jadwalGenderFilter', 'toggle-dropdown'],
     setup(props) {
+        const { ref, watch } = Vue;
         const days = ['Semua', 'Hari Ini', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Ahad'];
 
+        // FAB Click State
+        const isFabClicked = ref(false);
+
+        // Reset FAB state when modal closes
+        watch(() => props.isModalOpen, (newVal) => {
+            if (!newVal) {
+                isFabClicked.value = false;
+            }
+        });
+
+        const onJadwalFabClick = () => {
+            isFabClicked.value = true;
+        };
+
         return {
-            days
+            days,
+            isFabClicked,
+            onJadwalFabClick
         };
     },
     template: `
     <div class="space-y-4 pb-15">
         <!-- Header & Filters -->
         <div class="bg-white p-4 rounded-xl border border-slate-100 shadow-sm space-y-4">
-            <div class="flex justify-between items-center">
-                <div>
-                    <h2 class="text-2xl font-bold text-slate-800">Jadwal KBM</h2>
-                    <p class="text-xs text-slate-500">Jadwal Kegiatan Belajar Mengajar</p>
-                </div>
-                
-                <!-- Add Button (FAB-like in header for desktop/mobile consistency) -->
-                <!-- Add Button (Standard Style) -->
-                <button v-if="userSession.role === 'admin'" 
-                    @click="openJadwalModal(null)"
-                    class="bg-primary text-white px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-bold shadow-lg shadow-blue-900/20 hover:bg-blue-800 transition">
-                    <span class="material-symbols-outlined text-lg">add</span> Tambah
-                </button>
-            </div>
+            <!-- Header Removed -->
 
             <!-- Gender Filter -->
             <div class="flex p-1 bg-slate-100 rounded-lg">
@@ -130,6 +135,15 @@ const JadwalView = {
                 <p class="text-slate-300 text-xs">Silakan tambah jadwal baru</p>
             </div>
         </div>
+        <!-- Floating Action Button (Admin Only) -->
+        <teleport to="body">
+            <div class="fixed bottom-24 right-4 z-[9999]" v-if="userSession.role === 'admin' && !isModalOpen">
+                <button v-if="!isFabClicked" @click="onJadwalFabClick(); openJadwalModal(null)"
+                    class="size-14 rounded-full bg-primary text-white shadow-xl flex items-center justify-center transition hover:scale-110 active:scale-95 hover:bg-blue-700">
+                    <span class="material-symbols-outlined text-3xl">add</span>
+                </button>
+            </div>
+        </teleport>
     </div>
     `
 };
