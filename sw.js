@@ -1,4 +1,4 @@
-const CACHE_NAME = "e-umar-v4.0";
+const CACHE_NAME = "e-umar-v4.1";
 const ASSETS_TO_CACHE = [
     "./",
     "./index.html",
@@ -90,9 +90,21 @@ self.addEventListener("fetch", (event) => {
             if (cached) return cached;
 
             return fetch(event.request).then((response) => {
+                // Check if we received a valid response
+                if (
+                    !response ||
+                    response.status !== 200 ||
+                    response.type !== 'basic'
+                ) {
+                    return response;
+                }
+
+                // IMPORTANT: Clone the response. A response is a stream
+                // and because we want the browser to consume the response
+                // as well as the cache consuming the response, we need
+                // to clone it so we have two streams.
                 if (
                     event.request.method === "GET" &&
-                    response.status === 200 &&
                     (
                         event.request.destination === "script" ||
                         event.request.destination === "style" ||
@@ -100,10 +112,13 @@ self.addEventListener("fetch", (event) => {
                         event.request.destination === "document"
                     )
                 ) {
+                    const responseToCache = response.clone();
+
                     caches.open(CACHE_NAME).then((cache) => {
-                        cache.put(event.request, response.clone());
+                        cache.put(event.request, responseToCache);
                     });
                 }
+
                 return response;
             });
         })
