@@ -54,21 +54,21 @@ const DashboardView = {
         <div class="space-y-6 pt-0 relative z-10 px-0.5">
             <!-- Greeting Card -->
             <div @click="$emit('navigate', 'profile')"
-                class="px-5 py-3 mb-0 flex items-center gap-4 cursor-pointer active:scale-95 transition">
+                class="px-5 py-3 mb-0 flex items-center gap-3 cursor-pointer active:scale-95 transition">
                 <!-- Photo or Initials -->
                 <div v-if="userSession.photo_url"
-                    class="size-14 rounded-full overflow-hidden border-2 border-white/50 shadow-md">
+                    class="size-10 rounded-full overflow-hidden border-2 border-white/50 shadow-md">
                     <img :src="userSession.photo_url" alt="Profile" class="w-full h-full object-cover"
                         referrerpolicy="no-referrer">
                 </div>
                 <div v-else
-                    class="size-14 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center text-white font-bold text-xl border border-white/30">
+                    class="size-10 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center text-white font-bold text-base border border-white/30">
                     {{ getInitials(userSession.full_name) }}
                 </div>
                 <div>
-                    <h2 class="text-2xl font-bold text-white drop-shadow-sm">Ahlan,
+                    <h2 class="text-lg font-bold text-white drop-shadow-sm">Ahlan,
                         {{ userSession.full_name ? userSession.full_name.split(' ')[0] : 'User' }}!</h2>
-                    <p class="text-sm text-blue-100 font-medium opacity-90">Selamat datang kembali</p>
+                    <p class="text-xs text-blue-100 font-medium opacity-90">Selamat datang kembali</p>
                 </div>
             </div>
 
