@@ -212,6 +212,18 @@ function useNotifications(uiData, userSession) {
         return monitoringAlerts.value.length + dbUnread;
     });
 
+    // --- 3. BADGE MANAGEMENT (v36) ---
+    // Reactive watcher for App Badge (Icon Number)
+    watch(unreadCount, (newCount) => {
+        if (navigator.setAppBadge) {
+            if (newCount > 0) {
+                navigator.setAppBadge(newCount).catch(e => console.warn("Badge error:", e));
+            } else {
+                navigator.clearAppBadge().catch(e => console.warn("Badge clear error:", e));
+            }
+        }
+    }, { immediate: true });
+
     return {
         currentTime,
         monitoringAlerts,
