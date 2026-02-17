@@ -37,7 +37,7 @@ const JadwalView = {
         };
     },
     template: `
-    <div class="space-y-4 pb-15">
+    <div class="space-y-4 pb-32">
         <!-- Header & Filters -->
         <div class="bg-white p-4 rounded-xl border border-slate-100 shadow-sm space-y-4">
             <!-- Header Removed -->

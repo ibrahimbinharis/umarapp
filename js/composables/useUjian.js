@@ -471,11 +471,24 @@ function useUjian(uiData, DB, userSession, refreshData, quranControls = null, cu
 
             if (editingId.value) {
                 await DB.update(editingId.value, payload);
+
+                // --- NOTIFICATION UPDATE (v36) ---
+                const santri = uiData.santri.find(s => s.santri_id === ujianForm.santri_id || s._id === ujianForm.santri_id);
+                if (santri && window.NotificationService) {
+                    window.NotificationService.notifyUjian(santri, payload.detail || payload.type, payload.score, editingId.value);
+                }
+
                 alert("Data Ujian Berhasil Diupdate");
                 editingId.value = null;
             } else {
-                await DB.create('ujian', payload);
+                const res = await DB.create('ujian', payload);
                 alert("Nilai Ujian Berhasil Disimpan");
+
+                // --- NOTIFICATION TRIGGER (v36) ---
+                const santri = uiData.santri.find(s => s.santri_id === ujianForm.santri_id || s._id === ujianForm.santri_id);
+                if (santri && window.NotificationService) {
+                    window.NotificationService.notifyUjian(santri, payload.detail || payload.type, payload.score, res._id);
+                }
             }
 
             if (refreshData) refreshData();

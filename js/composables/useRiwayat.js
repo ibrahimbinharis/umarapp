@@ -1,4 +1,4 @@
-const useRiwayat = (uiData, DB, refreshData, modules = {}, currentView) => {
+const useRiwayat = (uiData, DB, refreshData, modules = {}, currentView, userSession) => {
     const { reactive, computed } = Vue;
 
     // --- STATE ---
@@ -42,6 +42,15 @@ const useRiwayat = (uiData, DB, refreshData, modules = {}, currentView) => {
             if (!item.santri_id) return true; // Keep if no santri_id (rare/system)
             return uiData.santri.some(s => s.santri_id === item.santri_id || s._id === item.santri_id);
         });
+
+        // 0.5. Filter for Wali - only show data for linked santri
+        if (userSession?.value?.role === 'wali') {
+            const linkedSantriIds = (uiData.santri || [])
+                .filter(s => s.wali_id === userSession.value._id)
+                .map(s => s.santri_id || s._id);
+
+            merged = merged.filter(item => linkedSantriIds.includes(item.santri_id));
+        }
 
         if (riwayatState.startDate) {
             merged = merged.filter(i => i.date >= riwayatState.startDate);
@@ -216,7 +225,14 @@ const useRiwayat = (uiData, DB, refreshData, modules = {}, currentView) => {
         if (!confirm(`Yakin hapus ${riwayatState.selectedIds.length} data terpilih?`)) return;
 
         try {
-            await Promise.all(riwayatState.selectedIds.map(id => DB.delete(id)));
+            await Promise.all(riwayatState.selectedIds.map(async id => {
+                await DB.delete(id);
+                // --- NOTIFICATION RECALL (v36) ---
+                if (window.NotificationService) {
+                    await window.NotificationService.removeBySource(id);
+                }
+            }));
+
             refreshData();
             riwayatState.selectedIds = [];
             alert("Data terpilih berhasil dihapus");
@@ -329,6 +345,12 @@ const useRiwayat = (uiData, DB, refreshData, modules = {}, currentView) => {
 
         try {
             await DB.delete(id);
+
+            // --- NOTIFICATION RECALL (v36) ---
+            if (window.NotificationService) {
+                await window.NotificationService.removeBySource(id);
+            }
+
             refreshData(); // Refresh UI
             // alert("Data berhasil dihapus"); // Optional feedback
         } catch (e) {

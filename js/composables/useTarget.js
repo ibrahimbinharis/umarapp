@@ -52,10 +52,10 @@ function useTarget(uiData, DB) {
 
             return {
                 ...s,
-                computed_sabaq: sabaq,
-                computed_manzil: manzil,
-                computed_pct: pct,
-                computed_total_pages: defaults.totalPages
+                view_sabaq: sabaq,
+                view_manzil: manzil,
+                view_pct: pct,
+                view_total_pages: defaults.totalPages
             };
         }).sort((a, b) => (a.full_name || '').localeCompare(b.full_name || ''));
     });

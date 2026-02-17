@@ -63,11 +63,11 @@ const SetoranView = {
 
                     <!-- Search Input -->
                     <div class="p-2 border-b border-slate-50">
-                        <div class="flex items-center gap-2 bg-slate-50 px-3 py-2 rounded-lg border border-slate-100">
-                            <span class="material-symbols-outlined text-slate-400 text-lg">search</span>
+                        <div class="flex items-center gap-2 p-2 rounded-xl border border-slate-200 transition focus-within:ring-2 focus-within:ring-primary/20 shadow-sm bg-white">
+                            <span class="material-symbols-outlined text-slate-400 ml-2">search</span>
                             <input :value="setoranSantriSearch" @input="updateSearch"
-                                type="text" placeholder="Cari nama..."
-                                class="bg-transparent w-full text-sm font-bold outline-none placeholder:font-normal text-slate-700"
+                                type="text" placeholder="Cari berdasarkan nama atau NIS..."
+                                class="bg-transparent w-full text-sm font-bold outline-none placeholder:text-slate-400"
                                 @click.stop>
                         </div>
                     </div>
@@ -289,7 +289,7 @@ const SetoranView = {
                     class="bg-white p-3 rounded-xl border shadow-sm flex justify-between items-center">
                     <div class="overflow-hidden flex-1">
                         <div class="text-xs text-slate-400 font-bold mb-0.5">
-                            {{ r.setoran_date }} <span v-if="r.setoran_time">&bull; {{ r.setoran_time }}</span>
+                            {{ r.formatted_date || r.setoran_date }} <span v-if="r.setoran_time">&bull; {{ r.setoran_time }}</span>
                         </div>
                         <div class="font-bold text-slate-800 text-sm truncate">
                             {{ r.santri_name || 'Santri' }}

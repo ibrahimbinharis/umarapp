@@ -1,9 +1,9 @@
 const LoginView = {
-    props: ['appName', 'appVersion', 'loginForm'],
-    emits: ['login'],
+    props: ['appName', 'appVersion', 'loginForm', 'isRegisterMode'],
+    emits: ['login', 'register', 'toggle-mode'],
     template: `
         <div class="w-full h-full flex flex-col md:flex-row bg-slate-50 relative overflow-hidden">
-
+            <!-- (LEFT SIDE UNCHANGED) -->
             <!-- DESKTOP LEFT: Branding -->
             <div class="hidden md:flex md:w-1/2 lg:w-3/5 relative bg-primary items-center justify-center overflow-hidden">
                 <!-- Gradients -->
@@ -47,39 +47,56 @@ const LoginView = {
                     <!-- Login Card -->
                     <div class="bg-white md:bg-transparent rounded-[1rem] md:rounded-none shadow-2xl md:shadow-none p-6 md:p-0 border border-slate-100 md:border-none">
                         <div class="mb-8 hidden md:block">
-                            <h2 class="text-3xl font-bold text-slate-800">Assalamu'alaikum!</h2>
-                            <p class="text-slate-500 mt-2 font-medium">Silahkan masuk</p>
+                            <h2 class="text-3xl font-bold text-slate-800 tracking-tight">{{ isRegisterMode ? 'Buat Akun Baru' : "Assalamu'alaikum!" }}</h2>
                         </div>
 
                         <!-- Mobile Title inside Card -->
                         <div class="mb-6 md:hidden text-center">
-                            <h2 class="text-xl font-bold text-slate-800">Assalamu'alaikum!</h2>
-                            <p class="text-slate-400 text-xs font-bold mt-1">Silahkan masuk</p>
+                            <h2 class="text-xl font-bold text-slate-800">{{ isRegisterMode ? 'Buat Akun' : "Assalamu'alaikum!" }}</h2>
                         </div>
 
-                        <form @submit.prevent="$emit('login')" class="space-y-4">
+                        <form @submit.prevent="isRegisterMode ? $emit('register') : $emit('login')" class="space-y-4">
+                            <div v-if="isRegisterMode" class="animate-pulse">
+                                <div class="relative group">
+                                    <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors text-[20px]">badge</span>
+                                    <input type="text" v-model="loginForm.fullName"
+                                        class="w-full pl-11 pr-4 py-3 rounded-2xl border border-slate-200 focus:outline-none focus:border-primary focus:ring-4 focus:ring-blue-500/10 bg-slate-50/50 text-slate-700 transition-all placeholder:font-normal placeholder:text-slate-400"
+                                        placeholder="Nama Lengkap">
+                                </div>
+                            </div>
                             <div>
                                 <div class="relative group">
                                     <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors text-[20px]">person</span>
                                     <input type="text" v-model="loginForm.username"
-                                        class="w-full pl-11 pr-4 py-3.5 rounded-2xl border border-slate-200 focus:outline-none focus:border-primary focus:ring-4 focus:ring-blue-500/10 bg-slate-50/50 font-bold text-slate-700 transition-all placeholder:font-normal placeholder:text-slate-400"
+                                        class="w-full pl-11 pr-4 py-3 rounded-2xl border border-slate-200 focus:outline-none focus:border-primary focus:ring-4 focus:ring-blue-500/10 bg-slate-50/50 text-slate-700 transition-all placeholder:font-normal placeholder:text-slate-400"
                                         placeholder="Username / NIG / NIS">
                                 </div>
                             </div>
                             <div>
                                 <div class="relative group">
                                     <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors text-[20px]">lock</span>
-                                    <input type="password" v-model="loginForm.password"
-                                        class="w-full pl-11 pr-4 py-3.5 rounded-2xl border border-slate-200 focus:outline-none focus:border-primary focus:ring-4 focus:ring-blue-500/10 bg-slate-50/50 font-bold text-slate-700 transition-all placeholder:font-normal placeholder:text-slate-400"
+                                    <input :type="showPassword ? 'text' : 'password'" v-model="loginForm.password"
+                                        class="w-full pl-11 pr-12 py-3 rounded-2xl border border-slate-200 focus:outline-none focus:border-primary focus:ring-4 focus:ring-blue-500/10 bg-slate-50/50 text-slate-700 transition-all placeholder:font-normal placeholder:text-slate-400"
                                         placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;">
+                                    <button type="button" @click="showPassword = !showPassword"
+                                        class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-primary transition active:scale-95">
+                                        <span class="material-symbols-outlined text-[20px]">{{ showPassword ? 'visibility_off' : 'visibility' }}</span>
+                                    </button>
                                 </div>
                             </div>
 
                             <button type="submit"
-                                class="w-full bg-primary text-white py-4 rounded-2xl font-bold text-lg hover:bg-blue-800 transform active:scale-[0.98] transition-all shadow-lg shadow-blue-900/20 mt-2 flex items-center justify-center gap-2">
-                                <span>Masuk</span>
-                                <span class="material-symbols-outlined text-xl">arrow_forward</span>
+                                class="w-full bg-primary text-white py-3 rounded-2xl font-bold text-base hover:bg-blue-800 transform active:scale-[0.98] transition-all shadow-lg shadow-blue-900/20 mt-2 flex items-center justify-center gap-2">
+                                <span>{{ isRegisterMode ? 'Daftar Sekarang' : 'Masuk' }}</span>
+                                <span class="material-symbols-outlined text-xl">{{ isRegisterMode ? 'check_circle' : 'arrow_forward' }}</span>
                             </button>
+
+                            <div class="text-center mt-4">
+                                <button type="button" @click="$emit('toggle-mode')" class="text-slate-500 font-medium hover:text-primary transition text-sm">
+                                    {{ isRegisterMode ? 'Sudah punya akun?' : 'Belum punya akun?' }} 
+                                    <span class="text-primary font-bold ml-1">{{ isRegisterMode ? 'Masuk' : 'Daftar' }}</span>
+                                </button>
+                            </div>
                         </form>
 
                         <!-- Mobile Footer (with Install Button) -->
@@ -97,6 +114,7 @@ const LoginView = {
     `,
     setup() {
         const canInstall = Vue.ref(false);
+        const showPassword = Vue.ref(false);
 
         const checkInstall = () => {
             if (window.deferredPrompt) {
@@ -116,6 +134,6 @@ const LoginView = {
             window.addEventListener('pwa-install-available', checkInstall);
         });
 
-        return { canInstall, installApp };
+        return { canInstall, installApp, showPassword };
     }
 };

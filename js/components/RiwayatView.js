@@ -192,8 +192,8 @@ const RiwayatView = {
         </teleport>
 
         <div class="bg-white rounded-xl border shadow-sm overflow-hidden mb-20 mx-2">
-            <!-- Bulk Action Bar -->
-            <div v-if="riwayatState.selectedIds.length > 0"
+            <!-- Bulk Action Bar (Hide for Wali) -->
+            <div v-if="riwayatState.selectedIds.length > 0 && userSession?.role !== 'wali'"
                 class="p-2 pl-4 bg-red-50 border-b border-red-100 flex items-center animate-fade-in">
                 <button @click="deleteSelected"
                     class="text-xs bg-red-600 text-white px-3 py-1.5 rounded-lg font-bold hover:bg-red-700 transition flex items-center gap-1 shadow-sm">
@@ -206,7 +206,7 @@ const RiwayatView = {
                 <table class="w-full text-sm text-left">
                     <thead class="bg-slate-50 text-slate-500 font-bold uppercase text-[10px] border-b">
                         <tr>
-                            <th class="px-4 py-3 w-10 text-center">
+                            <th v-if="userSession?.role !== 'wali'" class="px-4 py-3 w-10 text-center">
                                 <input type="checkbox" @change="toggleSelectAll(paginatedRiwayat)"
                                     :checked="paginatedRiwayat.length > 0 && paginatedRiwayat.every(i => riwayatState.selectedIds.includes(i._id))"
                                     class="rounded border-slate-300 text-primary focus:ring-primary">
@@ -216,7 +216,7 @@ const RiwayatView = {
                             <th class="px-4 py-3 whitespace-nowrap">Jenis</th>
                             <th class="px-4 py-3 whitespace-nowrap">Detail</th>
                             <th class="px-4 py-3 whitespace-nowrap text-center">Nilai/Poin</th>
-                            <th class="px-4 py-3 whitespace-nowrap text-center">Aksi</th>
+                            <th v-if="userSession?.role !== 'wali'" class="px-4 py-3 whitespace-nowrap text-center">Aksi</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100">
@@ -224,8 +224,8 @@ const RiwayatView = {
                             class="hover:bg-slate-50 transition"
                             :class="item.__cat === 'pelanggaran' ? 'bg-red-50/30 hover:bg-red-50' : ''">
                             
-                            <!-- Checkbox -->
-                            <td class="px-4 py-3 text-center">
+                            <!-- Checkbox (Hide for Wali) -->
+                            <td v-if="userSession?.role !== 'wali'" class="px-4 py-3 text-center">
                                 <input type="checkbox"
                                     :checked="riwayatState.selectedIds.includes(item._id)"
                                     @change="toggleSelect(item._id)"
@@ -313,8 +313,8 @@ const RiwayatView = {
                                 </span>
                             </td>
 
-                            <!-- Aksi -->
-                            <td class="px-4 py-3 text-center relative">
+                            <!-- Aksi (Hide for Wali) -->
+                            <td v-if="userSession?.role !== 'wali'" class="px-4 py-3 text-center relative">
                                 <button @click.stop="toggleActionMenu(item._id)"
                                     class="p-1 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 transition">
                                     <span class="material-symbols-outlined">more_vert</span>
@@ -334,7 +334,7 @@ const RiwayatView = {
                             </td>
                         </tr>
                         <tr v-if="paginatedRiwayat.length === 0">
-                            <td colspan="7" class="px-4 py-8 text-center text-slate-400 font-bold text-xs">
+                            <td :colspan="userSession?.role === 'wali' ? 5 : 7" class="px-4 py-8 text-center text-slate-400 font-bold text-xs">
                                 Belum ada riwayat setoran/ujian.
                             </td>
                         </tr>

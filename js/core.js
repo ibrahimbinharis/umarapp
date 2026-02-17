@@ -1,7 +1,7 @@
 // --- 1. CONFIG & DATABASE (SUPABASE v36) ---
 const APP_CONFIG = {
     appName: "E-Umar",
-    version: "v2",
+    version: "v2.0",
     supabaseUrl: "https://fxtmilqvxomuvkxxzjli.supabase.co",
     supabaseKey: "sb_publishable_aXcK3znrtRo0d3gH-Wg1Ew_-0Z3262O"
 };
@@ -112,13 +112,13 @@ const DB = {
 
     // --- CRUD ---
     create: async (collection, item) => {
-        item._id = generateId(collection);
+        if (!item._id) item._id = generateId(collection);
         item.__type = collection; // Internal type tracking
         const now = new Date().toISOString();
         item.created_at = now;
         item.updated_at = now;
 
-        if ((collection === 'users' || collection === 'santri') && item.password) {
+        if ((collection === 'user' || collection === 'users' || collection === 'santri') && item.password) {
             item.password = await hashPassword(item.password);
         }
 
@@ -148,6 +148,7 @@ const DB = {
         DB.saveAll(allData);
 
         // 2. Queue for Cloud (Only send updates id)
+        console.log(`[DB] Queuing update for ${collection} ID: ${id}`);
         DB.addToQueue('update', collection, { _id: id, ...updates });
         DB.triggerAutoSync();
 
@@ -193,17 +194,15 @@ const DB = {
         if (!silent) showLoading(true, 'Sinkronisasi Cloud...');
 
         try {
-            const tables = ['users', 'santri', 'kelas', 'mapel', 'jadwal', 'setoran', 'pelanggaran', 'pelanggaran_type', 'absensi', 'ujian'];
+            const tables = ['users', 'santri', 'kelas', 'mapel', 'jadwal', 'setoran', 'pelanggaran', 'pelanggaran_type', 'absensi', 'ujian', 'notifications'];
             let cloudData = [];
 
             // Parallel Fetch
             const promises = tables.map(table => sb.from(table).select('*').range(0, 9999).then(res => {
                 if (res.error) throw res.error;
-                // Add internal type so we know what table it belongs to
-                // Fix: Frontend expects 'user' (singular), but table is 'users'
+                // Standardize: 'users' table becomes 'user' type internally
                 const type = table === 'users' ? 'user' : table;
                 return res.data.map(d => {
-                    // Normalize boolean fields (fixes 'false' string issue)
                     if (d._deleted === 'false') d._deleted = false;
                     if (d._deleted === 'true') d._deleted = true;
                     return { ...d, __type: type };
@@ -299,20 +298,112 @@ const DB = {
     },
 
     // --- AUTHENTICATION & LOGIN (v36: Plain Text Support for Legacy Data) ---
-    // --- AUTHENTICATION & LOGIN (v36: Plain Text Support for Legacy Data) ---
+    // --- AUTHENTICATION & LOGIN (v36: Supabase Auth) ---
     login: async (username, password) => {
         try {
-            // 1. Hash SHA-256 (Standard)
-            let hash = await hashPassword(password);
-            let queryFilter = `username.eq.${username},custom_username.eq.${username}`;
+            const inputUsername = username.trim();
+            const inputPassword = password;
 
-            let { data, error } = await sb.from('users').select('*').or(queryFilter).eq('password', hash).maybeSingle();
+            // Supabase minimal 6 karakter. Jika kurang, kita tambah akhiran rahasia secara internal.
+            const authPassword = (inputPassword.length > 0 && inputPassword.length < 6) ? inputPassword + "_legacy" : inputPassword;
 
-            if (!data) return { success: false, message: "Username atau Password salah" };
-            return { success: true, user: data };
+            // 0. Resolve Username (Bisa login pakai NIG atau Username Custom)
+            const { data: profileLookup, error: lookupErr } = await sb.from('users')
+                .select('username, custom_username, password, full_name, role')
+                .or(`username.eq."${inputUsername}",custom_username.eq."${inputUsername}"`)
+                .maybeSingle();
+
+            if (lookupErr) console.warn("Profile lookup warning:", lookupErr);
+
+            // Tentukan Email Login: 
+            // Jika ketemu di DB, gunakan 'username' (Primary ID) sebagai prefix email.
+            // Jika tidak ketemu (user baru), gunakan input apa adanya.
+            const authUsername = profileLookup ? profileLookup.username : inputUsername;
+            const email = authUsername.includes('@') ? authUsername : `${authUsername}@tahfidz.app`;
+            console.log("Attempting login with email:", email);
+
+            // 1. Coba Login via Supabase Auth
+            let { data, error } = await sb.auth.signInWithPassword({
+                email: email,
+                password: authPassword
+            });
+
+            // 2. Jika Gagal Login (Mungkin user lama yang belum migrasi)
+            if (error && profileLookup && profileLookup.password) {
+                console.log("Auth failed, checking legacy local hash...");
+
+                const hashedInput = await hashPassword(inputPassword);
+                if (hashedInput === profileLookup.password) {
+                    console.log("Legacy password matched! Auto-migrating user...");
+
+                    // Buat akun Auth (Selalu gunakan 'username' dari DB agar konsisten)
+                    const { data: newData, error: regError } = await sb.auth.signUp({
+                        email: email,
+                        password: authPassword,
+                        options: {
+                            data: {
+                                username: authUsername,
+                                role: profileLookup.role,
+                                full_name: profileLookup.full_name
+                            }
+                        }
+                    });
+
+                    if (!regError) {
+                        // Hubungkan ID Auth baru ke profil database (TIDAK BOLEH SWAP LAGI)
+                        await sb.from('users')
+                            .update({ _id: newData.user.id })
+                            .eq('username', profileLookup.username);
+
+                        // Coba login ulang
+                        const retry = await sb.auth.signInWithPassword({
+                            email: email,
+                            password: authPassword
+                        });
+                        data = retry.data;
+                        error = retry.error;
+                    }
+                }
+            }
+
+            if (error) {
+                console.error("Final login error:", error);
+                return { success: false, message: "Username atau Password salah" };
+            }
+
+            // 3. Ambil Profil Final
+            const { data: finalProfile } = await sb.from('users')
+                .select('*')
+                .eq('_id', data.user.id)
+                .maybeSingle();
+
+            const meta = data.user.user_metadata || {};
+
+            // 4. Ensure local record exists
+            if (finalProfile) {
+                const existingIdx = allData.findIndex(u => u._id === finalProfile._id);
+                if (existingIdx === -1) {
+                    allData.unshift({ ...finalProfile, __type: 'user' });
+                } else {
+                    allData[existingIdx] = { ...allData[existingIdx], ...finalProfile, __type: 'user' };
+                }
+                DB.saveAll(allData);
+            }
+
+            return {
+                success: true,
+                user: finalProfile || {
+                    _id: data.user.id,
+                    full_name: meta.full_name || inputUsername,
+                    role: meta.role || 'wali',
+                    username: authUsername
+                },
+                session: data.session
+            };
+
         } catch (e) {
-            console.error("Auth Error", e);
-            return { success: false, message: "Gagal menghubungkan ke server" };
+            console.error("Auth Exception", e);
+            return { success: false, message: "Terjadi kesalahan sistem: " + e.message };
         }
     },
 
@@ -336,19 +427,27 @@ const DB = {
                 const { __type, ...cleanPayload } = payload;
 
                 if (action === 'create') {
+                    console.log(`[CloudSync] Creating ${collection}...`);
                     res = await sb.from(collection).insert(cleanPayload);
                 } else if (action === 'update') {
                     const { _id, ...fields } = cleanPayload;
+                    console.log(`[CloudSync] Updating ${collection} ID: ${_id}...`);
                     res = await sb.from(collection).update(fields).eq('_id', _id);
                 } else if (action === 'delete') {
+                    console.log(`[CloudSync] Deleting ${collection} ID: ${cleanPayload._id}...`);
                     res = await sb.from(collection).delete().eq('_id', cleanPayload._id);
                 }
 
                 if (res.error) {
-                    // Handle Duplicate Key (Data already exists on server)
-                    // Catch both 23505 code and 409 status (Conflict)
-                    if (res.error.code === '23505' || res.status === 409 || (res.error.message && res.error.message.includes('duplicate key'))) {
-                        console.warn("Duplicate data detected (already synced). Removing from queue.", cleanPayload);
+                    // Handle Duplicate Key or Missing Column (Schema Mismatch/Contamination)
+                    const isUnrecoverable =
+                        res.error.code === '23505' ||
+                        res.error.code === 'PGRST204' ||
+                        res.status === 409 ||
+                        (res.error.message && res.error.message.includes('duplicate key'));
+
+                    if (isUnrecoverable) {
+                        console.warn("Unrecoverable sync error. Removing from queue.", res.error.message);
                         DB.removeFromQueue(timestamp);
                     } else {
                         console.error("Push Error", res.error);
@@ -499,5 +598,3 @@ function formatDateLong(isoString, timeOverride = null) {
 
     return `${datePart}<br><span class="text-xs text-slate-400 font-normal">${timePart}</span>`;
 }
-
-

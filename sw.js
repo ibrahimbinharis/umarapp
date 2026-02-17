@@ -1,4 +1,4 @@
-const CACHE_NAME = "e-umar-v2";
+const CACHE_NAME = "v2.0";
 const ASSETS_TO_CACHE = [
     "./",
     "./index.html",
@@ -124,7 +124,64 @@ self.addEventListener("fetch", (event) => {
         })
     );
 });
+// --- PUSH NOTIFICATION EVENT ---
+self.addEventListener('push', (event) => {
+    console.log('[Service Worker] Push Received.');
 
+    let data = { title: 'Pesan Baru', body: 'Ada aktivitas baru di E-Umar', icon: 'image/192pxlogo_new.png' };
+    if (event.data) {
+        try {
+            data = event.data.json();
+        } catch (e) {
+            data.body = event.data.text();
+        }
+    }
 
+    const options = {
+        body: data.body,
+        icon: data.icon || 'image/192pxlogo_new.png',
+        badge: 'image/150x150.png', // Transparent small icon for notification bar
+        vibrate: [100, 50, 100],
+        data: {
+            url: data.url || './index.html'
+        },
+        actions: [
+            { action: 'open', title: 'Buka Aplikasi' }
+        ]
+    };
 
+    // Update App Badge (if supported)
+    if (navigator.setAppBadge) {
+        navigator.setAppBadge(); // Increment badge by 1 (default)
+    }
 
+    event.waitUntil(
+        self.registration.showNotification(data.title, options)
+    );
+});
+
+// --- NOTIFICATION CLICK EVENT ---
+self.addEventListener('notificationclick', (event) => {
+    console.log('[Service Worker] Notification click Received.');
+    event.notification.close();
+
+    // Clear Badge when opened
+    if (navigator.clearAppBadge) {
+        navigator.clearAppBadge();
+    }
+
+    event.waitUntil(
+        clients.matchAll({ type: 'window' }).then((clientList) => {
+            // If already open, focus it
+            for (const client of clientList) {
+                if (client.url.includes('index.html') && 'focus' in client) {
+                    return client.focus();
+                }
+            }
+            // If not open, open new window
+            if (clients.openWindow) {
+                return clients.openWindow(event.notification.data.url || './');
+            }
+        })
+    );
+});

@@ -64,10 +64,7 @@ function useAbsensi(uiData, DB, modalState) {
         return jadwalData
             .filter(j => j.day === absensiDayName.value)
             .filter(j => {
-                // Special Case: 'Kelas Umum' appears for BOTH genders
-                if (j.class_name === 'Umum') return true;
-
-                // Default: Strict gender match
+                // Strict gender match for ALL classes (including Umum)
                 return (j.gender || 'L') === genderFilter.value;
             })
             .sort((a, b) => (a.time || '').localeCompare(b.time || ''));
@@ -156,11 +153,8 @@ function useAbsensi(uiData, DB, modalState) {
         }
 
         // Filter by Gender
-        // If 'Kelas Umum', respect the UI Filter. Otherwise use Schedule Gender.
-        let targetGender = jadwal.gender || genderFilter.value || 'L';
-        if (jadwal.class_name === 'Umum') {
-            targetGender = genderFilter.value || 'L'; // Force use UI filter
-        }
+        // Strict: Use Schedule Gender
+        let targetGender = jadwal.gender || 'L';
 
         santriData = santriData.filter(s => (s.gender || 'L') === targetGender);
 

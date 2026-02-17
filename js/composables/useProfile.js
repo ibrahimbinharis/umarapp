@@ -16,7 +16,9 @@ function useProfile(uiData, DB, userSession, refreshData) {
     const profileForm = reactive({
         full_name: '',
         username: '',
-        password: ''
+        password: '',
+        phone: '',
+        photo_url: '' // Added for better tracking
     });
 
     // --- METHODS ---
@@ -24,12 +26,13 @@ function useProfile(uiData, DB, userSession, refreshData) {
         if (!userSession.value) return;
         profileForm.full_name = userSession.value.full_name || '';
         profileForm.username = userSession.value.custom_username || userSession.value.username || '';
+        profileForm.phone = userSession.value.phone || '';
         profileForm.password = '';
     };
 
     const saveProfile = async () => {
         if (!profileForm.full_name) return alert("Nama wajib diisi");
-        if (!profileForm.username && userSession.value.role !== 'wali') return alert("Username wajib diisi");
+        if (!profileForm.username) return alert("Username wajib diisi");
 
         // We can't access 'loading' ref from here directly unless passed or we use a local one?
         // Usually composables return 'loading' or we rely on parent's loading if passed.
@@ -41,49 +44,85 @@ function useProfile(uiData, DB, userSession, refreshData) {
         // Let's try to access the loading ref if we can, or just skip it for now (it's fast).
 
         try {
-            const updates = { full_name: profileForm.full_name };
+            const updates = {
+                full_name: profileForm.full_name,
+                phone: profileForm.phone,
+                custom_username: profileForm.username
+            };
 
-            if (userSession.value.role === 'guru' || userSession.value.role === 'admin') {
-                updates.custom_username = profileForm.username;
-            }
-
+            // --- AUTH PASSWORD UPDATE ---
             if (profileForm.password) {
-                // Pass plain text, let DB.update handle hashing
+                console.log("Updating Supabase Auth password...");
+                const { error: authError } = await sb.auth.updateUser({
+                    password: profileForm.password
+                });
+                if (authError) throw new Error("Gagal update Auth: " + authError.message);
+
                 updates.password = profileForm.password;
             }
 
-            // Update based on Role
-            if (userSession.value.role === 'wali') {
-                // Update Santri Data (Parent Name/Password)
-                // userSession for Wali is { ...santriData, role: 'wali' }
-                // Real ID is userSession.child_id or userSession._id?
-                // In login logic: user = { ...santri, role: 'wali', child_id: santri._id }
-                const childId = userSession.value.child_id;
-                const payload = { parent_name: profileForm.full_name };
-                if (updates.password) payload.password = updates.password;
-
-                await DB.update(childId, payload);
-
-                // Update Session
-                userSession.value.parent_name = payload.parent_name;
-                // Don't store password in session
-            } else {
-                // Update User (Guru/Admin)
+            // --- DATABASE UPDATE ---
+            try {
+                console.log("Saving profile for ID:", userSession.value._id, updates);
                 await DB.update(userSession.value._id, updates);
-
-                // Update Session
-                userSession.value.full_name = updates.full_name;
-                if (updates.custom_username) userSession.value.custom_username = updates.custom_username;
+            } catch (err) {
+                if (err.message && err.message.includes("not found")) {
+                    console.warn("Profile record not found in local DB. Creating new one...");
+                    // Create minimal profile if none exists locally
+                    const newProfile = {
+                        _id: userSession.value._id,
+                        username: userSession.value.username || profileForm.username,
+                        full_name: updates.full_name,
+                        phone: updates.phone,
+                        custom_username: updates.custom_username,
+                        role: userSession.value.role || 'wali',
+                        password: profileForm.password || 'migrated_user' // Provide placeholder to satisfy NOT NULL
+                    };
+                    await DB.create('user', newProfile);
+                } else {
+                    throw err;
+                }
             }
+
+            // --- UPDATE LOCAL SESSION ---
+            userSession.value.full_name = updates.full_name;
+            userSession.value.phone = updates.phone;
+            userSession.value.custom_username = updates.custom_username;
 
             // Persistence
             localStorage.setItem('tahfidz_session', JSON.stringify(userSession.value));
 
             alert("Profil berhasil disimpan");
-            refreshData(); // Refresh UI list if needed
+
+            // Clear password and re-sync form
+            profileForm.password = '';
+            initProfileForm();
+
+            if (refreshData) refreshData();
+
+            // Trigger Sync
+            if (DB.syncToCloud) DB.syncToCloud();
+
+            return true;
+        } catch (e) {
+            console.error("Save Profile Error:", e);
+            alert("Gagal menyimpan profil: " + e.message);
+            return false;
+        }
+    };
+
+    const deletePhoto = async () => {
+        if (!userSession.value.photo_url) return;
+        if (!confirm("Hapus foto profil?")) return;
+
+        try {
+            await DB.update(userSession.value._id, { photo_url: null });
+            userSession.value.photo_url = null;
+            localStorage.setItem('tahfidz_session', JSON.stringify(userSession.value));
+            alert("Foto profil berhasil dihapus");
         } catch (e) {
             console.error(e);
-            alert("Gagal menyimpan profil");
+            alert("Gagal menghapus foto profil");
         }
     };
 
@@ -157,8 +196,131 @@ function useProfile(uiData, DB, userSession, refreshData) {
         } catch (e) {
             console.error(e);
             alert("Gagal upload foto: " + e.message);
-        } finally {
-            isUploading.value = false;
+        }
+    };
+
+    // --- WALI: LINK SANTRI LOGIC ---
+    const nisInput = Vue.ref('');
+    const linkedSantri = Vue.ref([]);
+
+    /**
+     * Get list of Santri linked to current Wali
+     */
+    const getLinkedSantri = async () => {
+        if (userSession.value?.role !== 'wali') return;
+
+        console.log('📥 Loading linked santri for Wali:', userSession.value._id);
+
+        try {
+            const { data, error } = await sb.from('santri')
+                .select('*')
+                .eq('wali_id', userSession.value._id)
+                .or('_deleted.is.null,_deleted.eq.false');
+
+            console.log('📊 Linked santri result:', { data, error });
+
+            if (error) throw error;
+            linkedSantri.value = data || [];
+        } catch (e) {
+            console.error('Error loading linked santri:', e);
+        }
+    };
+
+    /**
+     * Link a Santri to current Wali by NIS
+     * @param {string} nis - NIS Santri
+     */
+    const linkSantri = async (nis) => {
+        if (!nis) return alert('NIS wajib diisi');
+        if (userSession.value?.role !== 'wali') return alert('Fitur ini khusus Wali');
+
+        try {
+            console.log('🔍 Searching for NIS:', nis.trim());
+
+            // 1. Find santri by NIS (allow _deleted = null or false)
+            const { data: santriList, error: findError } = await sb.from('santri')
+                .select('*')
+                .eq('nis', nis.trim())
+                .or('_deleted.is.null,_deleted.eq.false');
+
+            console.log('📊 Query result:', { santriList, error: findError });
+
+            if (findError) throw findError;
+
+            // Get first result
+            const santri = santriList && santriList.length > 0 ? santriList[0] : null;
+
+            if (!santri) return alert('NIS tidak ditemukan');
+
+            // 2. Check if already linked to another Wali
+            // 2. Check if already linked to another Wali (Allow override with confirmation)
+            if (santri.wali_id && santri.wali_id !== userSession.value._id) {
+                const proceed = confirm(`Santri ini sudah terhubung ke akun Wali lain. Ambil alih sambungan ke akun Anda?`);
+                if (!proceed) return;
+            }
+
+            // 3. Link to current Wali
+            const { error: updateError } = await sb.from('santri')
+                .update({ wali_id: userSession.value._id })
+                .eq('_id', santri._id);
+
+            if (updateError) throw updateError;
+
+            // 4. Update local state immediately
+            // Manual update ensures instant UI feedback without waiting for network
+            await DB.update(santri._id, { wali_id: userSession.value._id });
+
+            const linked = { ...santri, wali_id: userSession.value._id };
+            // Remove if exists to prevent duplicates
+            linkedSantri.value = linkedSantri.value.filter(s => s._id !== linked._id);
+            linkedSantri.value.push(linked);
+
+            // Background fetch to ensure sync
+            getLinkedSantri();
+
+            nisInput.value = ''; // Reset input
+            alert(`Berhasil menghubungkan dengan ${santri.full_name}`);
+
+            // Manual update of global UI state for immediate Dashboard visibility
+            if (uiData && uiData.santri) {
+                const existingInUi = uiData.santri.find(s => s._id === linked._id);
+                if (!existingInUi) {
+                    uiData.santri.push(linked);
+                }
+            }
+
+            if (refreshData) {
+                console.log("Refreshing global data...");
+                refreshData();
+            }
+        } catch (e) {
+            console.error('Error linking santri:', e);
+            alert('Gagal menghubungkan santri: ' + e.message);
+        }
+    };
+
+    /**
+     * Unlink a Santri from current Wali
+     * @param {string} santriId - ID Santri
+     */
+    const unlinkSantri = async (santriId) => {
+        if (!confirm('Putuskan hubungan dengan santri ini?')) return;
+
+        try {
+            const { error } = await sb.from('santri')
+                .update({ wali_id: null })
+                .eq('_id', santriId);
+
+            if (error) throw error;
+
+            await DB.update(santriId, { wali_id: null });
+            await getLinkedSantri();
+
+            alert('Hubungan berhasil diputuskan');
+            if (refreshData) refreshData();
+        } catch (e) {
+            console.error('Error unlinking santri:', e);
+            alert('Gagal memutuskan hubungan: ' + e.message);
         }
     };
 
@@ -167,6 +329,13 @@ function useProfile(uiData, DB, userSession, refreshData) {
         initProfileForm,
         saveProfile,
         uploadPhoto,
-        isUploading: Vue.computed(() => isUploading.value)
+        deletePhoto,
+        isUploading: Vue.computed(() => isUploading.value),
+        // Wali Link Santri
+        nisInput,
+        linkedSantri,
+        getLinkedSantri,
+        linkSantri,
+        unlinkSantri
     };
 }

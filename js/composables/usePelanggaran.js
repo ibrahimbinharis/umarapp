@@ -137,10 +137,23 @@ function usePelanggaran(uiData, DB, refreshData) {
             if (editingId.value) {
                 await DB.update(editingId.value, payload);
                 alert('Pelanggaran berhasil diupdate');
+
+                // --- NOTIFICATION UPDATE (v36) ---
+                const santri = uiData.santri.find(s => s._id === payload.santri_id || s.santri_id === payload.santri_id);
+                if (santri && window.NotificationService) {
+                    window.NotificationService.notifyPelanggaran(santri, payload.description, payload.points, editingId.value);
+                }
+
                 editingId.value = null; // Reset
             } else {
-                await DB.create('pelanggaran', payload);
+                const res = await DB.create('pelanggaran', payload);
                 alert('Pelanggaran berhasil disimpan');
+
+                // --- NOTIFICATION TRIGGER (v36) ---
+                const santri = uiData.santri.find(s => s._id === payload.santri_id || s.santri_id === payload.santri_id);
+                if (santri && window.NotificationService) {
+                    window.NotificationService.notifyPelanggaran(santri, payload.description, payload.points, res._id);
+                }
             }
 
             // Reset form
@@ -195,6 +208,12 @@ function usePelanggaran(uiData, DB, refreshData) {
 
         try {
             await DB.delete(id);
+
+            // --- NOTIFICATION RECALL (v36) ---
+            if (window.NotificationService) {
+                window.NotificationService.removeBySource(id);
+            }
+
             alert('Data berhasil dihapus');
 
             // Trigger refresh if available

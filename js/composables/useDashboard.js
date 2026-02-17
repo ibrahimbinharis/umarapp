@@ -9,7 +9,7 @@
  * Dependencies: uiData (from parent), userSession
  */
 
-function useDashboard(uiData, userSession) {
+function useDashboard(uiData, userSession, activeChildId) {
     const { reactive, computed, ref, nextTick } = Vue;
 
     // --- STATE ---
@@ -19,6 +19,22 @@ function useDashboard(uiData, userSession) {
         totalPutri: 0,
         totalSabaq: 0, // Keep in case needed for calculations, though not displayed
         totalManzil: 0,
+        juzCompleted: 0, // New: for Admin Average or Wali Single
+        juzRemaining: 30, // New
+        monthlyTarget: {
+            sabaqCurrent: 0,
+            sabaqTarget: 20,
+            manzilCurrent: 0,
+            manzilTarget: 10,
+            diffLabel: '0 Hal'
+        },
+        weeklyActivity: {
+            labels: [],
+            sabaq: [],
+            manzil: [],
+            totalSabaq: 0,
+            totalManzil: 0
+        },
         waliData: null,
         topSantri: []
     });
@@ -122,24 +138,123 @@ function useDashboard(uiData, userSession) {
         rawActivities.value = acts.slice(0, 10);
     };
 
+    const loadWeeklyActivity = (santriIds = null) => {
+        const days = [];
+        const sabaq = [];
+        const manzil = [];
+        let tSabaq = 0;
+        let tManzil = 0;
+
+        const dayNames = ['Ahad', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
+        const now = new Date();
+
+        // Calculate for the last 7 days
+        for (let i = 6; i >= 0; i--) {
+            const date = new Date(now);
+            date.setDate(date.getDate() - i);
+            const dateStr = date.toDateString();
+
+            days.push(dayNames[date.getDay()]);
+
+            // Sum up pages for this specific day
+            const dailySetoran = uiData.setoran.filter(s => {
+                const sDate = new Date(s.setoran_date || s.created_at).toDateString();
+                const isMatch = sDate === dateStr;
+                if (!isMatch) return false;
+
+                // If santriIds provided (Wali mode), filter by those IDs
+                if (santriIds && !santriIds.includes(s.santri_id)) return false;
+
+                return true;
+            });
+
+            const daySabaq = dailySetoran.filter(s => s.setoran_type === 'Sabaq').reduce((acc, curr) => acc + (parseFloat(curr.pages) || 0), 0);
+            const dayManzil = dailySetoran.filter(s => s.setoran_type === 'Manzil').reduce((acc, curr) => acc + (parseFloat(curr.pages) || 0), 0);
+
+            sabaq.push(daySabaq);
+            manzil.push(dayManzil);
+            tSabaq += daySabaq;
+            tManzil += dayManzil;
+        }
+
+        dashboardStats.weeklyActivity = {
+            labels: days,
+            sabaq: sabaq,
+            manzil: manzil,
+            totalSabaq: Math.round(tSabaq * 10) / 10,
+            totalManzil: Math.round(tManzil * 10) / 10
+        };
+    };
+
     // --- Top Santri Filter ---
     const topSantriFilter = ref('Semua'); // Semua | L | P
 
-    const calculateStats = () => {
+    const calculateStats = (overrideChildId = null) => {
         const santris = uiData.santri || [];
         dashboardStats.totalSantri = santris.length;
 
         // 1. Wali View
         if (userSession.value && userSession.value.role === 'wali') {
-            const childId = userSession.value.child_id;
-            const st = getStudentStats(childId);
+            // Priority: overrideChildId > activeChildId ref > userSession default
+            const targetId = overrideChildId || (activeChildId ? activeChildId.value : null) || userSession.value.child_id;
+
+            // Try matching by _id (UUID) or santri_id (NIS)
+            let santri = santris.find(s => s._id === targetId || s.santri_id === targetId || s.nis === targetId);
+
+            if (!santri && santris.length > 0) {
+                santri = santris[0]; // Final fallback
+            }
+
+            let completed = 0;
+            if (santri && santri.hafalan_progress) {
+                try {
+                    const prog = typeof santri.hafalan_progress === 'string' ? JSON.parse(santri.hafalan_progress) : santri.hafalan_progress;
+                    completed = Object.keys(prog).filter(k => prog[k]).length;
+                } catch (e) {
+                    console.error("Error parsing progress", e);
+                }
+            }
+
+            const st = santri ? getStudentStats(santri._id || santri.santri_id) : null;
+
+            // Monthly Target Logic
+            const now = new Date();
+            const currentMonth = now.getMonth();
+            const currentYear = now.getFullYear();
+
+            const mySetoran = uiData.setoran.filter(s => {
+                const d = new Date(s.setoran_date || s.created_at);
+                return (s.santri_id === santri?._id || s.santri_id === santri?.santri_id) &&
+                    d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+            });
+
+            const actualSabaq = mySetoran.filter(s => s.setoran_type === 'Sabaq').reduce((acc, curr) => acc + (parseFloat(curr.pages) || 0), 0);
+            const actualManzil = mySetoran.filter(s => s.setoran_type === 'Manzil').reduce((acc, curr) => acc + (parseFloat(curr.pages) || 0), 0);
+
+            const targetSabaq = parseInt(santri?.target_sabaq) || 20;
+            const manzilPct = parseInt(santri?.target_manzil_pct) || 20;
+            const targetManzil = Math.max(1, Math.round((completed * 20) * (manzilPct / 100)));
+
+            dashboardStats.monthlyTarget = {
+                sabaqCurrent: actualSabaq,
+                sabaqTarget: targetSabaq,
+                manzilCurrent: actualManzil,
+                manzilTarget: targetManzil,
+                diffLabel: actualSabaq >= targetSabaq ? 'Selesai' : `-${targetSabaq - actualSabaq} Hal`
+            };
+
             const sabaqPct = st ? (st.sabaq / 604) * 100 : 0;
-            const manzilPct = st ? (st.manzil / 604) * 100 : 0;
+            const manzilPctTotal = st ? (st.manzil / 604) * 100 : 0;
+
+            dashboardStats.juzCompleted = completed;
+            dashboardStats.juzRemaining = 30 - completed;
 
             dashboardStats.waliData = {
                 sabaqPercent: Math.min(100, sabaqPct),
-                manzilPercent: Math.min(100, manzilPct)
+                manzilPercent: Math.min(100, manzilPctTotal)
             };
+
+            loadWeeklyActivity(santri ? [santri._id, santri.santri_id].filter(Boolean) : []);
         }
         // 2. Admin/Guru View
         else {
@@ -237,6 +352,71 @@ function useDashboard(uiData, userSession) {
 
             dashboardStats.totalPutra = tPutra;
             dashboardStats.totalPutri = tPutri;
+
+            // Calculate Admin Average Progress
+            if (santris.length > 0) {
+                const totalCompleted = santris.reduce((sum, s) => {
+                    let c = 0;
+                    if (s.hafalan_progress) {
+                        try {
+                            const prog = typeof s.hafalan_progress === 'string' ? JSON.parse(s.hafalan_progress) : s.hafalan_progress;
+                            c = Object.keys(prog).filter(k => prog[k]).length;
+                        } catch (e) { }
+                    }
+                    return sum + c;
+                }, 0);
+                const avg = totalCompleted / santris.length;
+                dashboardStats.juzCompleted = Math.round(avg * 10) / 10;
+                dashboardStats.juzRemaining = Math.max(0, 30 - dashboardStats.juzCompleted);
+            } else {
+                dashboardStats.juzCompleted = 0;
+                dashboardStats.juzRemaining = 30;
+            }
+
+            // Calculate Admin Monthly Target Averages
+            if (santris.length > 0) {
+                let totalActualSabaq = 0, totalTargetSabaq = 0;
+                let totalActualManzil = 0, totalTargetManzil = 0;
+
+                santris.forEach(s => {
+                    const mySetoran = filteredSetoran.filter(x => x.santri_id === s._id || x.santri_id === s.santri_id);
+                    const actS = mySetoran.filter(x => x.setoran_type === 'Sabaq').reduce((acc, curr) => acc + (parseFloat(curr.pages) || 0), 0);
+                    const actM = mySetoran.filter(x => x.setoran_type === 'Manzil').reduce((acc, curr) => acc + (parseFloat(curr.pages) || 0), 0);
+
+                    const tS = parseInt(s.target_sabaq) || 20;
+
+                    // Count completed juz for this santri to calc manzil target
+                    let c = 0;
+                    if (s.hafalan_progress) {
+                        try {
+                            const prog = typeof s.hafalan_progress === 'string' ? JSON.parse(s.hafalan_progress) : s.hafalan_progress;
+                            c = Object.keys(prog).filter(k => prog[k]).length;
+                        } catch (e) { }
+                    }
+                    const mPct = parseInt(s.target_manzil_pct) || 20;
+                    const tM = Math.max(1, Math.round((c * 20) * (mPct / 100)));
+
+                    totalActualSabaq += actS;
+                    totalTargetSabaq += tS;
+                    totalActualManzil += actM;
+                    totalTargetManzil += tM;
+                });
+
+                const avgActS = totalActualSabaq / santris.length;
+                const avgTarS = totalTargetSabaq / santris.length;
+                const avgActM = totalActualManzil / santris.length;
+                const avgTarM = totalTargetManzil / santris.length;
+
+                dashboardStats.monthlyTarget = {
+                    sabaqCurrent: Math.round(avgActS * 10) / 10,
+                    sabaqTarget: Math.round(avgTarS),
+                    manzilCurrent: Math.round(avgActM * 10) / 10,
+                    manzilTarget: Math.round(avgTarM),
+                    diffLabel: `Avg: ${Math.round(avgActS)} Hal`
+                };
+            }
+
+            loadWeeklyActivity(); // Admin/Guru: Total all students
 
             // Store FULL Leaderboard (unsorted/unfiltered) to allow dynamic filtering
             dashboardStats.leaderboard = leaderboard;

@@ -8,8 +8,8 @@ const PelanggaranView = {
         'uiData',
         'editingId',
         'filteredPelanggaran',
-        'filteredPelanggaran',
-        'activeDropdown'
+        'activeDropdown',
+        'userSession'
     ],
     emits: [
         'update:pelanggaranForm',
@@ -43,8 +43,8 @@ const PelanggaranView = {
             <p class="text-xs text-slate-500">Catat dan kelola pelanggaran santri</p>
         </div>
 
-        <!-- TABS -->
-        <div class="p-2 bg-slate-100 m-2 rounded-xl flex border border-slate-200 relative z-10">
+        <!-- TABS (Hide for Wali) -->
+        <div v-if="userSession?.role !== 'wali'" class="p-2 bg-slate-100 m-2 rounded-xl flex border border-slate-200 relative z-10">
             <button @click="$emit('update:pelanggaranForm', { ...pelanggaranForm, tab: 'input' })"
                 :class="pelanggaranForm.tab === 'input' ? 'bg-white text-slate-900 shadow-sm font-bold' : 'text-slate-500 hover:text-slate-700'"
                 class="flex-1 py-2 text-xs rounded-lg transition-all">
@@ -59,8 +59,8 @@ const PelanggaranView = {
 
         <!-- TAB 1: INPUT & RIWAYAT -->
         <div v-if="pelanggaranForm.tab === 'input'" class="space-y-6 pb-24">
-            <!-- Input Form -->
-            <div class="bg-white p-5 rounded-3xl border shadow-sm mx-2 space-y-4">
+            <!-- Input Form (Hide for Wali) -->
+            <div v-if="userSession?.role !== 'wali'" class="bg-white p-5 rounded-3xl border shadow-sm mx-2 space-y-4">
                 <h3 class="font-bold text-slate-800 border-b pb-2">Catat Pelanggaran</h3>
 
                 <!-- 1. Select Santri -->
@@ -175,8 +175,8 @@ const PelanggaranView = {
                     <div class="flex items-center gap-2">
                         <span class="bg-red-50 text-red-600 px-2 py-1 rounded-lg text-xs font-black">-{{ p.points }}</span>
 
-                        <!-- 3-Dot Menu -->
-                        <div class="relative">
+                        <!-- 3-Dot Menu (Hide for Wali) -->
+                        <div v-if="userSession?.role !== 'wali'" class="relative">
                             <button @click.stop="$emit('toggle-dropdown', p._id)"
                                 class="size-8 flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition">
                                 <span class="material-symbols-outlined">more_vert</span>

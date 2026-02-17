@@ -97,6 +97,11 @@ function useSantri(uiData, DB, userSession, modalState, refreshData, searchText)
             );
         }
 
+        // Filter for Wali - only show linked santri
+        if (userSession.value?.role === 'wali') {
+            items = items.filter(s => s.wali_id === userSession.value._id);
+        }
+
         // Gender segregation for guru users
         if (userSession.value?.role === 'guru' && userSession.value?.gender) {
             items = items.filter(s => s.gender === userSession.value.gender);

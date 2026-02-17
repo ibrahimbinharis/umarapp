@@ -35,6 +35,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.1/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <!-- PWA -->
     <link rel="manifest" href="manifest.json">
@@ -43,15 +44,24 @@
 </head>
 
 <body class="bg-slate-50 text-slate-800 h-screen w-full overflow-hidden">
-    <div id="app" v-cloak class="w-full h-full flex flex-col relative text-sm">
+    <div id="app" v-cloak class="w-full h-full flex flex-col relative text-sm bg-slate-50">
 
-        <!-- LOGIN VIEW (Redesigned) -->
+        <!-- FLAT LOADING SCREEN -->
+        <transition name="fade">
+            <div v-if="loading"
+                class="fixed inset-0 z-[999] bg-white flex flex-col items-center justify-center transition-all duration-500">
+                <img src="image/logo_new.png" alt="Logo" class="size-24 object-contain">
+                <p class="mt-4 font-bold text-slate-800 text-lg uppercase tracking-widest">{{ appName }}</p>
+            </div>
+        </transition>
+
         <!-- LOGIN VIEW (Component) -->
-        <login-view v-if="currentView === 'login'" :app-name="appName" :app-version="appVersion" :login-form="loginForm"
-            @login="handleLogin"></login-view>
+        <login-view v-if="!loading && currentView === 'login'" :app-name="appName" :app-version="appVersion"
+            :login-form="loginForm" :is-register-mode="isRegisterMode" @login="handleLogin" @register="handleRegister"
+            @toggle-mode="isRegisterMode = !isRegisterMode"></login-view>
 
         <!-- MAIN APP VIEW -->
-        <div v-else class="flex h-full w-full">
+        <div v-else-if="!loading && currentView" class="flex h-full w-full animate-in fade-in duration-700">
 
             <!-- SIDEBAR (Desktop) -->
             <aside v-if="isSidebarVisible"
@@ -81,20 +91,7 @@
                     </button>
                 </div>
 
-                <!-- MONITORING BELL (Desktop Sidebar) -->
-                <div v-if="userSession && userSession.role !== 'santri'" class="p-4 border-t border-slate-100 pb-0">
-                    <button @click="openMonitoringModal()"
-                        class="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-50 font-medium text-sm text-slate-500 relative">
-                        <div class="relative">
-                            <span class="material-symbols-outlined">notifications</span>
-                            <span v-if="notificationCount > 0"
-                                class="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white ring-2 ring-white">
-                                {{ notificationCount }}
-                            </span>
-                        </div>
-                        Monitoring
-                    </button>
-                </div>
+                <!-- MONITORING BELL (Desktop Sidebar) REMOVED -->
                 <!-- User Profile -->
                 <div class="p-4 border-t border-slate-100">
                     <div @click="navigateTo('profile')"
@@ -130,15 +127,7 @@
                     <!-- Optional: Right Header Items (e.g. Profile) -->
                     <!-- Sync Indicator & Profile -->
                     <div class="flex items-center gap-2">
-                        <!-- MONITORING BELL (Mobile Header) -->
-                        <button v-if="userSession && userSession.role !== 'santri'" @click="openMonitoringModal()"
-                            class="mr-1 relative p-1.5 text-slate-500 hover:bg-slate-50 rounded-full transition">
-                            <span class="material-symbols-outlined">notifications</span>
-                            <span v-if="notificationCount > 0"
-                                class="absolute top-1 right-1 flex h-3 w-3 items-center justify-center rounded-full bg-red-500 text-[8px] font-bold text-white ring-1 ring-white">
-                                {{ notificationCount }}
-                            </span>
-                        </button>
+                        <!-- MONITORING BELL (Mobile Header) REMOVED -->
                         <!-- QURAN MENU BUTTON (Only in Quran View) -->
                         <button v-if="currentView === 'quran'" @click="quranState.showDrawer = true"
                             class="mr-2 text-slate-600 hover:text-primary transition flex items-center">
@@ -205,9 +194,18 @@
                             :my-menus="myMenus" :activity-filter="activityFilter"
                             :filtered-activities="filteredActivities" :loading="loading"
                             :top-santri-filter="topSantriFilter" :filtered-top-santri="filteredTopSantri"
+                            :notifications="allNotifications" :unread-count="unreadCount" :ui-data="uiData"
+                            :active-child-id="activeChildId" :select-child="selectChild"
                             @update:activity-filter="activityFilter = $event"
-                            @update:top-santri-filter="topSantriFilter = $event"
-                            @navigate="navigateTo"></dashboard-view>
+                            @update:top-santri-filter="topSantriFilter = $event" @mark-read="markAsRead"
+                            @mark-all-read="markAllRead" @navigate="navigateTo"></dashboard-view>
+                    </div>
+
+                    <!-- NOTIFICATION VIEW -->
+                    <div v-if="!loading && currentView === 'notifications'" class="h-full w-full">
+                        <notification-view :notifications="allNotifications" :unread-count="unreadCount"
+                            :ui-data="uiData" @mark-read="markAsRead" @mark-all-read="markAllRead"
+                            @back="currentView = 'dashboard'"></notification-view>
                     </div>
                     <!-- SANTRI VIEW SKELETON -->
                     <div v-if="loading && currentView === 'santri'" class="animate-pulse px-4 space-y-4 pt-4">
@@ -345,8 +343,10 @@
                     <div v-if="currentView === 'profile'">
                         <profile-view :user-session="userSession" :profile-form="profileForm"
                             :save-profile="saveProfile" :logout="logout" :handle-file-select="handleFileSelect"
-                            :is-uploading="isUploading" :get-initials="getInitials"
-                            :app-version="appVersion"></profile-view>
+                            :delete-photo="deletePhoto" :is-uploading="isUploading" :get-initials="getInitials"
+                            :app-version="appVersion" :linked-santri="linkedSantri" :get-linked-santri="getLinkedSantri"
+                            :link-santri="linkSantri" :unlink-santri="unlinkSantri" :active-child-id="activeChildId"
+                            :select-child="selectChild"></profile-view>
                     </div>
 
 
@@ -455,178 +455,16 @@
                         </teleport>
                     </div>
 
-                    <!-- QURAN VIEW -->
-                    <div v-if="currentView === 'quran'"
-                        class="fixed top-16 bottom-0 left-0 right-0 flex flex-col bg-slate-50 pb-24 md:static md:pb-0 md:h-[calc(100vh-4rem)] z-0">
-                        <!-- Header (Mobile only) Removed as per request, using global header -->
-
-                        <!-- Quran Info Bar (Top) -->
-                        <div
-                            class="w-full bg-white border-b border-slate-200 px-4 py-2 flex justify-between items-center shadow-sm z-10 sticky top-0">
-                            <span class="font-bold text-slate-500 text-xs w-1/3 text-left">Juz {{ currentJuz
-                                }}</span>
-                            <span
-                                class="font-bold text-slate-900 text-sm w-1/3 text-center bg-slate-100 rounded-md py-1">{{
-                                quranState.page }}</span>
-                            <span class="font-bold text-primary text-xs w-1/3 text-right truncate">{{
-                                currentSurahName
-                                }}</span>
-                        </div>
-
-
-                        <!-- Main Viewer Area -->
-                        <div
-                            class="flex-1 relative overflow-y-auto overflow-x-hidden bg-[#fdfaf7] flex flex-col items-center justify-start">
-                            <div @touchstart="handleTouchStart" @touchmove="handleTouchMove" @touchend="handleTouchEnd"
-                                class="w-full min-h-full flex items-start justify-center relative p-0 md:p-0 md:h-full">
-                                <img :src="quranImageSrc"
-                                    class="w-full h-auto shadow-lg transition-opacity duration-200 select-none border border-[#f0e6d2] md:max-h-full md:max-w-full md:object-contain md:h-full md:w-auto mt-0"
-                                    alt="Halaman Quran">
-
-                                <!-- Click Areas for Nav (Invisible) -->
-                                <div class="absolute inset-0 flex">
-                                    <div @click="nextQPage"
-                                        class="w-1/2 h-full z-10 cursor-pointer active:bg-black/5 transition"
-                                        title="Lanjut (Next)"></div>
-                                    <div @click="prevQPage"
-                                        class="w-1/2 h-full z-10 cursor-pointer active:bg-black/5 transition"
-                                        title="Kembali (Prev)"></div>
-                                </div>
-
-                                <!-- Desktop Drawer Toggle Only -->
-                                <button @click="quranState.showDrawer = true"
-                                    class="hidden md:flex absolute top-4 right-4 size-10 bg-white/50 hover:bg-white rounded-full items-center justify-center shadow z-20 text-slate-700 hover:text-primary transition"
-                                    title="Menu Quran">
-                                    <span class="material-symbols-outlined">menu</span>
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Footer Info Removed -->
-
-
-                        <!-- Draggable Exam Controls -->
-                        <div v-if="showExamControls && currentView === 'quran' && ujianForm.santri_id"
-                            class="fixed inset-0 z-40 bg-transparent" @click="showExamControls = false"></div>
-
-                        <div v-if="currentView === 'quran' && ujianForm.santri_id && showExamControls"
-                            class="fixed z-50 bg-white rounded-2xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden w-40 touch-none transition-shadow hover:shadow-xl active:shadow-2xl"
-                            :style="{ left: examControlPos.x + 'px', top: examControlPos.y + 'px' }"
-                            @touchstart.passive="startDragExamControl" @touchmove.passive="dragExamControl"
-                            @touchend="endDragExamControl" @mousedown="startDragExamControl"
-                            @mousemove="dragExamControl" @mouseup="endDragExamControl" @mouseleave="endDragExamControl">
-
-                            <!-- Drag Handle -->
-                            <div class="bg-primary px-3 py-2 cursor-move flex items-center justify-between text-white">
-                                <span class="text-[10px] font-bold uppercase tracking-wider">Kesalahan</span>
-                                <span class="material-symbols-outlined text-sm opacity-50">drag_indicator</span>
-                            </div>
-
-                            <!-- Content -->
-                            <div class="p-3 bg-white space-y-3">
-                                <!-- Counter -->
-                                <div class="flex items-center justify-between gap-2">
-                                    <button @click="updateSalah(-1)"
-                                        class="size-8 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center hover:bg-slate-200 active:scale-95 transition">
-                                        <span class="material-symbols-outlined text-lg">remove</span>
-                                    </button>
-                                    <span class="text-2xl font-black text-red-500 min-w-[30px] text-center">{{
-                                        ujianForm.tab === 'bulanan' ? ujianForm.b_salah : ujianForm.s_salah
-                                        }}</span>
-                                    <button @click="updateSalah(1)"
-                                        class="size-8 rounded-full bg-red-50 text-red-500 flex items-center justify-center hover:bg-red-100 active:scale-95 transition">
-                                        <span class="material-symbols-outlined text-lg">add</span>
-                                    </button>
-                                </div>
-
-                                <!-- Finish Button -->
-                                <button @click="finishExam"
-                                    class="w-full py-2 bg-emerald-50 text-emerald-600 rounded-xl text-xs font-bold flex items-center justify-center gap-1 hover:bg-emerald-100 transition active:scale-95">
-                                    <span class="material-symbols-outlined text-sm">check</span> Selesai
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Drawer (Jump) -->
-                        <div v-if="quranState.showDrawer" class="absolute inset-0 bg-black/50 z-30"
-                            @click.self="quranState.showDrawer=false">
-                            <div
-                                class="absolute right-0 top-0 bottom-0 w-80 bg-white shadow-2xl flex flex-col animate-slide-in-right">
-                                <div class="p-4 border-b flex justify-between items-center bg-slate-50">
-                                    <h3 class="font-bold text-slate-800">Navigasi Quran</h3>
-                                    <button @click="quranState.showDrawer=false"
-                                        class="size-8 flex items-center justify-center hover:bg-slate-200 rounded-full"><span
-                                            class="material-symbols-outlined">close</span></button>
-                                </div>
-                                <div class="p-4 space-y-6 overflow-y-auto flex-1 h-full pb-20">
-                                    <!-- 1. Jump Page -->
-                                    <div class="space-y-2">
-                                        <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Loncat
-                                            ke Halaman</label>
-                                        <div class="flex gap-2">
-                                            <input v-model="quranState.jumpPage" type="number"
-                                                class="w-full border rounded-lg px-3 py-2 text-sm font-bold bg-white focus:outline-none focus:border-primary"
-                                                min="1" max="604" placeholder="1 - 604">
-                                            <button @click="jumpToPage"
-                                                class="bg-primary text-white px-4 py-2 rounded-lg font-bold text-sm">Go</button>
-                                        </div>
-                                    </div>
-
-                                    <!-- 2. Cari Surat & Ayat -->
-                                    <div class="space-y-3 pt-4 border-t border-dashed">
-                                        <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Cari
-                                            Surat & Ayat</label>
-                                        <select v-model="quranState.jumpSurah"
-                                            class="w-full border rounded-lg px-3 py-2 text-sm font-bold bg-white mb-2">
-                                            <option value="">Pilih Surat...</option>
-                                            <option v-for="s in uiData.surahList" :value="s.no">{{ s.no }}. {{
-                                                s.latin
-                                                }}</option>
-                                        </select>
-                                        <div class="flex gap-2">
-                                            <input v-model="quranState.jumpAyat" type="number"
-                                                class="w-full border rounded-lg px-3 py-2 text-sm font-bold bg-white focus:outline-none focus:border-primary"
-                                                placeholder="Ayat No.">
-                                            <button @click="jumpToAyat"
-                                                class="bg-primary text-white px-4 py-2 rounded-lg font-bold text-sm">Cari</button>
-                                        </div>
-                                    </div>
-
-                                    <!-- 3. Indeks Juz -->
-                                    <div class="space-y-2 pt-4 border-t border-dashed">
-                                        <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Indeks
-                                            Juz</label>
-                                        <select @change="goToJuz($event.target.value)"
-                                            class="w-full border rounded-lg px-3 py-2 text-sm font-bold bg-white mb-2">
-                                            <option value="">Pilih Juz...</option>
-                                            <option v-for="j in 30" :key="j" :value="j">Juz {{ j }}</option>
-                                        </select>
-                                    </div>
-
-                                    <!-- 4. Indeks Surat -->
-                                    <div class="space-y-2 pt-4 border-t border-dashed">
-                                        <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Indeks
-                                            Surat</label>
-                                        <div class="space-y-1">
-                                            <button v-for="s in uiData.surahList" :key="s.no" @click="goToSurah(s.no)"
-                                                class="w-full text-left p-2 rounded hover:bg-slate-50 flex items-center gap-3 border-b border-transparent hover:border-slate-100 transition group">
-                                                <span
-                                                    class="font-bold text-xs text-slate-400 group-hover:text-primary w-6">{{
-                                                    s.no }}</span>
-                                                <div class="flex-1">
-                                                    <p class="font-bold text-sm text-slate-800">{{ s.latin }}
-                                                    </p>
-                                                    <p class="text-[10px] text-slate-400 italic">{{ s.arti }} &bull;
-                                                        {{
-                                                        s.ayat }} Ayat</p>
-                                                </div>
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                </div>
-                            </div>
-                        </div>
+                    <!-- QURAN VIEW (Component) -->
+                    <div v-if="currentView === 'quran'">
+                        <quran-view :ui-data="uiData" :quran-state="quranState" :quran-image-src="quranImageSrc"
+                            :current-surah-name="currentSurahName" :current-juz="currentJuz" :next-q-page="nextQPage"
+                            :prev-q-page="prevQPage" :go-to-surah="goToSurah" :jump-to-surah-start="jumpToSurahStart"
+                            :jump-to-page="jumpToPage" :go-to-juz="goToJuz" :jump-to-ayat="jumpToAyat"
+                            :handle-touch-start="handleTouchStart" :handle-touch-move="handleTouchMove"
+                            :handle-touch-end="handleTouchEnd" :ujian-form="ujianForm"
+                            :show-exam-controls="showExamControls" :update-salah="updateSalah"
+                            :finish-exam="finishExam"></quran-view>
                     </div>
 
                     <div v-else-if="currentView === 'hafalan'" class="fade-in pb-24">
@@ -697,9 +535,11 @@
                             <div class="bg-white p-6 rounded-3xl border shadow-sm mx-2">
                                 <div class="grid grid-cols-5 gap-3 sm:gap-4 justify-items-center">
                                     <button v-for="j in 30" :key="j"
-                                        @click="selectUjianJuz(j); modalState.view='grading'; modalState.isOpen=true;"
-                                        class="size-12 sm:size-14 rounded-full border-2 flex flex-col items-center justify-center transition-all transform hover:scale-110 active:scale-95 bg-slate-50 text-slate-400 border-slate-200 hover:border-emerald-300"
+                                        @click="userSession?.role !== 'wali' && (selectUjianJuz(j), modalState.view='grading', modalState.isOpen=true)"
+                                        class="size-12 sm:size-14 rounded-full border-2 flex flex-col items-center justify-center transition-all bg-slate-50 text-slate-400 border-slate-200"
                                         :class="{
+                                            'hover:scale-110 active:scale-95 hover:border-emerald-300 cursor-pointer': userSession?.role !== 'wali',
+                                            'cursor-default pointer-events-none': userSession?.role === 'wali',
                                             'bg-blue-500 text-white shadow-lg shadow-blue-200 border-transparent': selectedSantriProgress[j] && ['A+', 'A'].includes(selectedSantriProgress[j]),
                                             'bg-emerald-500 text-white shadow-lg shadow-emerald-200 border-transparent': selectedSantriProgress[j] && ['B+', 'B', 'B-', 'B'].includes(selectedSantriProgress[j]),
                                             'bg-red-500 text-white shadow-lg shadow-red-200 border-transparent': selectedSantriProgress[j] === 'C',
@@ -733,7 +573,7 @@
                             :is-pelanggaran-santri-dropdown-open="isPelanggaranSantriDropdownOpen"
                             :pelanggaran-selected-santri-name="pelanggaranSelectedSantriName" :ui-data="uiData"
                             :editing-id="editingId" :filtered-pelanggaran="filteredPelanggaran"
-                            :active-dropdown="activeDropdown"
+                            :active-dropdown="activeDropdown" :user-session="userSession"
                             @update:pelanggaran-form="Object.assign(pelanggaranForm, $event)"
                             @update:pelanggaran-santri-search="pelanggaranSantriSearch = $event"
                             @update:is-pelanggaran-santri-dropdown-open="isPelanggaranSantriDropdownOpen = $event"
@@ -781,46 +621,7 @@
             </div>
         </div>
 
-        <!-- MONITORING MODAL -->
-        <div v-if="monitoringModalOpen"
-            class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[60] p-4"
-            @click.self="closeMonitoringModal">
-            <div class="bg-white rounded-2xl p-6 max-w-md w-full mx-4 space-y-4 max-h-[85vh] flex flex-col shadow-2xl">
-                <div class="flex justify-between items-center border-b border-slate-100 pb-4">
-                    <div>
-                        <h3 class="font-bold text-lg text-slate-900">Laporan Monitoring</h3>
-                        <p class="text-xs text-slate-500">{{ formatDateFriendly(new Date()) }}</p>
-                    </div>
-                    <button @click="closeMonitoringModal"
-                        class="size-8 flex items-center justify-center hover:bg-slate-100 rounded-full transition">
-                        <span class="material-symbols-outlined">close</span>
-                    </button>
-                </div>
-
-                <div class="flex-1 overflow-y-auto space-y-4 pl-3 pr-1 custom-scrollbar">
-                    <div v-if="notificationCount === 0" class="text-center py-12 text-slate-400">
-                        <span class="material-symbols-outlined text-5xl opacity-20">check_circle</span>
-                        <p class="mt-4 text-sm font-medium">Tidak ada laporan santri belum setor.</p>
-                    </div>
-
-                    <div v-else class="space-y-4 pb-4">
-                        <div v-for="item in missingReports" :key="item.id"
-                            class="flex items-start gap-3 relative pl-4 border-l-2 border-slate-100 last:border-0 pb-4 last:pb-0 group">
-                            <!-- Timeline dot -->
-                            <div
-                                class="absolute -left-[5px] top-1.5 size-2.5 rounded-full border-2 border-white ring-1 ring-slate-200 bg-red-500 group-hover:scale-110 transition">
-                            </div>
-
-                            <div class="flex-1">
-                                <p class="font-bold text-slate-900 text-sm group-hover:text-primary transition">{{
-                                    item.santri_name }}</p>
-                                <p class="text-xs text-slate-500 mt-0.5">{{ item.msg }}</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <!-- MONITORING MODAL REMOVED -->
 
         <!-- MAPEL MODAL FORM -->
         <div v-if="mapelModalState.isOpen" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
@@ -978,13 +779,12 @@
                             <div>
                                 <label class="block text-xs font-bold text-slate-700 mb-1">NIS (Otomatis)</label>
                                 <input v-model="santriForm.nis" type="text"
-                                    class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-slate-700 font-bold focus:outline-none focus:border-primary"
-                                    readonly>
+                                    class="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:outline-none focus:border-primary focus:ring-4 focus:ring-blue-500/10 bg-slate-50/50 text-slate-700 transition-all placeholder:font-normal placeholder:text-slate-400">
                             </div>
                             <div>
                                 <label class="block text-xs font-bold text-slate-700 mb-1">Kelas</label>
                                 <select v-model="santriForm.class_id"
-                                    class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-primary bg-white">
+                                    class="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:outline-none focus:border-primary focus:ring-4 focus:ring-blue-500/10 bg-slate-50/50 text-slate-700 transition-all">
                                     <option value="">Pilih Kelas</option>
                                     <option v-for="k in uiData.kelas" :value="k.name">{{ k.name }}</option>
                                 </select>
@@ -994,14 +794,14 @@
                         <div>
                             <label class="block text-xs font-bold text-slate-700 mb-1">Nama Lengkap</label>
                             <input v-model="santriForm.full_name" type="text"
-                                class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary bg-white"
+                                class="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:outline-none focus:border-primary focus:ring-4 focus:ring-blue-500/10 bg-slate-50/50 text-slate-700 transition-all placeholder:font-normal placeholder:text-slate-400"
                                 placeholder="Nama lengkap santri" required>
                         </div>
 
                         <div>
                             <label class="block text-xs font-bold text-slate-700 mb-1">Username (Opsional)</label>
                             <input v-model="santriForm.username" type="text"
-                                class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary bg-white"
+                                class="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:outline-none focus:border-primary focus:ring-4 focus:ring-blue-500/10 bg-slate-50/50 text-slate-700 transition-all placeholder:font-normal placeholder:text-slate-400"
                                 placeholder="Username untuk login alternatif">
                         </div>
 
@@ -1009,7 +809,7 @@
                             <div>
                                 <label class="block text-xs font-bold text-slate-700 mb-1">Jenis Kelamin</label>
                                 <select v-model="santriForm.gender"
-                                    class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-primary bg-white">
+                                    class="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:outline-none focus:border-primary focus:ring-4 focus:ring-blue-500/10 bg-slate-50/50 text-slate-700 transition-all">
                                     <option value="L">Laki-laki</option>
                                     <option value="P">Perempuan</option>
                                 </select>
@@ -1021,16 +821,16 @@
                             <h4 class="text-xs font-bold text-slate-800 mb-3">Informasi Wali</h4>
                             <div class="grid grid-cols-2 gap-3">
                                 <input v-model="santriForm.parent_name" type="text"
-                                    class="w-full px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:border-primary bg-white text-sm"
+                                    class="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:outline-none focus:border-primary focus:ring-4 focus:ring-blue-500/10 bg-slate-50/50 text-slate-700 transition-all placeholder:font-normal placeholder:text-slate-400 text-sm"
                                     placeholder="Nama Wali">
                                 <input v-model="santriForm.parent_phone" type="text"
-                                    class="w-full px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:border-primary bg-white text-sm"
+                                    class="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:outline-none focus:border-primary focus:ring-4 focus:ring-blue-500/10 bg-slate-50/50 text-slate-700 transition-all placeholder:font-normal placeholder:text-slate-400 text-sm"
                                     placeholder="No. HP / WA">
                             </div>
                             <div class="mt-3">
                                 <label class="block text-xs font-bold text-slate-700 mb-1">Password Wali (Login)</label>
                                 <input v-model="santriForm.password" type="password"
-                                    class="w-full px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:border-primary bg-white text-sm"
+                                    class="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:outline-none focus:border-primary focus:ring-4 focus:ring-blue-500/10 bg-slate-50/50 text-slate-700 transition-all placeholder:font-normal placeholder:text-slate-400 text-sm"
                                     placeholder="Isi untuk ubah password">
                             </div>
                         </div>
@@ -1422,6 +1222,8 @@
     <script src="js/components/SantriView.js"></script>
     <script src="js/components/GuruView.js"></script>
     <script src="js/components/UjianView.js"></script>
+    <script src="js/components/ExamCounter.js"></script> <!-- NEW -->
+    <script src="js/components/QuranView.js"></script>
     <script src="js/components/SetoranView.js"></script>
     <script src="js/components/TargetView.js"></script>
     <script src="js/components/RekapView.js"></script>
@@ -1429,7 +1231,10 @@
     <script src="js/components/JadwalView.js"></script>
     <script src="js/components/AbsensiView.js"></script>
     <script src="js/components/ProfileView.js"></script>
-    <script src="js/composables/useMonitoring.js"></script>
+    <script src="js/components/NotificationView.js"></script>
+    <script src="js/services/NotificationService.js"></script>
+    <script src="js/services/PushService.js"></script>
+    <script src="js/composables/useNotifications.js"></script>
     <script src="js/app_vue.js"></script>
 
     <!-- Service Worker Registration -->
@@ -1496,7 +1301,7 @@
 
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js?v=2').then(reg => {
+                navigator.serviceWorker.register('sw.js?v=2.0').then(reg => {
                     console.log('SW Registered!', reg);
 
                     // 1. Check if update is already waiting (e.g. from previous visit)
@@ -1528,6 +1333,5 @@
         }
     </script>
 </body>
-
 
 </html>

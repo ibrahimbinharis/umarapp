@@ -9,7 +9,7 @@
  * Dependencies: window.allData (from core.js)
  */
 
-const useRekap = () => {
+const useRekap = (uiData, userSession) => { // Accept uiData and userSession
     const { ref, computed } = Vue;
 
     // State
@@ -29,7 +29,9 @@ const useRekap = () => {
      */
     const rekapHafalanData = computed(() => {
         // 1. Filter Santri by Kelas & Gender (and exclude deleted)
-        let santris = window.allData.filter(d => d.__type === 'santri' && d._deleted !== true && d._deleted !== 'true');
+        // Use uiData.santri which is already filtered in loadData()
+        let santris = uiData.santri || [];
+
         if (rekapKelas.value) {
             santris = santris.filter(s => s.kelas === rekapKelas.value);
         }
@@ -44,18 +46,14 @@ const useRekap = () => {
         // Helper: Check Date Match
         const isMatch = (dateStr) => {
             if (!dateStr) return false;
-            // Handle various date formats if necessary, but standard is YYYY-MM-DD
             const d = new Date(dateStr);
             return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
         };
 
-        // Get All Relevant Data Only Once
-        const allSetoran = window.allData.filter(d => d.__type === 'setoran');
-        const allUjian = window.allData.filter(d => d.__type === 'ujian');
-
-        const filteredSetoran = allSetoran.filter(d => isMatch(d.setoran_date));
-        const filteredUjian = allUjian.filter(d => isMatch(d.date));
-        const allPelanggaran = window.allData.filter(d => d.__type === 'pelanggaran' && isMatch(d.date));
+        // Get All Relevant Data from uiData (already filtered in loadData)
+        const filteredSetoran = (uiData.setoran || []).filter(d => isMatch(d.setoran_date));
+        const filteredUjian = (uiData.ujian || []).filter(d => isMatch(d.date));
+        const allPelanggaran = (uiData.pelanggaran || []).filter(d => isMatch(d.date));
 
         // 3. Map Data per Santri
         return santris.map(s => {

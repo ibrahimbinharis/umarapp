@@ -141,10 +141,14 @@ function useSetoran(uiData, DB, refreshData) {
             // I should move formatSetoranDetail to the top of the file or change it to a function declaration.
 
             // Strategy: Move helper functions to the top of useSetoran body.
+            // Start formatSetoranDetail logic
+            const detailText = formatSetoranDetail(r);
+
             return {
                 ...r,
                 santri_name: s ? s.full_name : 'Unknown',
-                detail: formatSetoranDetail(r)
+                detail: detailText,
+                formatted_date: window.DateUtils.formatDateFriendly(r.setoran_date)
             };
         });
     });
@@ -634,11 +638,24 @@ function useSetoran(uiData, DB, refreshData) {
             if (editingId.value) {
                 // UPDATE mode
                 await DB.update(editingId.value, payload);
+
+                // --- NOTIFICATION UPDATE (v36) ---
+                const santri = uiData.santri.find(s => s.santri_id === setoranForm.santri_id || s._id === setoranForm.santri_id);
+                if (santri && window.NotificationService) {
+                    window.NotificationService.notifySetoran(santri, setoranForm.setoran_type, setoranForm.pages, editingId.value);
+                }
+
                 alert('Setoran berhasil diupdate!');
             } else {
                 // CREATE mode
-                await DB.create('setoran', payload);
+                const res = await DB.create('setoran', payload);
                 alert('Setoran berhasil disimpan!');
+
+                // --- NOTIFICATION TRIGGER (v36) ---
+                const santri = uiData.santri.find(s => s.santri_id === setoranForm.santri_id || s._id === setoranForm.santri_id);
+                if (santri && window.NotificationService) {
+                    window.NotificationService.notifySetoran(santri, setoranForm.setoran_type, setoranForm.pages, res._id);
+                }
             }
 
             // Refresh data
@@ -669,6 +686,11 @@ function useSetoran(uiData, DB, refreshData) {
 
         try {
             await DB.delete(setoranId);
+
+            // --- NOTIFICATION RECALL (v36) ---
+            if (window.NotificationService) {
+                window.NotificationService.removeBySource(setoranId);
+            }
 
             // Refresh data
             if (refreshData) {

@@ -57,29 +57,46 @@ window.DateUtils = {
         return time;
     },
 
-    formatDateFriendly: (date) => {
-        if (!date) return '-';
-        const dStr = getTodayDateString();
+    formatDateFriendly: (dateStr) => {
+        if (!dateStr) return '-';
 
-        // Handle string input (ISO or YYYY-MM-DD)
-        if (typeof date === 'string') {
-            if (date.startsWith(dStr)) return 'Hari ini';
-            const d = new Date(date);
-            if (isNaN(d.getTime())) return date;
-            return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+        // Helper to normalize input to YYYY-MM-DD string
+        const getYmd = (d) => {
+            if (typeof d === 'string') {
+                // If it's already YYYY-MM-DD
+                if (d.match(/^\d{4}-\d{2}-\d{2}$/)) return d;
+                // If ISO string
+                if (d.includes('T')) return d.split('T')[0];
+            }
+            // Date object
+            const dateObj = new Date(d);
+            if (isNaN(dateObj.getTime())) return null;
+            const year = dateObj.getFullYear();
+            const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+            const day = String(dateObj.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        };
+
+        const targetYmd = getYmd(dateStr);
+        if (!targetYmd) return dateStr;
+
+        // Get Today YYYY-MM-DD
+        const today = new Date();
+        const todayYmd = getYmd(today);
+
+        // Get Yesterday YYYY-MM-DD
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yesterdayYmd = getYmd(yesterday);
+
+        if (targetYmd === todayYmd) {
+            return 'Hari ini';
+        } else if (targetYmd === yesterdayYmd) {
+            return 'Kemarin';
+        } else {
+            // Return DD/MM/YYYY
+            const [y, m, d] = targetYmd.split('-');
+            return `${d}/${m}/${y}`;
         }
-
-        // Handle Date object
-        if (date instanceof Date) {
-            const year = date.getFullYear();
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const day = String(date.getDate()).padStart(2, '0');
-            const isoLocal = `${year}-${month}-${day}`;
-
-            if (isoLocal === dStr) return 'Hari ini';
-            return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
-        }
-
-        return '-';
     }
 };

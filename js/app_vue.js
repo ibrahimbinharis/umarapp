@@ -2,7 +2,7 @@ const { createApp, ref, reactive, computed, onMounted, watch, nextTick } = Vue;
 
 const MENU_CONFIG = [
     { id: 'dashboard', label: "Home", icon: "home", roles: ['admin', 'guru', 'wali'], inBottom: true },
-    { id: 'jadwal', label: "Jadwal", icon: "calendar_month", roles: ['admin', 'guru'], inBottom: true },
+    { id: 'jadwal', label: "Jadwal", icon: "calendar_month", roles: ['admin', 'guru', 'wali'], inBottom: true },
     { id: 'input', label: "Input", icon: "add", roles: ['admin', 'guru'], inBottom: true, highlight: true },
     { id: 'riwayat', label: "Riwayat", icon: "history", roles: ['admin', 'guru', 'wali'], inBottom: true },
     { id: 'absensi', label: "Absensi", icon: "event_available", roles: ['admin', 'guru'], inBottom: true },
@@ -14,7 +14,7 @@ const MENU_CONFIG = [
     { id: 'mapel', label: "Mapel", icon: "book_2", roles: ['admin'], inBottom: false },
     { id: 'kelas', label: "Kelas", icon: "meeting_room", roles: ['admin'], inBottom: false },
     { id: 'quran', label: "Al-Quran", icon: "auto_stories", roles: ['admin', 'guru', 'wali'], inBottom: false },
-    { id: 'pelanggaran', label: "Pelanggaran", icon: "warning", roles: ['admin', 'guru', 'wali'], inBottom: false },
+    { id: 'pelanggaran', label: "Pelanggaran", icon: "warning", roles: ['admin', 'guru'], inBottom: false },
     { id: 'profile', label: "Profile", icon: "account_circle", roles: ['admin', 'guru', 'wali'], inBottom: false },
     { id: 'rekap', label: "Rekap", icon: "analytics", roles: ['admin', 'guru', 'wali'], inBottom: false },
 ];
@@ -30,7 +30,7 @@ createApp({
         const currentView = ref('login');
 
         // --- AUTH (v34 Refactor) ---
-        const { userSession, loginForm, handleLogin, logout, checkSession } = useAuth(currentView, loading);
+        const { userSession, loginForm, handleLogin, handleRegister, logout, checkSession, isRegisterMode } = useAuth(currentView, loading);
         const syncStatus = reactive({ status: 'idle', message: '', icon: 'sync' });
         const dataStats = computed(() => ({
             total: window.allData ? window.allData.length : 0,
@@ -104,17 +104,34 @@ createApp({
         const ujian = useUjian(uiData, DB, userSession, refreshData, quranControls, currentView, modalState);
 
         // Initialize Riwayat Composable
-        const riwayat = useRiwayat(uiData, DB, refreshData, { setoran, ujian, pelanggaran }, currentView);
+        const riwayat = useRiwayat(uiData, DB, refreshData, { setoran, ujian, pelanggaran }, currentView, userSession);
 
+
+        // Initialize Active Child State (Move up for dashboard dependency)
+        const activeChildId = ref(localStorage.getItem('active_child_id'));
 
         // Initialize Dashboard Composable
-        const { dashboardStats, calculateStats, initCharts, activityFilter, filteredActivities, topSantriFilter, filteredTopSantri } = useDashboard(uiData, userSession);
+        const { dashboardStats, calculateStats, initCharts, activityFilter, filteredActivities, topSantriFilter, filteredTopSantri } = useDashboard(uiData, userSession, activeChildId);
+
+        const selectChild = (id) => {
+            console.log('🎯 Switching to child:', id);
+            activeChildId.value = id;
+            localStorage.setItem('active_child_id', id);
+
+            // Recalculate stats immediately
+            calculateStats(id);
+
+            // Re-render charts
+            nextTick(() => {
+                if (typeof initCharts === 'function') initCharts();
+            });
+        };
 
         // Initialize Profile Composable
         const profile = useProfile(uiData, DB, userSession, refreshData);
 
-        // Initialize Monitoring Composable
-        const monitoring = useMonitoring(uiData, userSession);
+        // Initialize Notification Composable (formerly Monitoring)
+        const notifications = useNotifications(uiData, userSession);
 
         // --- PAGE CALC Caches (Non-reactive for performance) ---
         const surahPageCache = {};
@@ -156,33 +173,8 @@ createApp({
         const cropperImage = ref(null);
         let cropperInstance = null;
 
-        // --- EXAM FLOATING CONTROLS ---
-        const examControlPos = reactive({ x: window.innerWidth - 180, y: window.innerHeight - 200 }); // Default position
-        const isDraggingControl = ref(false);
-        const dragOffset = reactive({ x: 0, y: 0 });
+        // --- EXAM CONTROLS (Fixed Bottom Pill) ---
         const showExamControls = ref(false);
-
-        const startDragExamControl = (e) => {
-            isDraggingControl.value = true;
-            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-            dragOffset.x = clientX - examControlPos.x;
-            dragOffset.y = clientY - examControlPos.y;
-        };
-
-        const dragExamControl = (e) => {
-            if (!isDraggingControl.value) return;
-            // Prevent default scroll if needed, but 'passive' in template handles it. 
-            // Here just calc position
-            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-            examControlPos.x = clientX - dragOffset.x;
-            examControlPos.y = clientY - dragOffset.y;
-        };
-
-        const endDragExamControl = () => {
-            isDraggingControl.value = false;
-        };
 
         const updateSalah = (delta) => {
             if (ujian.ujianForm.tab === 'bulanan') {
@@ -409,7 +401,14 @@ createApp({
         });
 
         const bottomMenus = computed(() => {
-            // if (currentView.value === 'quran') return []; // Show bottom nav on Quran too
+            if (!userSession.value) return [];
+
+            // Special bottom bar for Wali: Home, Hafalan, Rekap, Al-Quran, Profile
+            if (userSession.value.role === 'wali') {
+                const waliOrder = ['dashboard', 'hafalan', 'rekap', 'quran', 'profile'];
+                return waliOrder.map(id => myMenus.value.find(m => m.id === id)).filter(Boolean);
+            }
+
             return myMenus.value.filter(m => m.inBottom).slice(0, 5);
         });
 
@@ -515,19 +514,55 @@ createApp({
             // Handle boolean true, string 'true', and existing logic
             const activeData = rawData.filter(d => d._deleted !== true && d._deleted !== 'true');
 
-            uiData.santri = activeData.filter(d => d.__type === 'santri');
+            // 1. Get Base Sets
+            let santriList = activeData.filter(d => d.__type === 'santri');
+            let setoranList = activeData.filter(d => d.__type === 'setoran');
+            let ujianList = activeData.filter(d => d.__type === 'ujian');
+            let pelanggaranList = activeData.filter(d => d.__type === 'pelanggaran');
+
+            // 2. APPLY WALI FILTER (Wali only sees their linked children's data)
+            if (userSession.value && userSession.value.role === 'wali') {
+                const myWaliId = userSession.value._id;
+
+                // My Santri and their IDs/NIS
+                const mySantri = santriList.filter(s => s.wali_id === myWaliId);
+                const mySantriIds = mySantri.map(s => s._id);
+                const mySantriNISs = mySantri.map(s => s.nis || s.santri_id);
+
+                // Filter everything by these IDs
+                santriList = mySantri;
+                setoranList = setoranList.filter(d => mySantriIds.includes(d.santri_id) || mySantriNISs.includes(d.santri_id));
+                ujianList = ujianList.filter(d => mySantriIds.includes(d.santri_id) || mySantriNISs.includes(d.santri_id));
+                pelanggaranList = pelanggaranList.filter(d => mySantriIds.includes(d.santri_id) || mySantriNISs.includes(d.santri_id));
+            }
+
+            // 3. Assign to Reactive State
+            uiData.santri = santriList;
+            uiData.setoran = setoranList;
+            uiData.ujian = ujianList;
+            uiData.pelanggaran = pelanggaranList;
+
             uiData.guru = activeData.filter(d => d.__type === 'user' && d.role === 'guru');
             uiData.mapel = activeData.filter(d => d.__type === 'mapel');
             uiData.kelas = activeData.filter(d => d.__type === 'kelas');
             uiData.jadwal = activeData.filter(d => d.__type === 'jadwal');
             uiData.absensi = activeData.filter(d => d.__type === 'absensi');
-
-            uiData.setoran = activeData.filter(d => d.__type === 'setoran');
-            uiData.ujian = activeData.filter(d => d.__type === 'ujian');
-            uiData.pelanggaran = activeData.filter(d => d.__type === 'pelanggaran');
             uiData.master_pelanggaran = activeData.filter(d => d.__type === 'pelanggaran_type');
 
-            calculateStats();
+            // Initialize or Validate activeChildId for Wali
+            if (userSession.value?.role === 'wali' && santriList.length > 0) {
+                const validIds = santriList.map(s => s._id).concat(santriList.map(s => s.santri_id));
+                const isValid = activeChildId.value && validIds.some(id => String(id) === String(activeChildId.value));
+
+                if (!activeChildId.value || !isValid) {
+                    const firstId = santriList[0]._id || santriList[0].santri_id;
+                    console.log(`[Wali] Resetting active child to: ${firstId} (Previous: ${activeChildId.value})`);
+                    activeChildId.value = firstId;
+                    localStorage.setItem('active_child_id', firstId);
+                }
+            }
+
+            calculateStats(activeChildId.value);
         };
 
         function refreshData() {
@@ -562,9 +597,13 @@ createApp({
         // --- HELPER --
         const getSantriName = (id) => {
             if (!id) return '-';
-            // Search by santri_id OR _id (legacy support)
-            const s = uiData.santri.find(x => x.santri_id === id || x._id === id);
-            return s ? s.full_name : 'Unknown ID';
+            // Search by santri_id OR _id (legacy support) with string conversion safety
+            const s = uiData.santri.find(x =>
+                String(x.santri_id) === String(id) ||
+                String(x._id) === String(id) ||
+                String(x.nis) === String(id) // Fallback for NIS as ID
+            );
+            return s ? s.full_name : 'Santri';
         };
 
         const formatDate = (iso) => {
@@ -616,9 +655,28 @@ createApp({
         window.getInitials = getInitials;
 
         // --- WATCHERS ---
+        const openMonitoringModal = () => {
+            currentView.value = 'dashboard';
+            // Optional: Scroll to top or trigger notification dropdown if we can
+            window.scrollTo(0, 0);
+        };
+
+        watch(userSession, (newVal) => {
+            console.log("👤 Session updated, refreshing data filters...");
+            loadData();
+        }, { deep: true });
+
+        // Add watch for active child change to force re-render
+        watch(() => activeChildId.value, (newId) => {
+            if (newId) {
+                calculateStats(newId); // Recalculate stats for the new child
+                nextTick(initCharts); // Re-initialize charts
+            }
+        });
+
         watch(currentView, (newVal) => {
             if (newVal === 'dashboard') {
-                calculateStats();
+                calculateStats(activeChildId.value);
                 nextTick(initCharts);
             }
             if (newVal === 'santri') {
@@ -729,7 +787,7 @@ createApp({
                 if (window.surahList) uiData.surahList = window.surahList;
 
                 loadData();
-                checkSession();
+                await checkSession(); // Be sure session is confirmed before hiding loader
 
                 // Ensure Default Admin if no users
                 // Ensure Default Admin if no users
@@ -807,14 +865,15 @@ createApp({
             formatWANumber,
             loading, appName, appVersion, currentView, userSession, loginForm,
             dashboardStats, searchText, modalState, uiData,
-            examControlPos, startDragExamControl, dragExamControl, endDragExamControl, showExamControls, // Exam Controls
+            showExamControls,
             updateSalah, finishExam,
             cropModal, cropperImage, handleFileSelect, cancelCrop, saveCrop, // Cropper Exports
             mapelList, syncState,
             myMenus, bottomMenus, isSidebarVisible, isHeaderVisible,
-            navigateTo, handleLogin, logout, getInitials, refreshData, forceSync,
+            navigateTo, handleLogin, handleRegister, isRegisterMode, logout, getInitials, refreshData, forceSync,
             syncStatus, dataStats,
             closeModal,
+            openMonitoringModal,
             // Composables (expose all methods & state)
             ...ujian,
             ...pelanggaran,
@@ -832,11 +891,12 @@ createApp({
             ...profile,
             // Riwayat
             ...riwayat,
-            ...useRekap(), // ADD REKAP
-            // Monitoring
-            ...monitoring,
+            ...useRekap(uiData, userSession), // Pass uiData and userSession
+            // Notifications
+            ...notifications,
             // Dashboard
-            initCharts, activityFilter, filteredActivities, topSantriFilter, filteredTopSantri
+            initCharts, activityFilter, filteredActivities, topSantriFilter, filteredTopSantri,
+            activeChildId, selectChild
         };
     },
     components: {
@@ -852,6 +912,9 @@ createApp({
         RiwayatView,
         JadwalView,
         AbsensiView,
-        ProfileView
+        ProfileView,
+        NotificationView,
+        ExamCounter,
+        QuranView
     }
 }).mount('#app');

@@ -59,18 +59,18 @@ function useGuru(uiData, DB, modalState) {
         if (guru) {
             // Edit mode
             guruForm.id = guru._id;
-            guruForm.username = guru.username;
-            guruForm.custom_username = guru.custom_username || '';
+            guruForm.username = guru.username;               // Primary ID (NIG)
+            guruForm.custom_username = guru.custom_username || ''; // Alias
             guruForm.full_name = guru.full_name;
-            guruForm.password = ''; // Leave blank to keep existing
+            guruForm.password = '';
             guruForm.role = 'guru';
             modalState.title = 'Edit Guru';
             modalState.isEdit = true;
         } else {
             // Add mode
             guruForm.id = null;
-            guruForm.username = generateGuruID();
-            guruForm.custom_username = '';
+            guruForm.username = generateGuruID(); // Always generate NIG
+            guruForm.custom_username = '';        // Admin fills friendly login name here
             guruForm.full_name = '';
             guruForm.password = '';
             guruForm.role = 'guru';
@@ -100,8 +100,8 @@ function useGuru(uiData, DB, modalState) {
         try {
             const payload = {
                 full_name: guruForm.full_name,
-                username: guruForm.username,
-                custom_username: guruForm.custom_username,
+                username: guruForm.username,         // NIG is the primary key (Auth Email)
+                custom_username: guruForm.custom_username.trim(), // Friendly Name is Alias
                 role: 'guru'
             };
 

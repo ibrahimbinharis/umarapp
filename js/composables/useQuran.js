@@ -67,7 +67,7 @@ function useQuran(uiData) {
         for (const [j, p] of Object.entries(JUZ_PAGE_START)) {
             if (quranState.page >= p) juz = j;
         }
-        return juz;
+        return parseInt(juz);
     });
 
     // --- METHODS ---
