@@ -45,7 +45,12 @@ function useSetoran(uiData, DB, refreshData) {
         manzil_mode: 'page', // juz | page
         juz: 1,
         page_from: 1,
-        page_to: 20
+        page_to: 20,
+
+        // Tilawah specific
+        tilawah_mode: 'juz', // juz | page
+        juz_from: 1,
+        juz_to: 1
     });
 
     /**
@@ -105,6 +110,10 @@ function useSetoran(uiData, DB, refreshData) {
         } else if (setoran.setoran_type === 'Manzil') {
             return setoran.manzil_mode === 'juz'
                 ? `Juz ${setoran.juz}`
+                : `Hal ${setoran.page_from}-${setoran.page_to}`;
+        } else if (setoran.setoran_type === 'Tilawah') {
+            return setoran.tilawah_mode === 'juz'
+                ? `Juz ${setoran.juz_from}-${setoran.juz_to}`
                 : `Hal ${setoran.page_from}-${setoran.page_to}`;
         } else {
             return `${setoran.pages} Halaman`;
@@ -254,6 +263,13 @@ function useSetoran(uiData, DB, refreshData) {
             setoranForm.manzil_mode = 'page';
             setoranForm.page_from = 1;
             setoranForm.page_to = 20;
+        } else if (type === 'Tilawah') {
+            setoranForm.pages = 20;
+            setoranForm.tilawah_mode = 'juz';
+            setoranForm.page_from = 1;
+            setoranForm.page_to = 20;
+            setoranForm.juz_from = 1;
+            setoranForm.juz_to = 1;
         } else if (type === 'Sabaq') {
             setoranForm.pages = 1;
             autoCalcInfo.value.visible = false;
@@ -293,6 +309,33 @@ function useSetoran(uiData, DB, refreshData) {
             // Calculate from page range
             calcPagesFromRange();
         }
+        updateGrade();
+    };
+
+    /**
+     * Toggle tilawah mode (juz / page)
+     */
+    const toggleTilawahMode = () => {
+        if (setoranForm.tilawah_mode === 'juz') {
+            calcPagesFromJuzRange();
+        } else {
+            calcPagesFromRange();
+        }
+        updateGrade();
+    };
+
+    /**
+     * Calculate pages from juz range
+     */
+    const calcPagesFromJuzRange = () => {
+        let from = parseInt(setoranForm.juz_from) || 1;
+        let to = parseInt(setoranForm.juz_to) || 1;
+
+        // Normalize range
+        const start = Math.min(from, to);
+        const end = Math.max(from, to);
+
+        setoranForm.pages = (end - start + 1) * 20;
         updateGrade();
     };
 
@@ -580,6 +623,13 @@ function useSetoran(uiData, DB, refreshData) {
             setoranForm.page_from = 1;
             setoranForm.page_to = 20;
             setoranForm.pages = 20;
+        } else if (setoranForm.setoran_type === 'Tilawah') {
+            setoranForm.tilawah_mode = 'juz';
+            setoranForm.page_from = 1;
+            setoranForm.page_to = 20;
+            setoranForm.juz_from = 1;
+            setoranForm.juz_to = 1;
+            setoranForm.pages = 20;
         } else {
             // Sabqi / Robt
             setoranForm.pages = 1;
@@ -628,6 +678,15 @@ function useSetoran(uiData, DB, refreshData) {
                 payload.manzil_mode = setoranForm.manzil_mode;
                 if (setoranForm.manzil_mode === 'juz') {
                     payload.juz = setoranForm.juz;
+                } else {
+                    payload.page_from = setoranForm.page_from;
+                    payload.page_to = setoranForm.page_to;
+                }
+            } else if (setoranForm.setoran_type === 'Tilawah') {
+                payload.tilawah_mode = setoranForm.tilawah_mode;
+                if (setoranForm.tilawah_mode === 'juz') {
+                    payload.juz_from = setoranForm.juz_from;
+                    payload.juz_to = setoranForm.juz_to;
                 } else {
                     payload.page_from = setoranForm.page_from;
                     payload.page_to = setoranForm.page_to;
@@ -734,6 +793,12 @@ function useSetoran(uiData, DB, refreshData) {
             setoranForm.juz = setoran.juz || 1;
             setoranForm.page_from = setoran.page_from || 1;
             setoranForm.page_to = setoran.page_to || 20;
+        } else if (setoran.setoran_type === 'Tilawah') {
+            setoranForm.tilawah_mode = setoran.tilawah_mode || 'page';
+            setoranForm.juz_from = setoran.juz_from || 1;
+            setoranForm.juz_to = setoran.juz_to || 1;
+            setoranForm.page_from = setoran.page_from || 1;
+            setoranForm.page_to = setoran.page_to || 20;
         }
 
         updateGrade();
@@ -748,7 +813,7 @@ function useSetoran(uiData, DB, refreshData) {
     const cancelEdit = () => {
         editingId.value = null;
         // Reset form to defaults
-        setoranForm.pages = setoranForm.setoran_type === 'Manzil' ? 20 : 1;
+        setoranForm.pages = (setoranForm.setoran_type === 'Manzil' || setoranForm.setoran_type === 'Tilawah') ? 20 : 1;
         setoranForm.errors = 0;
         updateGrade();
     };
@@ -798,6 +863,12 @@ function useSetoran(uiData, DB, refreshData) {
 
         surahList,
         recentSetoran,
+
+        // Modes
+        toggleManzilMode,
+        toggleTilawahMode,
+        calcPagesFromJuzRange,
+        calcPagesFromRange,
         menuStates,
 
         // Methods
