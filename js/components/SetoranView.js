@@ -19,6 +19,8 @@ const SetoranView = {
         'sync-surah',
         'validate-ayat',
         'toggle-manzil-mode',
+        'toggle-tilawah-mode',
+        'calc-pages-from-juz-range',
         'calc-pages-from-range',
         'adjust-value',
         'update-grade',
@@ -97,7 +99,7 @@ const SetoranView = {
 
             <!-- Type Tabs -->
             <div class="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
-                <label v-for="type in ['Sabaq', 'Sabqi', 'Robt', 'Manzil']" :key="type"
+                <label v-for="type in ['Sabaq', 'Sabqi', 'Robt', 'Manzil', 'Tilawah']" :key="type"
                     class="flex-1 min-w-[70px]">
                     <input type="radio" :value="type" v-model="setoranForm.setoran_type"
                         @change="$emit('change-setoran-type', type)" class="peer hidden">
@@ -194,6 +196,54 @@ const SetoranView = {
                 </div>
             </div>
 
+            <!-- FORM TILAWAH -->
+            <div v-if="setoranForm.setoran_type === 'Tilawah'" class="space-y-3">
+                <div>
+                    <label class="text-xs font-bold text-slate-400">Opsi Input</label>
+                    <select v-model="setoranForm.tilawah_mode" @change="$emit('toggle-tilawah-mode')"
+                        class="w-full p-2 border rounded-xl font-bold">
+                        <option value="juz">Per Juz</option>
+                        <option value="page">Per Halaman</option>
+                    </select>
+                </div>
+
+                <!-- Juz Mode -->
+                <div v-if="setoranForm.tilawah_mode === 'juz'" class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="text-xs font-bold text-slate-400">Dari Juz</label>
+                        <select v-model.number="setoranForm.juz_from"
+                            @change="$emit('calc-pages-from-juz-range')"
+                            class="w-full p-2 border rounded-xl font-bold">
+                            <option v-for="i in 30" :key="i" :value="i">Juz {{ i }}</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-xs font-bold text-slate-400">Sampai Juz</label>
+                        <select v-model.number="setoranForm.juz_to"
+                            @change="$emit('calc-pages-from-juz-range')"
+                            class="w-full p-2 border rounded-xl font-bold">
+                            <option v-for="i in 30" :key="i" :value="i">Juz {{ i }}</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Page Mode -->
+                <div v-if="setoranForm.tilawah_mode === 'page'" class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="text-xs font-bold text-slate-400">Dari Hal</label>
+                        <input type="number" v-model.number="setoranForm.page_from"
+                            @input="$emit('calc-pages-from-range')"
+                            class="w-full p-2 border rounded-xl text-center font-bold">
+                    </div>
+                    <div>
+                        <label class="text-xs font-bold text-slate-400">Sampai Hal</label>
+                        <input type="number" v-model.number="setoranForm.page_to"
+                            @input="$emit('calc-pages-from-range')"
+                            class="w-full p-2 border rounded-xl text-center font-bold">
+                    </div>
+                </div>
+            </div>
+
             <!-- AUTO INFO -->
             <div v-if="autoCalcInfo.visible"
                 class="bg-blue-50 p-3 rounded-xl border border-blue-100 flex items-center gap-2">
@@ -214,9 +264,9 @@ const SetoranView = {
                             </button>
                             <input type="number" v-model.number="setoranForm.pages"
                                 @input="$emit('update-grade')"
-                                :readonly="setoranForm.setoran_type === 'Manzil' || setoranForm.setoran_type === 'Sabqi' || setoranForm.setoran_type === 'Robt'"
+                                :readonly="setoranForm.setoran_type === 'Manzil' || setoranForm.setoran_type === 'Tilawah' || setoranForm.setoran_type === 'Sabqi' || setoranForm.setoran_type === 'Robt'"
                                 class="w-full bg-white p-2 border rounded-lg text-center font-bold"
-                                :class="{ 'text-gray-400': setoranForm.setoran_type === 'Manzil' || setoranForm.setoran_type === 'Sabqi' || setoranForm.setoran_type === 'Robt' }">
+                                :class="{ 'text-gray-400': setoranForm.setoran_type === 'Manzil' || setoranForm.setoran_type === 'Tilawah' || setoranForm.setoran_type === 'Sabqi' || setoranForm.setoran_type === 'Robt' }">
                             <button @click="$emit('adjust-value', 'pages', 0.5)"
                                 class="size-8 rounded-lg bg-white border shadow-sm font-bold text-slate-500">
                                 +
