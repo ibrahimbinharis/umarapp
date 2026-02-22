@@ -297,8 +297,12 @@
                     <!-- TARGET VIEW (Component) -->
                     <div v-if="currentView === 'target'" class="fade-in">
                         <target-view :santri-data="santriWithTarget" :user-session="userSession"
-                            :active-dropdown="activeDropdown" @open-target-modal="openTargetModal"
-                            @reset-target="resetTarget" @toggle-dropdown="toggleDropdown"></target-view>
+                            :active-dropdown="activeDropdown" :selection-mode="targetModalState.selectionMode"
+                            :selected-santri-ids="selectedSantriIds" @open-target-modal="openTargetModal"
+                            @reset-target="resetTarget" @toggle-dropdown="toggleDropdown"
+                            @toggle-selection-mode="toggleSelectionMode"
+                            @toggle-santri-selection="toggleSantriSelection" @select-all-santri="selectAllSantri"
+                            @open-bulk-target-modal="openBulkTargetModal"></target-view>
                     </div>
 
                     <!-- RIWAYAT & REKAP VIEW -->
@@ -325,8 +329,9 @@
                         <rekap-view v-model:rekap-month="rekapMonth" v-model:rekap-year="rekapYear"
                             v-model:rekap-kelas="rekapKelas" v-model:rekap-gender="rekapGender"
                             :month-names="monthNames" :kelas-options="uiData.kelas"
-                            :rekap-hafalan-data="rekapHafalanData" @export-to-excel="exportToExcel"
-                            @export-to-pdf="exportToPDF"></rekap-view>
+                            :rekap-hafalan-data="rekapHafalanData" :rekap-settings="rekapSettings"
+                            :user-session="userSession" @export-to-excel="exportToExcel" @export-to-pdf="exportToPDF"
+                            @save-settings="saveSettings"></rekap-view>
                     </div>
 
 
@@ -749,6 +754,18 @@
                         </p>
                     </div>
 
+                    <!-- Tilawah Input -->
+                    <div class="mb-5">
+                        <label class="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Target Tilawah (Baca
+                            Al-Quran)</label>
+                        <div class="flex items-center gap-2">
+                            <input type="number" v-model.number="targetForm.tilawah"
+                                class="w-full p-3 border rounded-xl font-bold text-slate-700 text-center text-lg">
+                            <div class="text-xs font-bold text-slate-400 whitespace-nowrap">Hal/Bulan</div>
+                        </div>
+                        <p class="text-[10px] text-slate-400 mt-1">*Target membaca Al-Quran setiap bulan</p>
+                    </div>
+
                     <!-- Save Button -->
                     <button @click="saveTarget()"
                         class="w-full bg-primary text-white py-3 rounded-xl font-bold shadow-lg shadow-primary/30 hover:bg-blue-800 transition">
@@ -758,10 +775,101 @@
             </div>
         </div>
 
+        <!-- BULK TARGET MODAL -->
+        <div v-if="targetModalState.isBulkOpen" @click.self="closeBulkTargetModal()"
+            class="fixed inset-0 bg-black/80 backdrop-blur-md z-[110] flex items-center justify-center p-4">
+            <div @click.stop
+                class="bg-white rounded-3xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+                <!-- Header -->
+                <div class="px-6 py-5 border-b flex justify-between items-center bg-slate-50/50">
+                    <div>
+                        <h3 class="font-bold text-slate-800">Set Target Massal</h3>
+                        <p class="text-[10px] text-slate-500 font-bold uppercase tracking-tight">Menyesuaikan {{
+                            selectedSantriIds.length }} Santri</p>
+                    </div>
+                    <button @click="closeBulkTargetModal()"
+                        class="size-8 rounded-full hover:bg-slate-200 flex items-center justify-center text-slate-400 transition">
+                        <span class="material-symbols-outlined">close</span>
+                    </button>
+                </div>
+
+                <!-- Form Body -->
+                <div class="p-6 overflow-y-auto space-y-6">
+                    <p
+                        class="text-xs text-slate-500 bg-blue-50 p-3 rounded-xl border border-blue-100 flex items-start gap-2">
+                        <span class="material-symbols-outlined text-blue-500 text-sm mt-0.5">info</span>
+                        Centang kriteria yang ingin Anda perbarui secara massal. Nilai yang tidak dicentang tidak akan
+                        diubah.
+                    </p>
+
+                    <!-- Sabaq -->
+                    <div class="space-y-2">
+                        <label class="flex items-center gap-3 cursor-pointer group">
+                            <input type="checkbox" v-model="bulkTargetForm.updateSabaq"
+                                class="size-5 rounded border-2 border-slate-300 text-primary focus:ring-primary transition cursor-pointer">
+                            <span class="text-xs font-black text-slate-700 uppercase">Target Sabaq (Halaman)</span>
+                        </label>
+                        <div v-if="bulkTargetForm.updateSabaq"
+                            class="pl-8 animate-in slide-in-from-left-2 duration-200">
+                            <div class="flex items-center gap-2">
+                                <input type="number" v-model.number="bulkTargetForm.sabaq"
+                                    class="w-full p-3 border rounded-xl font-black text-slate-700 text-center text-lg bg-slate-50 border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none">
+                                <span class="text-[10px] font-bold text-slate-400 uppercase">Hal</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Manzil -->
+                    <div class="space-y-2">
+                        <label class="flex items-center gap-3 cursor-pointer group">
+                            <input type="checkbox" v-model="bulkTargetForm.updateManzil"
+                                class="size-5 rounded border-2 border-slate-300 text-primary focus:ring-primary transition cursor-pointer">
+                            <span class="text-xs font-black text-slate-700 uppercase">Target Manzil (Halaman)</span>
+                        </label>
+                        <div v-if="bulkTargetForm.updateManzil"
+                            class="pl-8 animate-in slide-in-from-left-2 duration-200">
+                            <div class="flex items-center gap-2">
+                                <input type="number" v-model.number="bulkTargetForm.manzil"
+                                    class="w-full p-3 border rounded-xl font-black text-slate-700 text-center text-lg bg-slate-50 border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none">
+                                <span class="text-[10px] font-bold text-slate-400 uppercase">Hal</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tilawah -->
+                    <div class="space-y-2">
+                        <label class="flex items-center gap-3 cursor-pointer group">
+                            <input type="checkbox" v-model="bulkTargetForm.updateTilawah"
+                                class="size-5 rounded border-2 border-slate-300 text-primary focus:ring-primary transition cursor-pointer">
+                            <span class="text-xs font-black text-slate-700 uppercase">Target Tilawah (Halaman)</span>
+                        </label>
+                        <div v-if="bulkTargetForm.updateTilawah"
+                            class="pl-8 animate-in slide-in-from-left-2 duration-200">
+                            <div class="flex items-center gap-2">
+                                <input type="number" v-model.number="bulkTargetForm.tilawah"
+                                    class="w-full p-3 border rounded-xl font-black text-slate-700 text-center text-lg bg-slate-50 border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none">
+                                <span class="text-[10px] font-bold text-slate-400 uppercase">Hal</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Footer -->
+                <div class="p-6 border-t bg-slate-50/50">
+                    <button @click="applyBulkTarget()"
+                        class="w-full bg-slate-900 text-white py-4 rounded-2xl font-black shadow-xl shadow-slate-900/10 hover:bg-slate-800 active:scale-[0.98] transition-all flex items-center justify-center gap-2">
+                        Terapkan ke {{ selectedSantriIds.length }} Santri
+                    </button>
+                    <p class="text-[10px] text-center text-slate-400 mt-4 font-bold uppercase tracking-tight">Tindakan
+                        ini akan menimpa target yang ada</p>
+                </div>
+            </div>
+        </div>
+
         <!-- MODAL OVERLAY -->
-        <div v-if="modalState.isOpen"
+        <div v-if="modalState.isOpen" @click.self="closeModal"
             class="fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 fade-in">
-            <div
+            <div @click.stop
                 class="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden max-h-[90vh] flex flex-col transform transition-all scale-100">
                 <!-- Modal Header -->
                 <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
@@ -1163,9 +1271,10 @@
 
 
         <!-- CROP MODAL -->
-        <div v-if="cropModal.isOpen"
+        <div v-if="cropModal.isOpen" @click.self="cancelCrop"
             class="fixed inset-0 z-[70] bg-black/90 flex items-center justify-center p-4 fade-in">
-            <div class="bg-white rounded-2xl overflow-hidden shadow-2xl w-full max-w-lg flex flex-col max-h-[90vh]">
+            <div @click.stop
+                class="bg-white rounded-2xl overflow-hidden shadow-2xl w-full max-w-lg flex flex-col max-h-[90vh]">
                 <div class="p-4 bg-white flex justify-between items-center border-b z-10">
                     <h3 class="font-bold text-lg text-slate-800">Sesuaikan Foto</h3>
                     <button @click="cancelCrop"
@@ -1302,7 +1411,7 @@
 
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js?v=2.2').then(reg => {
+                navigator.serviceWorker.register('sw.js?v=2.1').then(reg => {
                     console.log('SW Registered!', reg);
 
                     // 1. Check if update is already waiting (e.g. from previous visit)
@@ -1334,6 +1443,5 @@
         }
     </script>
 </body>
-
 
 </html>

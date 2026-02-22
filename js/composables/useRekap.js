@@ -10,13 +10,76 @@
  */
 
 const useRekap = (uiData, userSession) => { // Accept uiData and userSession
-    const { ref, computed } = Vue;
+    const { ref, computed, watch } = Vue;
 
     // State
     const rekapMonth = ref(new Date().getMonth());
     const rekapYear = ref(new Date().getFullYear());
     const rekapKelas = ref('');
     const rekapGender = ref(''); // '' | 'L' | 'P'
+
+    // Default Settings
+    const defaultSettings = {
+        _id: 'rekap_config',
+        __type: 'settings',
+        weights: {
+            sabaq: 50,
+            manzil: 30,
+            ujian: 20,
+            tilawah: 0
+        },
+        visibility: {
+            sabaq: true,
+            manzil: true,
+            ujian: true,
+            tilawah: false
+        }
+    };
+
+    // Load initial settings from DB or use default
+    const loadSettings = () => {
+        const stored = (uiData.settings || []).find(s => s._id === 'rekap_config');
+        if (stored) {
+            // Merge with defaults for safety (in case new fields are added)
+            return {
+                ...defaultSettings,
+                ...stored,
+                weights: { ...defaultSettings.weights, ...stored.weights },
+                visibility: { ...defaultSettings.visibility, ...stored.visibility }
+            };
+        }
+        return JSON.parse(JSON.stringify(defaultSettings));
+    };
+
+    const rekapSettings = Vue.reactive(loadSettings());
+
+    // Watch for changes in uiData.settings to sync rekapSettings (e.g. after cloud sync)
+    watch(() => uiData.settings, () => {
+        const fresh = loadSettings();
+        Object.assign(rekapSettings, fresh);
+    }, { deep: true });
+
+    const saveSettings = async () => {
+        try {
+            const payload = JSON.parse(JSON.stringify(rekapSettings));
+            const existing = (uiData.settings || []).find(s => s._id === 'rekap_config');
+
+            if (existing) {
+                await DB.update('rekap_config', payload);
+            } else {
+                await DB.create('settings', payload);
+            }
+
+            // Reload local data
+            if (window.refreshData) window.refreshData();
+            alert("Pengaturan Berhasil Disimpan");
+            return true;
+        } catch (e) {
+            console.error("Save Settings Error", e);
+            alert("Gagal menyimpan pengaturan: " + e.message);
+            return false;
+        }
+    };
 
     const monthNames = [
         "Januari", "Februari", "Maret", "April", "Mei", "Juni",
@@ -106,21 +169,43 @@ const useRekap = (uiData, userSession) => { // Accept uiData and userSession
             const myPelanggaran = allPelanggaran.filter(x => x.santri_id === s._id || x.santri_id === s.santri_id);
             const totalPointsPelanggaran = myPelanggaran.reduce((acc, curr) => acc + (parseInt(curr.points) || 0), 0);
 
-            // --- C. SCORING FORMULA ---
 
-            // 1. Sabaq Score (50%) -> Cap at 100? No, "jangan batasi"
-            const scoreSabaqRaw = targetSabaq > 0 ? (actualSabaq / targetSabaq) * 100 : 0;
-            const scoreSabaqWeighted = scoreSabaqRaw * 0.5;
+            // --- C. SCORING FORMULA (DYNAMIC) ---
+            const { weights, visibility } = rekapSettings;
 
-            // 2. Manzil Score (30%)
-            const scoreManzilRaw = targetManzil > 0 ? (actualManzil / targetManzil) * 100 : 0;
-            const scoreManzilWeighted = scoreManzilRaw * 0.3;
+            // 1. Sabaq Score
+            let scoreSabaqWeighted = 0;
+            if (visibility.sabaq) {
+                const scoreSabaqRaw = targetSabaq > 0 ? (actualSabaq / targetSabaq) * 100 : 0;
+                scoreSabaqWeighted = scoreSabaqRaw * (weights.sabaq / 100);
+            }
 
-            // 3. Ujian Score (20%)
-            const scoreUjianWeighted = avgUjian * 0.2;
+            // 2. Manzil Score
+            let scoreManzilWeighted = 0;
+            if (visibility.manzil) {
+                const scoreManzilRaw = targetManzil > 0 ? (actualManzil / targetManzil) * 100 : 0;
+                scoreManzilWeighted = scoreManzilRaw * (weights.manzil / 100);
+            }
+
+            // 3. Ujian Score
+            let scoreUjianWeighted = 0;
+            if (visibility.ujian) {
+                scoreUjianWeighted = avgUjian * (weights.ujian / 100);
+            }
+
+            // 4. Tilawah Score (New)
+            let scoreTilawahWeighted = 0;
+            const myTilawah = filteredSetoran.filter(x => x.santri_id === s._id || x.santri_id === s.santri_id);
+            const actualTilawah = myTilawah.filter(x => x.setoran_type === 'Tilawah').reduce((acc, curr) => acc + (parseFloat(curr.pages) || 0), 0);
+            const targetTilawah = s.target_tilawah || 600;
+
+            if (visibility.tilawah) {
+                const scoreTilawahRaw = (actualTilawah / targetTilawah) * 100;
+                scoreTilawahWeighted = scoreTilawahRaw * (weights.tilawah / 100);
+            }
 
             // Subtotal
-            let finalScore = scoreSabaqWeighted + scoreManzilWeighted + scoreUjianWeighted;
+            let finalScore = scoreSabaqWeighted + scoreManzilWeighted + scoreUjianWeighted + scoreTilawahWeighted;
 
             // 4. Deduct Pelanggaran
             finalScore -= totalPointsPelanggaran;
@@ -142,15 +227,23 @@ const useRekap = (uiData, userSession) => { // Accept uiData and userSession
                 kelas: s.kelas,
 
                 // Sabaq
+                show_sabaq: visibility.sabaq,
                 sabaq_act: parseFloat(actualSabaq.toFixed(1)),
                 sabaq_tgt: targetSabaq,
 
                 // Manzil
+                show_manzil: visibility.manzil,
                 manzil_act: parseFloat(actualManzil.toFixed(1)),
                 manzil_tgt: targetManzil,
 
                 // Ujian
+                show_ujian: visibility.ujian,
                 ujian_avg: parseFloat(avgUjian.toFixed(1)),
+
+                // Tilawah
+                show_tilawah: visibility.tilawah,
+                tilawah_act: parseFloat(actualTilawah.toFixed(1)),
+                tilawah_tgt: targetTilawah,
 
                 // Pelanggaran
                 pelanggaran_poin: totalPointsPelanggaran,
@@ -181,18 +274,33 @@ const useRekap = (uiData, userSession) => { // Accept uiData and userSession
             doc.text(`Kelas: ${rekapKelas.value}`, 105, 29, { align: "center" });
         }
 
-        // Table
-        const headers = [['No', 'Nama Santri', 'Sabaq (Act/Tgt)', 'Manzil (Act/Tgt)', 'Ujian', 'Pelanggaran', 'Nilai', 'Predikat']];
-        const data = rekapHafalanData.value.map((row, i) => [
-            i + 1,
-            row.nama,
-            `${row.sabaq_act} / ${row.sabaq_tgt}`,
-            `${row.manzil_act} / ${row.manzil_tgt}`,
-            row.ujian_avg,
-            row.pelanggaran_poin > 0 ? `-${row.pelanggaran_poin}` : '0',
-            row.nilai_akhir,
-            row.predikat
-        ]);
+        // Table Headers
+        const headerRow = ['No', 'Nama Santri'];
+        const { visibility } = rekapSettings;
+
+        if (visibility.sabaq) headerRow.push('Sabaq (Act/Tgt)');
+        if (visibility.manzil) headerRow.push('Manzil (Act/Tgt)');
+        if (visibility.ujian) headerRow.push('Ujian');
+        if (visibility.tilawah) headerRow.push('Tilawah (Act/Tgt)');
+
+        headerRow.push('Pelanggaran', 'Nilai', 'Predikat');
+        const headers = [headerRow];
+
+        // Table Data
+        const data = rekapHafalanData.value.map((row, i) => {
+            const dataRow = [i + 1, row.nama];
+            if (visibility.sabaq) dataRow.push(`${row.sabaq_act} / ${row.sabaq_tgt}`);
+            if (visibility.manzil) dataRow.push(`${row.manzil_act} / ${row.manzil_tgt}`);
+            if (visibility.ujian) dataRow.push(row.ujian_avg);
+            if (visibility.tilawah) dataRow.push(`${row.tilawah_act} / ${row.tilawah_tgt}`);
+
+            dataRow.push(
+                row.pelanggaran_poin > 0 ? `-${row.pelanggaran_poin}` : '0',
+                row.nilai_akhir,
+                row.predikat
+            );
+            return dataRow;
+        });
 
         doc.autoTable({
             head: headers,
@@ -211,19 +319,36 @@ const useRekap = (uiData, userSession) => { // Accept uiData and userSession
             return;
         }
 
-        const data = rekapHafalanData.value.map((row, i) => ({
-            "No": i + 1,
-            "Nama Santri": row.nama,
-            "Kelas": row.kelas,
-            "Sabaq (Hal)": row.sabaq_act,
-            "Target Sabaq": row.sabaq_tgt,
-            "Manzil (Hal)": row.manzil_act,
-            "Target Manzil": row.manzil_tgt,
-            "Rata-rata Ujian": row.ujian_avg,
-            "Poin Pelanggaran": row.pelanggaran_poin,
-            "Nilai Akhir": row.nilai_akhir,
-            "Predikat": row.predikat
-        }));
+        const { visibility } = rekapSettings;
+        const data = rekapHafalanData.value.map((row, i) => {
+            const item = {
+                "No": i + 1,
+                "Nama Santri": row.nama,
+                "Kelas": row.kelas
+            };
+
+            if (visibility.sabaq) {
+                item["Sabaq (Hal)"] = row.sabaq_act;
+                item["Target Sabaq"] = row.sabaq_tgt;
+            }
+            if (visibility.manzil) {
+                item["Manzil (Hal)"] = row.manzil_act;
+                item["Target Manzil"] = row.manzil_tgt;
+            }
+            if (visibility.ujian) {
+                item["Rata-rata Ujian"] = row.ujian_avg;
+            }
+            if (visibility.tilawah) {
+                item["Tilawah (Hal)"] = row.tilawah_act;
+                item["Target Tilawah"] = row.tilawah_tgt;
+            }
+
+            item["Poin Pelanggaran"] = row.pelanggaran_poin;
+            item["Nilai Akhir"] = row.nilai_akhir;
+            item["Predikat"] = row.predikat;
+
+            return item;
+        });
 
         const ws = XLSX.utils.json_to_sheet(data);
         const wb = XLSX.utils.book_new();
@@ -233,7 +358,8 @@ const useRekap = (uiData, userSession) => { // Accept uiData and userSession
 
     return {
         rekapMonth, rekapYear, rekapKelas, rekapGender,
-        monthNames, rekapHafalanData,
+        monthNames, rekapHafalanData, rekapSettings,
+        saveSettings,
         exportToPDF, exportToExcel
     };
 };

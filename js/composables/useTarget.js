@@ -23,6 +23,7 @@ function useTarget(uiData, DB) {
         id: null,
         sabaq: 20,
         manzil: 20,
+        tilawah: 600,
         pct: 20,
         totalPages: 0,
         full_name: '',
@@ -33,7 +34,20 @@ function useTarget(uiData, DB) {
      * Modal state
      */
     const targetModalState = reactive({
-        isOpen: false
+        isOpen: false,
+        isBulkOpen: false,
+        selectionMode: false
+    });
+
+    const selectedSantriIds = ref([]);
+
+    const bulkTargetForm = reactive({
+        updateSabaq: false,
+        updateManzil: false,
+        updateTilawah: false,
+        sabaq: 20,
+        manzil: 20,
+        tilawah: 600
     });
 
     // ===== COMPUTED =====
@@ -48,12 +62,14 @@ function useTarget(uiData, DB) {
             const defaults = getTargetDefaults(s);
             const sabaq = s.target_sabaq || defaults.sabaq;
             const manzil = s.target_manzil || defaults.manzil;
+            const tilawah = s.target_tilawah || 600;
             const pct = s.target_manzil_pct || 20;
 
             return {
                 ...s,
                 view_sabaq: sabaq,
                 view_manzil: manzil,
+                view_tilawah: tilawah,
                 view_pct: pct,
                 view_total_pages: defaults.totalPages
             };
@@ -114,6 +130,7 @@ function useTarget(uiData, DB) {
         targetForm.hafalan_desc = santri.hafalan_manual || '0 Juz';
         targetForm.sabaq = santri.target_sabaq || defaults.sabaq;
         targetForm.manzil = santri.target_manzil || defaults.manzil;
+        targetForm.tilawah = santri.target_tilawah || 600;
         targetForm.pct = santri.target_manzil_pct || 20;
         targetForm.totalPages = defaults.totalPages;
 
@@ -128,6 +145,82 @@ function useTarget(uiData, DB) {
         targetForm.id = null;
         targetForm.full_name = '';
         targetForm.hafalan_desc = '';
+    };
+
+    /**
+     * Bulk Selection Methods
+     */
+    const toggleSelectionMode = () => {
+        targetModalState.selectionMode = !targetModalState.selectionMode;
+        if (!targetModalState.selectionMode) {
+            selectedSantriIds.value = [];
+        }
+    };
+
+    const toggleSantriSelection = (id) => {
+        const index = selectedSantriIds.value.indexOf(id);
+        if (index > -1) {
+            selectedSantriIds.value.splice(index, 1);
+        } else {
+            selectedSantriIds.value.push(id);
+        }
+    };
+
+    const selectAllSantri = (ids) => {
+        if (selectedSantriIds.value.length === ids.length) {
+            selectedSantriIds.value = [];
+        } else {
+            selectedSantriIds.value = [...ids];
+        }
+    };
+
+    const openBulkTargetModal = () => {
+        if (selectedSantriIds.value.length === 0) {
+            alert('Pilih minimal satu santri');
+            return;
+        }
+        targetModalState.isBulkOpen = true;
+    };
+
+    const closeBulkTargetModal = () => {
+        targetModalState.isBulkOpen = false;
+    };
+
+    const applyBulkTarget = async () => {
+        if (selectedSantriIds.value.length === 0) return;
+
+        const payload = {};
+        if (bulkTargetForm.updateSabaq) payload.target_sabaq = parseInt(bulkTargetForm.sabaq) || 0;
+        if (bulkTargetForm.updateManzil) payload.target_manzil = parseInt(bulkTargetForm.manzil) || 0;
+        if (bulkTargetForm.updateTilawah) payload.target_tilawah = parseInt(bulkTargetForm.tilawah) || 0;
+
+        if (Object.keys(payload).length === 0) {
+            alert('Pilih minimal satu kriteria target untuk diupdate');
+            return;
+        }
+
+        try {
+            showLoading(true, `Mengupdate ${selectedSantriIds.value.length} santri...`);
+
+            // Sequential update for safety with current architecture
+            for (const id of selectedSantriIds.value) {
+                await DB.update(id, {
+                    ...payload,
+                    updated_at: new Date().toISOString()
+                });
+            }
+
+            if (window.refreshData) window.refreshData();
+
+            alert('Target massal berhasil diterapkan!');
+            closeBulkTargetModal();
+            toggleSelectionMode(); // Exit selection mode
+        } catch (error) {
+            console.error('Bulk update error:', error);
+            alert('Gagal update massal: ' + error.message);
+        } finally {
+            showLoading(false);
+        }
     };
 
     /**
@@ -157,6 +250,7 @@ function useTarget(uiData, DB) {
             const payload = {
                 target_sabaq: sabaq,
                 target_manzil: manzil,
+                target_tilawah: parseInt(targetForm.tilawah) || 600,
                 target_manzil_pct: pct
             };
 
@@ -194,6 +288,7 @@ function useTarget(uiData, DB) {
             const payload = {
                 target_sabaq: null,
                 target_manzil: null,
+                target_tilawah: null,
                 target_manzil_pct: null
             };
 
@@ -217,6 +312,8 @@ function useTarget(uiData, DB) {
         // State
         targetForm,
         targetModalState,
+        selectedSantriIds,
+        bulkTargetForm,
 
         // Computed
         santriWithTarget,
@@ -226,6 +323,12 @@ function useTarget(uiData, DB) {
         closeTargetModal,
         saveTarget,
         resetTarget,
-        recalcManzil
+        recalcManzil,
+        toggleSelectionMode,
+        toggleSantriSelection,
+        selectAllSantri,
+        openBulkTargetModal,
+        closeBulkTargetModal,
+        applyBulkTarget
     };
 }

@@ -1,7 +1,7 @@
 // --- 1. CONFIG & DATABASE (SUPABASE v36) ---
 const APP_CONFIG = {
     appName: "E-Umar",
-    version: "v2.2",
+    version: "v2.3",
     supabaseUrl: "https://fxtmilqvxomuvkxxzjli.supabase.co",
     supabaseKey: "sb_publishable_aXcK3znrtRo0d3gH-Wg1Ew_-0Z3262O"
 };
@@ -194,7 +194,7 @@ const DB = {
         if (!silent) showLoading(true, 'Sinkronisasi Cloud...');
 
         try {
-            const tables = ['users', 'santri', 'kelas', 'mapel', 'jadwal', 'setoran', 'pelanggaran', 'pelanggaran_type', 'absensi', 'ujian', 'notifications'];
+            const tables = ['users', 'santri', 'kelas', 'mapel', 'jadwal', 'setoran', 'pelanggaran', 'pelanggaran_type', 'absensi', 'ujian', 'notifications', 'settings'];
             let cloudData = [];
 
             // Parallel Fetch
@@ -598,4 +598,3 @@ function formatDateLong(isoString, timeOverride = null) {
 
     return `${datePart}<br><span class="text-xs text-slate-400 font-normal">${timePart}</span>`;
 }
-

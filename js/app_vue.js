@@ -59,6 +59,7 @@ createApp({
             ujian: [],
             pelanggaran: [], // added
             master_pelanggaran: [], // added
+            settings: [], // added
             surahList: [] // For dropdowns
         });
 
@@ -548,6 +549,7 @@ createApp({
             uiData.jadwal = activeData.filter(d => d.__type === 'jadwal');
             uiData.absensi = activeData.filter(d => d.__type === 'absensi');
             uiData.master_pelanggaran = activeData.filter(d => d.__type === 'pelanggaran_type');
+            uiData.settings = activeData.filter(d => d.__type === 'settings');
 
             // Initialize or Validate activeChildId for Wali
             if (userSession.value?.role === 'wali' && santriList.length > 0) {
