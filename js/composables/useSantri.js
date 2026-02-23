@@ -105,8 +105,8 @@ function useSantri(uiData, DB, userSession, modalState, refreshData, searchText)
         // Gender segregation for guru users
         if (userSession.value?.role === 'guru' && userSession.value?.gender) {
             items = items.filter(s => s.gender === userSession.value.gender);
-        } else {
-            // Filter by selected tab (L/P) if not forced by Guru role
+        } else if (userSession.value?.role !== 'wali') {
+            // Filter by selected tab (L/P) if not forced by Guru role and NOT holding Wali role
             if (santriGenderFilter.value) {
                 items = items.filter(s => s.gender === santriGenderFilter.value);
             }

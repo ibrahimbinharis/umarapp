@@ -13,11 +13,14 @@ function useProfile(uiData, DB, userSession, refreshData) {
     const { reactive } = Vue;
 
     // --- STATE ---
+    const activeSubMenu = Vue.ref(null); // null, 'account', 'santri'
+
     const profileForm = reactive({
         full_name: '',
         username: '',
         password: '',
         phone: '',
+        gender: '', // Added for cloud notification filtering
         photo_url: '' // Added for better tracking
     });
 
@@ -27,6 +30,7 @@ function useProfile(uiData, DB, userSession, refreshData) {
         profileForm.full_name = userSession.value.full_name || '';
         profileForm.username = userSession.value.custom_username || userSession.value.username || '';
         profileForm.phone = userSession.value.phone || '';
+        profileForm.gender = userSession.value.gender || '';
         profileForm.password = '';
     };
 
@@ -47,6 +51,7 @@ function useProfile(uiData, DB, userSession, refreshData) {
             const updates = {
                 full_name: profileForm.full_name,
                 phone: profileForm.phone,
+                gender: profileForm.gender,
                 custom_username: profileForm.username
             };
 
@@ -74,6 +79,7 @@ function useProfile(uiData, DB, userSession, refreshData) {
                         username: userSession.value.username || profileForm.username,
                         full_name: updates.full_name,
                         phone: updates.phone,
+                        gender: updates.gender,
                         custom_username: updates.custom_username,
                         role: userSession.value.role || 'wali',
                         password: profileForm.password || 'migrated_user' // Provide placeholder to satisfy NOT NULL
@@ -87,6 +93,7 @@ function useProfile(uiData, DB, userSession, refreshData) {
             // --- UPDATE LOCAL SESSION ---
             userSession.value.full_name = updates.full_name;
             userSession.value.phone = updates.phone;
+            userSession.value.gender = updates.gender;
             userSession.value.custom_username = updates.custom_username;
 
             // Persistence
@@ -325,6 +332,7 @@ function useProfile(uiData, DB, userSession, refreshData) {
     };
 
     return {
+        activeSubMenu,
         profileForm,
         initProfileForm,
         saveProfile,

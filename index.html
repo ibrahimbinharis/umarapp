@@ -348,6 +348,7 @@
                     <!-- PROFILE VIEW (Component) -->
                     <div v-if="currentView === 'profile'">
                         <profile-view :user-session="userSession" :profile-form="profileForm"
+                            :active-sub-menu="activeSubMenu" @update:active-sub-menu="activeSubMenu = $event"
                             :save-profile="saveProfile" :logout="logout" :handle-file-select="handleFileSelect"
                             :delete-photo="deletePhoto" :is-uploading="isUploading" :get-initials="getInitials"
                             :app-version="appVersion" :linked-santri="linkedSantri" :get-linked-santri="getLinkedSantri"
@@ -1411,7 +1412,7 @@
 
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js?v=2.1').then(reg => {
+                navigator.serviceWorker.register('sw.js?v=2.5').then(reg => {
                     console.log('SW Registered!', reg);
 
                     // 1. Check if update is already waiting (e.g. from previous visit)

@@ -17,6 +17,7 @@ const MENU_CONFIG = [
     { id: 'pelanggaran', label: "Pelanggaran", icon: "warning", roles: ['admin', 'guru'], inBottom: false },
     { id: 'profile', label: "Profile", icon: "account_circle", roles: ['admin', 'guru', 'wali'], inBottom: false },
     { id: 'rekap', label: "Rekap", icon: "analytics", roles: ['admin', 'guru', 'wali'], inBottom: false },
+    { id: 'connect_santri', label: "Sambungkan Santri", icon: "family_restroom", roles: ['wali'], inBottom: false },
 ];
 
 
@@ -127,6 +128,16 @@ createApp({
                 if (typeof initCharts === 'function') initCharts();
             });
         };
+
+        // Sync activeChildId with ujianForm for Wali
+        watch(activeChildId, (newId) => {
+            if (userSession.value?.role === 'wali' && newId) {
+                const s = uiData.santri.find(x => x._id === newId || x.santri_id === newId);
+                if (s) {
+                    ujian.ujianForm.santri_id = s.santri_id || s._id;
+                }
+            }
+        }, { immediate: true });
 
         // Initialize Profile Composable
         const profile = useProfile(uiData, DB, userSession, refreshData);
@@ -461,14 +472,23 @@ createApp({
                 return;
             }
 
-            currentView.value = view;
-
-            // PWA History Push
-            window.history.pushState({ view: view }, '', '#' + view);
-
             // Sync profile form when navigating to profile
-            if (view === 'profile') {
+            if (view === 'profile' || view === 'connect_santri') {
                 profile.initProfileForm();
+            }
+
+            if (view === 'connect_santri') {
+                currentView.value = 'profile';
+                profile.activeSubMenu.value = 'santri';
+                window.history.pushState({ view: 'profile' }, '', '#profile');
+            } else {
+                currentView.value = view;
+                window.history.pushState({ view: view }, '', '#' + view);
+                // If navigating to profile normally, reset sub-menu maybe? 
+                // Or just keep it as is. User usually wants the main profile.
+                if (view === 'profile' && profile.activeSubMenu.value !== 'santri') {
+                    profile.activeSubMenu.value = null;
+                }
             }
 
             window.scrollTo(0, 0); // Reset scroll

@@ -292,7 +292,7 @@ const DashboardView = {
                             }]
                         },
                         options: {
-                            cutout: '80%',
+                            cutout: '75%',
                             plugins: {
                                 legend: { display: false },
                                 tooltip: { enabled: true }

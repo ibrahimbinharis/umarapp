@@ -16,13 +16,23 @@ const ProfileView = {
         unlinkSantri: { type: Function },
         // Child Selection Props
         activeChildId: { type: String },
-        selectChild: { type: Function }
+        selectChild: { type: Function },
+        activeSubMenu: { type: [String, Object], default: null } // Added from composable
     },
-    setup(props) {
-        const { ref } = Vue;
+    setup(props, { emit }) {
+        const { ref, watch } = Vue;
 
-        // Navigation State
-        const activeSubMenu = ref(null); // null, 'account', 'santri'
+        // Navigation State (now from props if available, otherwise local for standalone use if any)
+        const activeSubMenu = ref(props.activeSubMenu);
+
+        watch(() => props.activeSubMenu, (newVal) => {
+            activeSubMenu.value = newVal;
+        });
+
+        watch(activeSubMenu, (newVal) => {
+            emit('update:activeSubMenu', newVal);
+        });
+
         const showPhotoMenu = ref(false);
 
         // Local NIS input (not from props)
@@ -256,6 +266,16 @@ const ProfileView = {
                         <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">Nomor WhatsApp</label>
                         <input v-model="profileForm.phone" type="tel" placeholder="08xxxx"
                             class="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:outline-none focus:border-primary focus:ring-4 focus:ring-blue-500/10 bg-slate-50/50 text-slate-700 transition-all placeholder:font-normal placeholder:text-slate-400">
+                    </div>
+
+                    <div v-if="userSession.role === 'guru'">
+                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">Jenis Kelamin</label>
+                        <select v-model="profileForm.gender" 
+                            class="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:outline-none focus:border-primary focus:ring-4 focus:ring-blue-500/10 bg-slate-50/50 text-slate-700 transition-all appearance-none cursor-pointer">
+                            <option value="">-- Pilih Jenis Kelamin --</option>
+                            <option value="L">Putra (L)</option>
+                            <option value="P">Putri (P)</option>
+                        </select>
                     </div>
 
                     <div class="pt-4 border-t border-slate-50">
