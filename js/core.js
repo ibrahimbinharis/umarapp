@@ -1,7 +1,7 @@
 // --- 1. CONFIG & DATABASE (SUPABASE v36) ---
 const APP_CONFIG = {
     appName: "E-Umar",
-    version: "v2.5",
+    version: "v2.6",
     supabaseUrl: "https://fxtmilqvxomuvkxxzjli.supabase.co",
     supabaseKey: "sb_publishable_aXcK3znrtRo0d3gH-Wg1Ew_-0Z3262O"
 };
@@ -194,11 +194,11 @@ const DB = {
         if (!silent) showLoading(true, 'Sinkronisasi Cloud...');
 
         try {
-            const tables = ['users', 'santri', 'kelas', 'mapel', 'jadwal', 'setoran', 'pelanggaran', 'pelanggaran_type', 'absensi', 'ujian', 'notifications', 'settings'];
+            const nonNotifTables = ['users', 'santri', 'kelas', 'mapel', 'jadwal', 'setoran', 'pelanggaran', 'pelanggaran_type', 'absensi', 'ujian', 'settings'];
             let cloudData = [];
 
-            // Parallel Fetch
-            const promises = tables.map(table => sb.from(table).select('*').range(0, 9999).then(res => {
+            // Parallel Fetch (non-notifications tables)
+            const promises = nonNotifTables.map(table => sb.from(table).select('*').range(0, 9999).then(res => {
                 if (res.error) throw res.error;
                 // Standardize: 'users' table becomes 'user' type internally
                 const type = table === 'users' ? 'user' : table;
@@ -208,6 +208,27 @@ const DB = {
                     return { ...d, __type: type };
                 });
             }));
+
+            // --- NOTIFICATIONS: Hanya fetch milik user yang sedang login ---
+            // Ini mencegah notifikasi user lain masuk ke localStorage
+            // dan mencegah status is_read di-reset saat sync
+            const currentUserId = currentUser ? (currentUser._id || currentUser.id) : null;
+            if (currentUserId) {
+                const notifPromise = sb.from('notifications')
+                    .select('*')
+                    .eq('user_id', currentUserId)
+                    .eq('_deleted', false)
+                    .order('created_at', { ascending: false })
+                    .limit(100)
+                    .then(res => {
+                        if (res.error) {
+                            console.warn('[Sync] Notifications fetch error:', res.error);
+                            return [];
+                        }
+                        return res.data.map(d => ({ ...d, __type: 'notifications' }));
+                    });
+                promises.push(notifPromise);
+            }
 
             const results = await Promise.all(promises);
             results.forEach(arr => cloudData = cloudData.concat(arr));

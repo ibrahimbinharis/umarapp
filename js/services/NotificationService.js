@@ -34,7 +34,9 @@ const NotificationService = {
         try {
             if (existing) {
                 console.log(`[Notifikasi] Updating existing: ${notifId}`);
-                await DB.update(notifId, payload);
+                // Safely update without overwriting is_read status (don't force false)
+                const { is_read, ...updatePayload } = payload;
+                await DB.update(notifId, updatePayload);
             } else {
                 console.log(`[Notifikasi] Creating new: ${notifId}`);
                 await DB.create('notifications', payload);
@@ -71,6 +73,14 @@ const NotificationService = {
         }
         if (!waliId) return;
 
+        // --- ROLE VALIDATION (v36) ---
+        // Ensure recipient is actually a Wali to prevent Guru receiving activity alerts
+        const { data: user } = await sb.from('users').select('role').eq('_id', waliId).maybeSingle();
+        if (!user || user.role !== 'wali') {
+            console.warn(`[Notifikasi] Skip activity notif: User ${waliId} is not a Wali.`);
+            return;
+        }
+
         await this.create({
             id: sourceId,
             userId: waliId,
@@ -91,6 +101,10 @@ const NotificationService = {
             if (data) waliId = data.wali_id;
         }
         if (!waliId) return;
+
+        // --- ROLE VALIDATION (v36) ---
+        const { data: user } = await sb.from('users').select('role').eq('_id', waliId).maybeSingle();
+        if (!user || user.role !== 'wali') return;
 
         const type = score >= 70 ? 'info' : 'warning';
         await this.create({
@@ -113,6 +127,10 @@ const NotificationService = {
             if (data && data.wali_id) waliId = data.wali_id;
         }
         if (!waliId) return;
+
+        // --- ROLE VALIDATION (v36) ---
+        const { data: user } = await sb.from('users').select('role').eq('_id', waliId).maybeSingle();
+        if (!user || user.role !== 'wali') return;
 
         await this.create({
             id: sourceId,

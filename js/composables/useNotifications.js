@@ -43,6 +43,7 @@ function useNotifications(uiData, userSession) {
         // Fetch last 50 notifications for better history
         const { data, error } = await sb.from('notifications')
             .select('*')
+            .eq('user_id', userSession.value.id || userSession.value._id)
             .eq('_deleted', false)
             .order('created_at', { ascending: false })
             .limit(50);
@@ -100,21 +101,37 @@ function useNotifications(uiData, userSession) {
     };
 
     const markAsRead = async (notifId) => {
-        // Optimistic Update
+        // 1. Optimistic: Update UI langsung tanpa tunggu server
         const idx = dbNotifications.value.findIndex(n => n._id === notifId);
         if (idx !== -1) dbNotifications.value[idx].is_read = true;
 
-        await sb.from('notifications')
+        // 2. Update langsung ke Supabase (bypass DB engine/queue agar tidak di-reset saat sync)
+        const { error } = await sb.from('notifications')
             .update({ is_read: true })
             .eq('_id', notifId);
+
+        if (error) {
+            console.error('[Notifikasi] Gagal update status read:', error);
+            // Rollback optimistic update jika gagal
+            if (idx !== -1) dbNotifications.value[idx].is_read = false;
+        }
     };
 
     const markAllRead = async () => {
+        // 1. Optimistic: Update semua di UI sekaligus
         dbNotifications.value.forEach(n => n.is_read = true);
-        await sb.from('notifications')
+
+        // 2. Update langsung ke Supabase (bypass DB engine/queue)
+        const { error } = await sb.from('notifications')
             .update({ is_read: true })
             .eq('user_id', userSession.value.id || userSession.value._id)
             .eq('_deleted', false);
+
+        if (error) {
+            console.error('[Notifikasi] Gagal markAllRead:', error);
+            // Refresh untuk mendapatkan state terbaru dari server
+            await fetchNotifications();
+        }
     };
 
     const allNotifications = computed(() => {
