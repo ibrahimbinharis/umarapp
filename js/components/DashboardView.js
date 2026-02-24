@@ -21,7 +21,7 @@ const DashboardView = {
         'mark-read',
         'mark-all-read'
     ],
-    setup(props) {
+    setup(props, { emit }) {
         const { ref, computed, onMounted, nextTick, watch } = Vue;
         const isMenuExpanded = ref(false);
         const showNotifications = ref(false);
@@ -57,9 +57,24 @@ const DashboardView = {
             return activeNotifTab.value === 'important' ? alertNotifications.value : infoNotifications.value;
         });
 
+        const stripHtml = (html) => {
+            if (!html) return '';
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = html;
+            return tempDiv.textContent || tempDiv.innerText || "";
+        };
+
         const hasUnreadAlerts = computed(() => {
             return alertNotifications.value.some(n => !n.is_read);
         });
+
+        const handleNotifClick = (notif) => {
+            emit('mark-read', notif._id || notif.id);
+            if (notif.source_id && notif.source_id.startsWith('ann_')) {
+                emit('navigate', 'pengumuman');
+                showNotifications.value = false;
+            }
+        };
 
         // --- CHARTS INITIALIZATION ---
         const initCharts = () => {
@@ -326,7 +341,9 @@ const DashboardView = {
             currentTabNotifications,
             alertNotifications,
             infoNotifications,
-            hasUnreadAlerts
+            hasUnreadAlerts,
+            handleNotifClick,
+            stripHtml
         };
     },
     template: `
@@ -383,7 +400,7 @@ const DashboardView = {
                         <div v-else v-for="notif in currentTabNotifications" :key="notif.id" 
                             class="p-3 border-b border-slate-50 hover:bg-slate-50 transition cursor-pointer relative group"
                             :class="{'bg-blue-50/30': !notif.is_read}"
-                            @click="$emit('mark-read', notif.id)">
+                            @click="handleNotifClick(notif)">
                             
                             <!-- Unread Indicator Dot -->
                             <div v-if="!notif.is_read" class="absolute left-2 top-4 size-1.5 rounded-full bg-blue-500"></div>
@@ -395,7 +412,7 @@ const DashboardView = {
                                         <h4 class="text-xs font-bold text-slate-800 line-clamp-1" :class="{'text-primary': !notif.is_read && activeNotifTab === 'info', 'text-red-600': !notif.is_read && activeNotifTab === 'important' }">{{ notif.title }}</h4>
                                         <span class="text-[9px] text-slate-400 whitespace-nowrap ml-2">{{ formatDate(notif.created_at || notif.timestamp) }}</span>
                                     </div>
-                                    <p class="text-[11px] text-slate-500 leading-snug line-clamp-2">{{ notif.message }}</p>
+                                    <p class="text-[11px] text-slate-500 leading-snug line-clamp-2">{{ stripHtml(notif.message) }}</p>
                                 </div>
                             </div>
                         </div>

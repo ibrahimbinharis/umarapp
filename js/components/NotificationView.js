@@ -1,12 +1,27 @@
 const NotificationView = {
     props: ['notifications', 'unreadCount', 'uiData'],
     emits: ['mark-read', 'mark-all-read', 'navigate', 'back'],
-    setup(props) {
+    setup(props, { emit }) {
         const { ref, computed } = Vue;
-        const activeFilter = ref('all'); // all, unread, alert, info, success
+        const activeFilter = ref('all');
 
-        // Helper
         const formatDate = window.formatDate || ((d) => d);
+
+        const stripHtml = (html) => {
+            if (!html) return '';
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = html;
+            return tempDiv.textContent || tempDiv.innerText || "";
+        };
+
+        const handleNotifClick = (notif) => {
+            // Mark as read
+            emit('mark-read', notif._id);
+            // Jika notifikasi dari pengumuman, navigate ke halaman pengumuman
+            if (notif.source_id && notif.source_id.startsWith('ann_')) {
+                emit('navigate', 'pengumuman');
+            }
+        };
 
         const filteredNotifications = computed(() => {
             let list = props.notifications;
@@ -36,7 +51,9 @@ const NotificationView = {
             activeFilter,
             filteredNotifications,
             filters,
-            formatDate
+            formatDate,
+            handleNotifClick,
+            stripHtml
         };
     },
     template: `
@@ -81,7 +98,7 @@ const NotificationView = {
             <div v-else v-for="notif in filteredNotifications" :key="notif._id"
                 class="bg-white p-4 rounded-xl border border-slate-100 shadow-sm hover:shadow-md transition-all cursor-pointer relative overflow-hidden group"
                 :class="{'ring-1 ring-blue-100 bg-blue-50/20': !notif.is_read}"
-                @click="$emit('mark-read', notif._id)">
+                @click="handleNotifClick(notif)">
                 
                 <!-- Unread Indicator Strip -->
                 <div v-if="!notif.is_read" class="absolute left-0 top-0 bottom-0 w-1 bg-blue-500"></div>
@@ -100,7 +117,7 @@ const NotificationView = {
                                 {{ formatDate(notif.created_at || notif.timestamp) }}
                             </span>
                         </div>
-                        <p class="text-xs text-slate-600 leading-relaxed">{{ notif.message }}</p>
+                        <p class="text-xs text-slate-600 leading-relaxed">{{ stripHtml(notif.message) }}</p>
                         
                         <!-- Optional Actions or Meta -->
                         <div v-if="notif.santri_id" class="mt-2 text-[10px] font-bold text-slate-400 bg-slate-50 inline-block px-1.5 py-0.5 rounded border border-slate-100">

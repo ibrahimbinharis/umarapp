@@ -205,7 +205,7 @@
                     <div v-if="!loading && currentView === 'notifications'" class="h-full w-full">
                         <notification-view :notifications="allNotifications" :unread-count="unreadCount"
                             :ui-data="uiData" @mark-read="markAsRead" @mark-all-read="markAllRead"
-                            @back="currentView = 'dashboard'"></notification-view>
+                            @navigate="navigateTo" @back="currentView = 'dashboard'"></notification-view>
                     </div>
                     <!-- SANTRI VIEW SKELETON -->
                     <div v-if="loading && currentView === 'santri'" class="animate-pulse px-4 space-y-4 pt-4">
@@ -334,9 +334,22 @@
                             @save-settings="saveSettings"></rekap-view>
                     </div>
 
+                    <!-- PENGUMUMAN VIEW (Component) -->
+                    <div v-if="currentView === 'pengumuman'">
+                        <pengumuman-view :user-session="userSession" :pengumuman-list="pengumumanList"
+                            :paginated-list="paginatedList" :current-page="currentPage" :total-pages="totalPages"
+                            :is-loading="isLoading" :show-form-modal="showFormModal"
+                            :show-detail-modal="showDetailModal" :detail-item="detailItem" :form="form"
+                            :page-size="PAGE_SIZE" @load="loadPengumuman" @open-add="openAddForm"
+                            @open-edit="item => { openEditForm(item); $nextTick(() => $refs.pengumumanView?.initEditor?.()) }"
+                            @save="savePengumuman" @delete="deletePengumuman" @open-detail="openDetail"
+                            @go-page="goToPage" @close-form="showFormModal = false"
+                            @close-detail="showDetailModal = false" @update:form-judul="form.judul = $event"
+                            @update:form-isi="form.isi = $event" @update:form-kategori="form.kategori = $event"
+                            @update:form-target="form.target = $event"></pengumuman-view>
+                    </div>
 
 
-                    <!-- ABSENSI VIEW (Component) -->
                     <div v-if="currentView === 'absensi'">
                         <absensi-view :absensi-state="absensiState" :daily-jadwal="dailyJadwal"
                             :gender-filter="genderFilter" :absensi-day-name="absensiDayName"
@@ -1324,6 +1337,7 @@
     <script src="js/composables/useQuran.js"></script>
     <script src="js/composables/useDashboard.js"></script>
     <script src="js/composables/useProfile.js"></script>
+    <script src="js/composables/usePengumuman.js"></script>
 
     <!-- Main App -->
     <!-- Components -->
@@ -1343,6 +1357,7 @@
     <script src="js/components/AbsensiView.js"></script>
     <script src="js/components/ProfileView.js"></script>
     <script src="js/components/NotificationView.js"></script>
+    <script src="js/components/PengumumanView.js"></script>
     <script src="js/services/NotificationService.js"></script>
     <script src="js/services/PushService.js"></script>
     <script src="js/composables/useNotifications.js"></script>

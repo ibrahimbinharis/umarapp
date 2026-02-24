@@ -1,13 +1,13 @@
-// --- 1. CONFIG & DATABASE (SUPABASE v36) ---
+// --- 1. CONFIG & DATABASE (SUPABASE v37) ---
 const APP_CONFIG = {
     appName: "E-Umar",
-    version: "v2.7",
+    version: "v2.8",
     supabaseUrl: "https://fxtmilqvxomuvkxxzjli.supabase.co",
     supabaseKey: "sb_publishable_aXcK3znrtRo0d3gH-Wg1Ew_-0Z3262O"
 };
 
-const DB_KEY = 'tahfidz_v36_master';
-const QUEUE_KEY = 'tahfidz_v36_queue';
+const DB_KEY = 'tahfidz_v37_master';
+const QUEUE_KEY = 'tahfidz_v37_queue';
 
 // Init Supabase Client
 const { createClient } = supabase;

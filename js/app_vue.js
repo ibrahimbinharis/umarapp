@@ -5,6 +5,7 @@ const MENU_CONFIG = [
     { id: 'jadwal', label: "Jadwal", icon: "calendar_month", roles: ['admin', 'guru', 'wali'], inBottom: true },
     { id: 'input', label: "Input", icon: "add", roles: ['admin', 'guru'], inBottom: true, highlight: true },
     { id: 'riwayat', label: "Riwayat", icon: "history", roles: ['admin', 'guru', 'wali'], inBottom: true },
+    { id: 'pengumuman', label: "Pengumuman", icon: "campaign", roles: ['admin', 'guru', 'wali'], inBottom: false },
     { id: 'absensi', label: "Absensi", icon: "event_available", roles: ['admin', 'guru'], inBottom: true },
     { id: 'santri', label: "Santri", icon: "group", roles: ['admin', 'guru'], inBottom: false },
     { id: 'hafalan', label: "Hafalan", icon: "menu_book", roles: ['admin', 'guru', 'wali'], inBottom: false },
@@ -141,6 +142,9 @@ createApp({
 
         // Initialize Profile Composable
         const profile = useProfile(uiData, DB, userSession, refreshData);
+
+        // Initialize Pengumuman Composable
+        const pengumuman = usePengumuman(uiData, DB, userSession, refreshData);
 
         // Initialize Notification Composable (formerly Monitoring)
         const notifications = useNotifications(uiData, userSession);
@@ -501,7 +505,7 @@ createApp({
 
 
         const forceSync = async () => {
-            // v36: Supabase Sync
+            // v37: Supabase Sync
 
             loading.value = true;
             syncStatus.status = 'loading';
@@ -846,7 +850,7 @@ createApp({
                     loadData();
                 };
 
-                // v36: Supabase Init (Always connect)
+                // v37: Supabase Init (Always connect)
                 syncStatus.status = 'loading';
                 syncStatus.message = 'Menghubungkan ke Cloud...';
 
@@ -916,6 +920,8 @@ createApp({
             ...useRekap(uiData, userSession), // Pass uiData and userSession
             // Notifications
             ...notifications,
+            // Pengumuman
+            ...pengumuman,
             // Dashboard
             initCharts, activityFilter, filteredActivities, topSantriFilter, filteredTopSantri,
             activeChildId, selectChild
@@ -937,6 +943,7 @@ createApp({
         ProfileView,
         NotificationView,
         ExamCounter,
-        QuranView
+        QuranView,
+        PengumumanView
     }
 }).mount('#app');

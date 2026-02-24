@@ -1,4 +1,4 @@
-const CACHE_NAME = "v2.7";
+const CACHE_NAME = "v2.8";
 const ASSETS_TO_CACHE = [
     "./",
     "./index.html",
@@ -30,7 +30,8 @@ const ASSETS_TO_CACHE = [
     "./js/composables/useRiwayat.js",
     "./js/composables/usePelanggaran.js",
     "./js/composables/useProfile.js",
-    "./js/composables/useRekap.js"
+    "./js/composables/useRekap.js",
+    "./js/composables/usePengumuman.js"
 ];
 
 // Install Event: Cache all static assets

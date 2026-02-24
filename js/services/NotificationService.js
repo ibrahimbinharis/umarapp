@@ -90,7 +90,7 @@ const NotificationService = {
         }
         if (!waliId) return;
 
-        // --- ROLE VALIDATION (v36) ---
+        // --- ROLE VALIDATION (v37) ---
         // Ensure recipient is actually a Wali to prevent Guru receiving activity alerts
         const { data: user } = await sb.from('users').select('role').eq('_id', waliId).maybeSingle();
         if (!user || user.role !== 'wali') {
@@ -119,7 +119,7 @@ const NotificationService = {
         }
         if (!waliId) return;
 
-        // --- ROLE VALIDATION (v36) ---
+        // --- ROLE VALIDATION (v37) ---
         const { data: user } = await sb.from('users').select('role').eq('_id', waliId).maybeSingle();
         if (!user || user.role !== 'wali') return;
 
@@ -138,25 +138,52 @@ const NotificationService = {
      * Beri tahu Wali tentang Pelanggaran
      */
     async notifyPelanggaran(santri, pelanggaranName, points, sourceId) {
+        // --- 1. NOTIFY WALI ---
         let waliId = santri.wali_id;
         if (!waliId) {
             const { data } = await sb.from('santri').select('wali_id').eq('_id', santri._id).maybeSingle();
             if (data && data.wali_id) waliId = data.wali_id;
         }
-        if (!waliId) return;
 
-        // --- ROLE VALIDATION (v36) ---
-        const { data: user } = await sb.from('users').select('role').eq('_id', waliId).maybeSingle();
-        if (!user || user.role !== 'wali') return;
+        if (waliId) {
+            const { data: user } = await sb.from('users').select('role').eq('_id', waliId).maybeSingle();
+            if (user && user.role === 'wali') {
+                await this.create({
+                    id: sourceId,
+                    userId: waliId,
+                    title: `Laporan Pelanggaran`,
+                    message: `Mohon perhatian, tercatat pelanggaran: ${pelanggaranName} (${points} Poin) untuk Ananda ${santri.full_name}.`,
+                    type: 'alert',
+                    relatedId: santri._id
+                });
+            }
+        }
 
-        await this.create({
-            id: sourceId,
-            userId: waliId,
-            title: `Laporan Pelanggaran`,
-            message: `Mohon perhatian, tercatat pelanggaran: ${pelanggaranName} (${points} Poin) untuk Ananda ${santri.full_name}.`,
-            type: 'alert',
-            relatedId: santri._id
-        });
+        // --- 2. NOTIFY ADMINS (v37) ---
+        const { data: adminAndGurus } = await sb.from('users')
+            .select('_id, role, gender')
+            .in('role', ['admin', 'guru'])
+            .eq('_deleted', false);
+
+        if (adminAndGurus) {
+            for (const user of adminAndGurus) {
+                // Admin gets everything
+                // Guru only gets their gender (L guru for L santri, etc)
+                const isRelevantGuru = user.role === 'guru' && (!user.gender || user.gender === '' || user.gender === santri.gender);
+                const isAdmin = user.role === 'admin';
+
+                if (isAdmin || isRelevantGuru) {
+                    await this.create({
+                        id: `${sourceId}_${user.role.slice(0, 3)}`,
+                        userId: user._id,
+                        title: `📌 Pelanggaran: ${santri.full_name}`,
+                        message: `${santri.full_name} (${santri.santri_id || 'Santri'}) melanggar: ${pelanggaranName} (${points} Poin).`,
+                        type: 'alert',
+                        relatedId: santri._id
+                    });
+                }
+            }
+        }
     },
 
     /**
