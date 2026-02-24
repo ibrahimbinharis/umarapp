@@ -1,7 +1,7 @@
 // --- 1. CONFIG & DATABASE (SUPABASE v36) ---
 const APP_CONFIG = {
     appName: "E-Umar",
-    version: "v2.6",
+    version: "v2.7",
     supabaseUrl: "https://fxtmilqvxomuvkxxzjli.supabase.co",
     supabaseKey: "sb_publishable_aXcK3znrtRo0d3gH-Wg1Ew_-0Z3262O"
 };
@@ -212,7 +212,7 @@ const DB = {
             // --- NOTIFICATIONS: Hanya fetch milik user yang sedang login ---
             // Ini mencegah notifikasi user lain masuk ke localStorage
             // dan mencegah status is_read di-reset saat sync
-            const currentUserId = currentUser ? (currentUser._id || currentUser.id) : null;
+            const currentUserId = currentUser ? currentUser._id : null;
             if (currentUserId) {
                 const notifPromise = sb.from('notifications')
                     .select('*')

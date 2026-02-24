@@ -54,11 +54,28 @@ const NotificationService = {
         if (!sourceId) return;
         try {
             const notifId = `notif_${sourceId}`;
-            // Kita hapus menggunakan DB engine agar status _deleted=true tersinkron otomatis
-            await DB.delete(notifId);
-            console.log(`[Notifikasi] Berhasil ditarik via DB engine: ${notifId}`);
+
+            // 1. Soft delete di Supabase langsung (tidak lewat DB queue)
+            //    agar langsung efektif tanpa harus menunggu sync
+            const { error } = await sb.from('notifications')
+                .update({ _deleted: true })
+                .eq('_id', notifId);
+
+            if (error) {
+                console.warn('[Notifikasi] Supabase delete gagal, coba via DB engine:', error.message);
+                // Fallback: coba via local DB engine
+                await DB.delete(notifId);
+            } else {
+                console.log(`[Notifikasi] Berhasil dihapus dari Supabase: ${notifId}`);
+                // Juga update local cache agar UI langsung terupdate
+                const localIdx = allData.findIndex(d => d._id === notifId);
+                if (localIdx !== -1) {
+                    allData[localIdx]._deleted = true;
+                    DB.saveAll(allData);
+                }
+            }
         } catch (err) {
-            console.warn("[Notifikasi] Gagal tarik:", err.message);
+            console.warn('[Notifikasi] Gagal tarik:', err.message);
         }
     },
 

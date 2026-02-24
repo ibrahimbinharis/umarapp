@@ -367,28 +367,9 @@ function useUjian(uiData, DB, userSession, refreshData, quranControls = null, cu
                     });
                 }
 
-                // 2. Create History Log (Milestone/Completion - NOT Ujian)
-                // Only if grade is NOT null (not deleting)
-                if (grade) {
-                    const logPayload = {
-                        santri_id: ujianForm.santri_id,
-                        date: ujianForm.date,
-                        time: window.DateUtils.getCurrentTimeString(),
-                        type: 'Hafalan Selesai', // New Type
-                        detail: `Telah menyetorkan hafalan Juz ${ujianForm.s_juz}`,
-                        score: 0, // Ignored
-                        grade: grade, // 'Centang' or actual grade
-                        meta: {
-                            juz: ujianForm.s_juz
-                        }
-                    };
-                    // Save as 'ujian' with type 'Hafalan Selesai' so it appears in recent history.
-                    await DB.create('ujian', {
-                        ...logPayload,
-                        type: 'hafalan_exam', // Explicit type for clarity
-                        __type: 'ujian' // Ensure it syncs
-                    });
-                }
+                // Monitoring Mode hanya update progress santri.
+                // TIDAK membuat record ujian/riwayat agar tidak muncul
+                // di Riwayat, Aktivitas, dan Rekap.
 
                 alert("Status Hafalan Diupdate");
 
