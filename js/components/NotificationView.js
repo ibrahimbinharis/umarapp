@@ -27,13 +27,20 @@ const NotificationView = {
             let list = props.notifications;
 
             if (activeFilter.value === 'unread') {
-                list = list.filter(n => !n.is_read);
-            } else if (activeFilter.value === 'alert') {
-                list = list.filter(n => n.type === 'alert' || n.type === 'warning' || n.type === 'pelanggaran');
+                return list.filter(n => !n.is_read);
+            } else if (activeFilter.value === 'monitoring') {
+                return list.filter(n => n._id && n._id.startsWith('cl_'));
+            } else if (activeFilter.value === 'emergency') {
+                return list.filter(n => n.type === 'alert' && String(n._id).includes('_ann_'));
+            } else if (activeFilter.value === 'important') {
+                return list.filter(n =>
+                    (n.type === 'warning' || n.type === 'pelanggaran' || (n.type === 'alert' && !String(n._id).startsWith('cl_'))) &&
+                    !String(n._id).includes('_ann_')
+                );
             } else if (activeFilter.value === 'info') {
-                list = list.filter(n => n.type === 'info');
+                return list.filter(n => n.type === 'info');
             } else if (activeFilter.value === 'success') {
-                list = list.filter(n => n.type === 'success');
+                return list.filter(n => n.type === 'success');
             }
 
             return list;
@@ -42,8 +49,10 @@ const NotificationView = {
         const filters = [
             { id: 'all', label: 'Semua' },
             { id: 'unread', label: 'Belum Dibaca' },
-            { id: 'alert', label: 'Penting' },
             { id: 'info', label: 'Info' },
+            { id: 'monitoring', label: 'Monitoring' },
+            { id: 'important', label: 'Penting' },
+            { id: 'emergency', label: 'Darurat' },
             { id: 'success', label: 'Sukses' }
         ];
 

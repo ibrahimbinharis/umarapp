@@ -398,30 +398,30 @@ const DashboardView = {
                         </div>
                         <div class="flex gap-1 overflow-x-auto pb-1 no-scrollbar">
                             <button @click="activeNotifTab = 'all'" 
-                                class="px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all whitespace-nowrap"
+                                class="px-2.5 py-1.5 rounded-full text-[10px] font-bold transition-all whitespace-nowrap"
                                 :class="activeNotifTab === 'all' ? 'bg-slate-800 text-white shadow-sm' : 'bg-white text-slate-400 border border-slate-100 hover:text-slate-600'">
                                 Semua
                             </button>
                             <button @click="activeNotifTab = 'info'" 
-                                class="px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all whitespace-nowrap"
+                                class="px-2.5 py-1.5 rounded-full text-[10px] font-bold transition-all whitespace-nowrap"
                                 :class="activeNotifTab === 'info' ? 'bg-blue-600 text-white shadow-sm' : 'bg-white text-blue-400 border border-blue-50 hover:text-blue-600'">
                                 Info
                             </button>
                             <button @click="activeNotifTab = 'monitoring'" 
-                                class="px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all whitespace-nowrap"
+                                class="px-2.5 py-1.5 rounded-full text-[10px] font-bold transition-all whitespace-nowrap"
                                 :class="activeNotifTab === 'monitoring' ? 'bg-indigo-500 text-white shadow-sm' : 'bg-white text-indigo-400 border border-indigo-50 hover:text-indigo-600'">
                                 Monitoring
                             </button>
                             <button @click="activeNotifTab = 'important'" 
-                                class="px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all whitespace-nowrap"
+                                class="px-2.5 py-1.5 rounded-full text-[10px] font-bold transition-all whitespace-nowrap"
                                 :class="activeNotifTab === 'important' ? 'bg-orange-500 text-white shadow-sm' : 'bg-white text-orange-500 border border-orange-50 hover:text-orange-600'">
                                 Penting
                             </button>
                             <button @click="activeNotifTab = 'emergency'" 
-                                class="px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all whitespace-nowrap relative"
+                                class="px-2.5 py-1.5 rounded-full text-[10px] font-bold transition-all whitespace-nowrap relative"
                                 :class="activeNotifTab === 'emergency' ? 'bg-red-500 text-white shadow-sm' : 'bg-white text-red-500 border border-red-50 hover:text-red-600'">
                                 Darurat
-                                <span v-if="notifications.some(n => !n.is_read && n.type === 'alert' && n._id.includes('_ann_'))" class="absolute top-0 right-0 size-2 bg-white rounded-full border-2 border-red-500"></span>
+                                <span v-if="notifications.some(n => !n.is_read && n.type === 'alert' && String(n._id).includes('_ann_'))" class="absolute top-0 right-0 size-2 bg-white rounded-full border-2 border-red-500"></span>
                             </button>
                         </div>
                     </div>
