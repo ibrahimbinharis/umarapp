@@ -123,7 +123,10 @@ function usePengumuman(uiData, DB, userSession, refreshData) {
                     .eq('_id', form._id);
 
                 if (error) throw error;
-                alert('Pengumuman berhasil diperbarui.');
+
+                // Update notifications (v37: Upsert will update existing records by ID)
+                await broadcastNotification(form._id, form.judul, form.isi, form.target, form.kategori);
+                alert('Pengumuman berhasil diperbarui dan notifikasi telah diupdate.');
             } else {
                 // CREATE
                 const newId = `ann_${Date.now()}_${Math.random().toString(36).slice(-4)}`;
@@ -223,15 +226,25 @@ function usePengumuman(uiData, DB, userSession, refreshData) {
 
     /** Hapus pengumuman (soft delete) */
     const deletePengumuman = async (id) => {
-        if (!confirm('Hapus pengumuman ini? Notifikasi terkait tidak akan dihapus.')) return;
+        if (!confirm('Hapus pengumuman ini? Notifikasi di lonceng user juga akan ditarik.')) return;
 
         try {
-            const { error } = await sb
+            // 1. Soft delete pengumuman
+            const { error: annErr } = await sb
                 .from('pengumuman')
                 .update({ _deleted: true })
                 .eq('_id', id);
 
-            if (error) throw error;
+            if (annErr) throw annErr;
+
+            // 2. Recall notifikasi terkait (v37)
+            const { error: notifErr } = await sb
+                .from('notifications')
+                .update({ _deleted: true })
+                .eq('source_id', id);
+
+            if (notifErr) console.warn('[Pengumuman] Gagal recall notif:', notifErr.message);
+
             await loadPengumuman();
         } catch (err) {
             console.error('[Pengumuman] Gagal hapus:', err.message);

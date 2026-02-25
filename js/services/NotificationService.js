@@ -53,24 +53,30 @@ const NotificationService = {
     async removeBySource(sourceId) {
         if (!sourceId) return;
         try {
-            const notifId = `notif_${sourceId}`;
-
-            // 1. Soft delete di Supabase langsung (tidak lewat DB queue)
-            //    agar langsung efektif tanpa harus menunggu sync
+            // 1. Soft delete di Supabase berdasarkan source_id (v37)
+            // Ini akan menarik SEMUA notifikasi terkait (Wali, Guru, Admin) sekaligus
             const { error } = await sb.from('notifications')
                 .update({ _deleted: true })
-                .eq('_id', notifId);
+                .eq('source_id', sourceId);
 
             if (error) {
-                console.warn('[Notifikasi] Supabase delete gagal, coba via DB engine:', error.message);
-                // Fallback: coba via local DB engine
-                await DB.delete(notifId);
+                console.warn('[Notifikasi] Supabase recall gagal:', error.message);
+                // Fallback: coba via local DB untuk ID utama
+                await DB.delete(`notif_${sourceId}`);
             } else {
-                console.log(`[Notifikasi] Berhasil dihapus dari Supabase: ${notifId}`);
-                // Juga update local cache agar UI langsung terupdate
-                const localIdx = allData.findIndex(d => d._id === notifId);
-                if (localIdx !== -1) {
-                    allData[localIdx]._deleted = true;
+                console.log(`[Notifikasi] Berhasil recall semua notif untuk source: ${sourceId}`);
+
+                // 2. Update local cache (v37 logic)
+                // Filter dan update semua notif yang memiliki source_id yang sama
+                let localUpdatesCount = 0;
+                allData.forEach(d => {
+                    if (d.__type === 'notifications' && d.source_id === sourceId) {
+                        d._deleted = true;
+                        localUpdatesCount++;
+                    }
+                });
+
+                if (localUpdatesCount > 0) {
                     DB.saveAll(allData);
                 }
             }

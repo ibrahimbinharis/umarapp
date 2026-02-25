@@ -43,18 +43,36 @@ const DashboardView = {
             return props.myMenus.filter(m => m.id !== 'logout').length > 8;
         });
 
-        const activeNotifTab = ref('important'); // 'important' | 'info'
+        const activeNotifTab = ref('all'); // 'all' | 'info' | 'monitoring' | 'important' | 'emergency'
+
+        const monitoringNotifications = computed(() => {
+            return props.notifications.filter(n => n._id && n._id.startsWith('cl_'));
+        });
 
         const alertNotifications = computed(() => {
-            return props.notifications.filter(n => n.type === 'alert' || n.type === 'warning' || n.type === 'pelanggaran');
+            // Important: Violations or Warning types that are NOT cloud monitoring
+            return props.notifications.filter(n =>
+                (n.type === 'warning' || (n.type === 'alert' && !n._id.startsWith('cl_'))) &&
+                !n._id.includes('_ann_')
+            );
+        });
+
+        const emergencyNotifications = computed(() => {
+            // Only Emergency Announcements
+            return props.notifications.filter(n => n.type === 'alert' && n._id.includes('_ann_'));
         });
 
         const infoNotifications = computed(() => {
-            return props.notifications.filter(n => n.type !== 'alert' && n.type !== 'warning' && n.type !== 'pelanggaran');
+            return props.notifications.filter(n => n.type === 'info' || n.type === 'success');
         });
 
         const currentTabNotifications = computed(() => {
-            return activeNotifTab.value === 'important' ? alertNotifications.value : infoNotifications.value;
+            if (activeNotifTab.value === 'all') return props.notifications;
+            if (activeNotifTab.value === 'info') return infoNotifications.value;
+            if (activeNotifTab.value === 'monitoring') return monitoringNotifications.value;
+            if (activeNotifTab.value === 'important') return alertNotifications.value;
+            if (activeNotifTab.value === 'emergency') return emergencyNotifications.value;
+            return props.notifications;
         });
 
         const stripHtml = (html) => {
@@ -65,7 +83,7 @@ const DashboardView = {
         };
 
         const hasUnreadAlerts = computed(() => {
-            return alertNotifications.value.some(n => !n.is_read);
+            return props.notifications.some(n => !n.is_read && (n.type === 'alert' || n.type === 'warning' || n.type === 'pelanggaran'));
         });
 
         const handleNotifClick = (notif) => {
@@ -371,30 +389,48 @@ const DashboardView = {
                 <!-- Dropdown -->
                 <div v-if="showNotifications" class="absolute right-0 top-12 w-80 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden animate-fade-in-up origin-top-right z-[60]">
                     <!-- Header with Tabs -->
-                    <div class="p-2 border-b border-slate-100 bg-slate-50 flex justify-between items-center gap-2">
-                        <div class="flex gap-1 bg-white p-1 rounded-lg border border-slate-100 shadow-sm">
-                            <button @click="activeNotifTab = 'important'" 
-                                class="px-3 py-1.5 rounded-md text-[10px] font-bold transition-all relative"
-                                :class="activeNotifTab === 'important' ? 'bg-red-50 text-red-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'">
-                                Penting
-                                <span v-if="hasUnreadAlerts" class="absolute -top-1 -right-1 size-2 bg-red-500 rounded-full border border-white"></span>
-                            </button>
-                            <button @click="activeNotifTab = 'info'" 
-                                class="px-3 py-1.5 rounded-md text-[10px] font-bold transition-all"
-                                :class="activeNotifTab === 'info' ? 'bg-blue-50 text-blue-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'">
-                                Info
+                    <div class="p-2 border-b border-slate-100 bg-slate-50 flex flex-col gap-2">
+                        <div class="flex justify-between items-center px-1">
+                            <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Notifikasi</span>
+                            <button @click="$emit('mark-all-read')" class="text-[10px] text-blue-600 font-bold hover:underline">
+                                Baca Semua
                             </button>
                         </div>
-                        <button @click="$emit('mark-all-read')" class="text-xs text-blue-600 font-medium hover:underline px-2">
-                            Baca Semua
-                        </button>
+                        <div class="flex gap-1 overflow-x-auto pb-1 no-scrollbar">
+                            <button @click="activeNotifTab = 'all'" 
+                                class="px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all whitespace-nowrap"
+                                :class="activeNotifTab === 'all' ? 'bg-slate-800 text-white shadow-sm' : 'bg-white text-slate-400 border border-slate-100 hover:text-slate-600'">
+                                Semua
+                            </button>
+                            <button @click="activeNotifTab = 'info'" 
+                                class="px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all whitespace-nowrap"
+                                :class="activeNotifTab === 'info' ? 'bg-blue-600 text-white shadow-sm' : 'bg-white text-blue-400 border border-blue-50 hover:text-blue-600'">
+                                Info
+                            </button>
+                            <button @click="activeNotifTab = 'monitoring'" 
+                                class="px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all whitespace-nowrap"
+                                :class="activeNotifTab === 'monitoring' ? 'bg-indigo-500 text-white shadow-sm' : 'bg-white text-indigo-400 border border-indigo-50 hover:text-indigo-600'">
+                                Monitoring
+                            </button>
+                            <button @click="activeNotifTab = 'important'" 
+                                class="px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all whitespace-nowrap"
+                                :class="activeNotifTab === 'important' ? 'bg-orange-500 text-white shadow-sm' : 'bg-white text-orange-500 border border-orange-50 hover:text-orange-600'">
+                                Penting
+                            </button>
+                            <button @click="activeNotifTab = 'emergency'" 
+                                class="px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all whitespace-nowrap relative"
+                                :class="activeNotifTab === 'emergency' ? 'bg-red-500 text-white shadow-sm' : 'bg-white text-red-500 border border-red-50 hover:text-red-600'">
+                                Darurat
+                                <span v-if="notifications.some(n => !n.is_read && n.type === 'alert' && n._id.includes('_ann_'))" class="absolute top-0 right-0 size-2 bg-white rounded-full border-2 border-red-500"></span>
+                            </button>
+                        </div>
                     </div>
 
                     <!-- List Content -->
                     <div class="max-h-80 overflow-y-auto custom-scrollbar bg-white">
                         <div v-if="currentTabNotifications.length === 0" class="p-8 text-center flex flex-col items-center justify-center text-slate-400 gap-2">
                             <span class="material-symbols-outlined text-3xl opacity-20">notifications_off</span>
-                            <span class="text-xs">Tidak ada notifikasi {{ activeNotifTab === 'important' ? 'penting' : 'baru' }}</span>
+                            <span class="text-xs">Tidak ada notifikasi dalam kategori ini</span>
                         </div>
                         
                         <div v-else v-for="notif in currentTabNotifications" :key="notif.id" 
@@ -409,7 +445,12 @@ const DashboardView = {
                                 <!-- Icon Removed -->
                                 <div class="flex-1 min-w-0">
                                     <div class="flex justify-between items-start mb-0.5">
-                                        <h4 class="text-xs font-bold text-slate-800 line-clamp-1" :class="{'text-primary': !notif.is_read && activeNotifTab === 'info', 'text-red-600': !notif.is_read && activeNotifTab === 'important' }">{{ notif.title }}</h4>
+                                        <h4 class="text-xs font-bold text-slate-800 line-clamp-1" 
+                                            :class="{
+                                                'text-red-600': notif.type === 'alert' && !notif.is_read,
+                                                'text-orange-600': notif.type === 'warning' && !notif.is_read,
+                                                'text-blue-600': notif.type === 'info' && !notif.is_read
+                                            }">{{ notif.title }}</h4>
                                         <span class="text-[9px] text-slate-400 whitespace-nowrap ml-2">{{ formatDate(notif.created_at || notif.timestamp) }}</span>
                                     </div>
                                     <p class="text-[11px] text-slate-500 leading-snug line-clamp-2">{{ stripHtml(notif.message) }}</p>

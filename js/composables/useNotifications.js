@@ -54,7 +54,7 @@ function useNotifications(uiData, userSession) {
         const { data, error } = await sb.from('notifications')
             .select('*')
             .eq('user_id', userId)
-            .eq('_deleted', false)
+            .or('_deleted.is.null,_deleted.eq.false')
             .order('created_at', { ascending: false })
             .limit(50);
 
