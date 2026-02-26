@@ -25,6 +25,41 @@ const QuranView = {
     components: {
         ExamCounter
     },
+    data() {
+        return {
+            wakeLock: null
+        }
+    },
+    async mounted() {
+        if ('wakeLock' in navigator) {
+            try {
+                this.wakeLock = await navigator.wakeLock.request('screen');
+                console.log('Wake Lock is active - Screen will not sleep');
+                document.addEventListener('visibilitychange', this.handleVisibilityChange);
+            } catch (err) {
+                console.error(`Wake Lock error: ${err.name}, ${err.message}`);
+            }
+        }
+    },
+    async unmounted() {
+        if (this.wakeLock !== null) {
+            await this.wakeLock.release();
+            this.wakeLock = null;
+            console.log('Wake Lock released');
+        }
+        document.removeEventListener('visibilitychange', this.handleVisibilityChange);
+    },
+    methods: {
+        async handleVisibilityChange() {
+            if (this.wakeLock !== null && document.visibilityState === 'visible') {
+                try {
+                    this.wakeLock = await navigator.wakeLock.request('screen');
+                } catch (err) {
+                    console.error(`Wake Lock re-activation error: ${err.name}, ${err.message}`);
+                }
+            }
+        }
+    },
     template: `
     <div class="fixed top-16 bottom-0 left-0 right-0 flex flex-col bg-slate-50 pb-24 md:static md:pb-0 md:h-[calc(100vh-4rem)] z-0">
         <!-- Header (Mobile only) Removed as per request, using global header -->

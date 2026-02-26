@@ -34,7 +34,9 @@ function useQuran(uiData) {
         showDrawer: false,
         jumpPage: 1,
         jumpSurah: '',
-        jumpAyat: ''
+        jumpAyat: '',
+        touchStartX: 0,
+        touchEndX: 0
     });
 
     // --- COMPUTED ---
@@ -55,19 +57,10 @@ function useQuran(uiData) {
     });
 
     const currentJuz = computed(() => {
-        const JUZ_PAGE_START = {
-            1: 1, 2: 22, 3: 42, 4: 62, 5: 82, 6: 102, 7: 122, 8: 142, 9: 162, 10: 182,
-            11: 202, 12: 222, 13: 242, 14: 262, 15: 282, 16: 302, 17: 322, 18: 342, 19: 362, 20: 382,
-            21: 402, 22: 422, 23: 442, 24: 462, 25: 482, 26: 502, 27: 522, 28: 542, 29: 562, 30: 582
-        };
-
-        // Exact match or approximation
-        // Iterate to find the range
-        let juz = 1;
-        for (const [j, p] of Object.entries(JUZ_PAGE_START)) {
-            if (quranState.page >= p) juz = j;
+        if (window.QuranUtils && window.QuranUtils.getJuzFromPage) {
+            return window.QuranUtils.getJuzFromPage(quranState.page);
         }
-        return parseInt(juz);
+        return 1;
     });
 
     // --- METHODS ---
@@ -102,14 +95,12 @@ function useQuran(uiData) {
     };
 
     const goToJuz = (juzNo) => {
-        const JUZ_PAGE_START = {
-            1: 1, 2: 22, 3: 42, 4: 62, 5: 82, 6: 102, 7: 122, 8: 142, 9: 162, 10: 182,
-            11: 202, 12: 222, 13: 242, 14: 262, 15: 282, 16: 302, 17: 322, 18: 342, 19: 362, 20: 382,
-            21: 402, 22: 422, 23: 442, 24: 462, 25: 482, 26: 502, 27: 522, 28: 542, 29: 562, 30: 582
-        };
-        if (JUZ_PAGE_START[juzNo]) {
-            quranState.page = JUZ_PAGE_START[juzNo];
-            quranState.showDrawer = false;
+        if (window.QuranUtils && window.QuranUtils.JUZ_BOUNDARIES) {
+            const boundary = window.QuranUtils.JUZ_BOUNDARIES[juzNo - 1];
+            if (boundary) {
+                quranState.page = boundary;
+                quranState.showDrawer = false;
+            }
         }
     };
 
