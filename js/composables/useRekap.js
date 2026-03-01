@@ -17,6 +17,9 @@ const useRekap = (uiData, userSession) => { // Accept uiData and userSession
     const rekapYear = ref(new Date().getFullYear());
     const rekapKelas = ref('');
     const rekapGender = ref(''); // '' | 'L' | 'P'
+    const rekapSearch = ref('');
+    const rekapSantriId = ref('');
+    const isRekapSantriDropdownOpen = ref(false);
 
     // Default Settings
     const defaultSettings = {
@@ -44,8 +47,8 @@ const useRekap = (uiData, userSession) => { // Accept uiData and userSession
             return {
                 ...defaultSettings,
                 ...stored,
-                weights: { ...defaultSettings.weights, ...stored.weights },
-                visibility: { ...defaultSettings.visibility, ...stored.visibility }
+                weights: { ...defaultSettings.weights, ...(stored.weights || {}) },
+                visibility: { ...defaultSettings.visibility, ...(stored.visibility || {}) }
             };
         }
         return JSON.parse(JSON.stringify(defaultSettings));
@@ -81,6 +84,27 @@ const useRekap = (uiData, userSession) => { // Accept uiData and userSession
         }
     };
 
+    /**
+     * Filtered Santri Options for Search Dropdown
+     */
+    const rekapFilteredSantriOptions = computed(() => {
+        let items = uiData.santri || [];
+        if (rekapSearch.value) {
+            const q = rekapSearch.value.toLowerCase();
+            items = items.filter(s =>
+                (s.full_name || '').toLowerCase().includes(q) ||
+                String(s.santri_id || '').toLowerCase().includes(q)
+            );
+        }
+        return items.slice().sort((a, b) => (a.full_name || '').localeCompare(b.full_name || ''));
+    });
+
+    const selectRekapSantri = (santri) => {
+        rekapSantriId.value = santri.santri_id || santri._id || '';
+        rekapSearch.value = santri.full_name || '';
+        isRekapSantriDropdownOpen.value = false;
+    };
+
     const monthNames = [
         "Januari", "Februari", "Maret", "April", "Mei", "Juni",
         "Juli", "Agustus", "September", "Oktober", "November", "Desember"
@@ -101,6 +125,9 @@ const useRekap = (uiData, userSession) => { // Accept uiData and userSession
         if (rekapGender.value) {
             santris = santris.filter(s => s.gender === rekapGender.value);
         }
+        if (rekapSantriId.value) {
+            santris = santris.filter(s => s.santri_id === rekapSantriId.value || s._id === rekapSantriId.value);
+        }
 
         // 2. Prepare Data Source for Selected Month/Year
         const currentMonth = rekapMonth.value;
@@ -110,7 +137,7 @@ const useRekap = (uiData, userSession) => { // Accept uiData and userSession
         const isMatch = (dateStr) => {
             if (!dateStr) return false;
             const d = new Date(dateStr);
-            return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+            return d.getMonth() == currentMonth && d.getFullYear() == currentYear;
         };
 
         // Get All Relevant Data from uiData (already filtered in loadData)
@@ -240,10 +267,10 @@ const useRekap = (uiData, userSession) => { // Accept uiData and userSession
                 show_ujian: visibility.ujian,
                 ujian_avg: parseFloat(avgUjian.toFixed(1)),
 
-                // Tilawah
+                // Tilawah (Convert to Juz: 1 Juz = 20 Pages)
                 show_tilawah: visibility.tilawah,
-                tilawah_act: parseFloat(actualTilawah.toFixed(1)),
-                tilawah_tgt: targetTilawah,
+                tilawah_act: parseFloat((actualTilawah / 20).toFixed(1)),
+                tilawah_tgt: Math.round(targetTilawah / 20),
 
                 // Pelanggaran
                 pelanggaran_poin: totalPointsPelanggaran,
@@ -278,10 +305,10 @@ const useRekap = (uiData, userSession) => { // Accept uiData and userSession
         const headerRow = ['No', 'Nama Santri'];
         const { visibility } = rekapSettings;
 
-        if (visibility.sabaq) headerRow.push('Sabaq (Act/Tgt)');
-        if (visibility.manzil) headerRow.push('Manzil (Act/Tgt)');
+        if (visibility.sabaq) headerRow.push('Sabaq (Hal)');
+        if (visibility.manzil) headerRow.push('Manzil (Hal)');
         if (visibility.ujian) headerRow.push('Ujian');
-        if (visibility.tilawah) headerRow.push('Tilawah (Act/Tgt)');
+        if (visibility.tilawah) headerRow.push('Tilawah (Juz)');
 
         headerRow.push('Pelanggaran', 'Nilai', 'Predikat');
         const headers = [headerRow];
@@ -289,10 +316,10 @@ const useRekap = (uiData, userSession) => { // Accept uiData and userSession
         // Table Data
         const data = rekapHafalanData.value.map((row, i) => {
             const dataRow = [i + 1, row.nama];
-            if (visibility.sabaq) dataRow.push(`${row.sabaq_act} / ${row.sabaq_tgt}`);
-            if (visibility.manzil) dataRow.push(`${row.manzil_act} / ${row.manzil_tgt}`);
+            if (visibility.sabaq) dataRow.push(`${row.sabaq_act} / ${row.sabaq_tgt} Hal`);
+            if (visibility.manzil) dataRow.push(`${row.manzil_act} / ${row.manzil_tgt} Hal`);
             if (visibility.ujian) dataRow.push(row.ujian_avg);
-            if (visibility.tilawah) dataRow.push(`${row.tilawah_act} / ${row.tilawah_tgt}`);
+            if (visibility.tilawah) dataRow.push(`${row.tilawah_act} / ${row.tilawah_tgt} Juz`);
 
             dataRow.push(
                 row.pelanggaran_poin > 0 ? `-${row.pelanggaran_poin}` : '0',
@@ -339,8 +366,8 @@ const useRekap = (uiData, userSession) => { // Accept uiData and userSession
                 item["Rata-rata Ujian"] = row.ujian_avg;
             }
             if (visibility.tilawah) {
-                item["Tilawah (Hal)"] = row.tilawah_act;
-                item["Target Tilawah"] = row.tilawah_tgt;
+                item["Tilawah (Juz)"] = row.tilawah_act;
+                item["Target Tilawah (Juz)"] = row.tilawah_tgt;
             }
 
             item["Poin Pelanggaran"] = row.pelanggaran_poin;
@@ -358,6 +385,8 @@ const useRekap = (uiData, userSession) => { // Accept uiData and userSession
 
     return {
         rekapMonth, rekapYear, rekapKelas, rekapGender,
+        rekapSearch, rekapSantriId, isRekapSantriDropdownOpen,
+        rekapFilteredSantriOptions, selectRekapSantri,
         monthNames, rekapHafalanData, rekapSettings,
         saveSettings,
         exportToPDF, exportToExcel

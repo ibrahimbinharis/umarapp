@@ -8,13 +8,21 @@ const RekapView = {
         'kelasOptions',
         'rekapHafalanData',
         'rekapSettings',
-        'userSession'
+        'userSession',
+        'rekapSearch',
+        'rekapSantriId',
+        'isRekapSantriDropdownOpen',
+        'rekapFilteredSantriOptions',
+        'selectRekapSantri'
     ],
     emits: [
         'update:rekapMonth',
         'update:rekapYear',
         'update:rekapKelas',
         'update:rekapGender',
+        'update:rekapSearch',
+        'update:rekapSantriId',
+        'update:isRekapSantriDropdownOpen',
         'export-to-excel',
         'export-to-pdf',
         'save-settings'
@@ -56,6 +64,52 @@ const RekapView = {
                 class="size-10 bg-white border shadow-sm rounded-xl flex items-center justify-center text-slate-600 hover:text-primary transition">
                 <span class="material-symbols-outlined">settings</span>
             </button>
+        </div>
+
+        <!-- Santri Quick Search Bar (New Implementation) -->
+        <div class="px-2">
+            <div class="relative">
+                <div class="flex items-center gap-2 bg-white border border-slate-200 p-2.5 rounded-2xl shadow-sm transition-all focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary">
+                    <span class="material-symbols-outlined text-slate-400 ml-1">person_search</span>
+                    <input type="text" 
+                        :value="rekapSearch"
+                        @input="$emit('update:rekapSearch', $event.target.value)"
+                        @focus="$emit('update:isRekapSantriDropdownOpen', true)"
+                        placeholder="Cari nama santri..." 
+                        class="bg-transparent w-full text-sm font-bold outline-none placeholder:text-slate-400">
+                    
+                    <!-- Clear Filter Button -->
+                    <button v-if="rekapSantriId" 
+                        @click="selectRekapSantri({ santri_id: '' })"
+                        class="size-6 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center hover:bg-red-50 hover:text-red-500 transition">
+                        <span class="material-symbols-outlined text-xs">close</span>
+                    </button>
+                    <!-- Loading/Icon if needed -->
+                    <span v-else class="material-symbols-outlined text-slate-300 text-sm mr-1">keyboard_arrow_down</span>
+                </div>
+
+                <!-- Live Results Dropdown -->
+                <div v-if="isRekapSantriDropdownOpen && rekapSearch" 
+                    class="absolute left-0 right-0 top-full mt-2 bg-white border border-slate-100 rounded-2xl shadow-2xl z-[100] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                    <div class="max-h-60 overflow-y-auto custom-scrollbar">
+                        <div v-for="s in rekapFilteredSantriOptions" :key="s._id"
+                            @click="selectRekapSantri(s)"
+                            class="px-4 py-3 hover:bg-blue-50 cursor-pointer border-b border-slate-50 last:border-0 transition-colors group">
+                            <p class="text-sm font-bold text-slate-800 group-hover:text-primary">{{ s.full_name }}</p>
+                            <p class="text-[10px] text-slate-500">{{ s.santri_id }} &bull; {{ s.kelas || '-' }}</p>
+                        </div>
+                        <div v-if="rekapFilteredSantriOptions.length === 0"
+                            class="p-4 text-center text-slate-400 text-xs italic">
+                            Santri tidak ditemukan...
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Backdrop to Close Dropdown -->
+                <div v-if="isRekapSantriDropdownOpen" 
+                    @click="$emit('update:isRekapSantriDropdownOpen', false)" 
+                    class="fixed inset-0 z-[90] cursor-default"></div>
+            </div>
         </div>
 
         <!-- Filter Control -->
@@ -109,12 +163,12 @@ const RekapView = {
                             <tr>
                                 <th class="px-4 py-3">Nama</th>
                                 <th v-if="rekapSettings.visibility.sabaq" class="px-4 py-3 text-center">Sabaq<br><span
-                                        class="text-[9px]">(Act/Tgt)</span></th>
+                                        class="text-[9px]">(Hal)</span></th>
                                 <th v-if="rekapSettings.visibility.manzil" class="px-4 py-3 text-center">Manzil<br><span
-                                        class="text-[9px]">(Act/Tgt)</span></th>
+                                        class="text-[9px]">(Hal)</span></th>
                                 <th v-if="rekapSettings.visibility.ujian" class="px-4 py-3 text-center">Ujian</th>
                                 <th v-if="rekapSettings.visibility.tilawah" class="px-4 py-3 text-center">Tilawah<br><span
-                                        class="text-[9px]">(Act/Tgt)</span></th>
+                                        class="text-[9px]">(Juz)</span></th>
                                 <th class="px-4 py-3 text-center">Pelanggaran</th>
                                 <th class="px-4 py-3 text-center">Nilai</th>
                                 <th class="px-4 py-3 text-center">Predikat</th>
@@ -128,18 +182,18 @@ const RekapView = {
                                 </td>
                                 <td v-if="row.show_sabaq" class="px-4 py-3 text-center">
                                     <div class="font-bold text-blue-600">{{ row.sabaq_act }} / {{
-                                        row.sabaq_tgt }}</div>
+                                        row.sabaq_tgt }} <span class="text-[9px] font-normal">Hal</span></div>
                                 </td>
                                 <td v-if="row.show_manzil" class="px-4 py-3 text-center">
                                     <div class="font-bold text-purple-600">{{ row.manzil_act }} / {{
-                                        row.manzil_tgt }}</div>
+                                        row.manzil_tgt }} <span class="text-[9px] font-normal">Hal</span></div>
                                 </td>
                                 <td v-if="row.show_ujian" class="px-4 py-3 text-center font-bold">
                                     {{ row.ujian_avg }}
                                 </td>
                                 <td v-if="row.show_tilawah" class="px-4 py-3 text-center">
                                     <div class="font-bold text-emerald-600">{{ row.tilawah_act }} / {{
-                                        row.tilawah_tgt }}</div>
+                                        row.tilawah_tgt }} <span class="text-[9px] font-normal">Juz</span></div>
                                 </td>
                                 <td class="px-4 py-3 text-center text-red-500 font-bold">
                                     {{ row.pelanggaran_poin > 0 ? '-' + row.pelanggaran_poin : '0'

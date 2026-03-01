@@ -295,6 +295,17 @@ function useDashboard(uiData, userSession, activeChildId) {
                 }
 
                 // --- Calculate Monthly Score for Leaderboard ---
+                // --- Dynamic Settings from Rekap Config ---
+                const defaultSettings = {
+                    weights: { sabaq: 50, manzil: 30, ujian: 20, tilawah: 0 },
+                    visibility: { sabaq: true, manzil: true, ujian: true, tilawah: false }
+                };
+                const storedSettings = (uiData.settings || []).find(s => s._id === 'rekap_config');
+                const settings = storedSettings ? {
+                    weights: { ...defaultSettings.weights, ...(storedSettings.weights || {}) },
+                    visibility: { ...defaultSettings.visibility, ...(storedSettings.visibility || {}) }
+                } : defaultSettings;
+
                 const targetSabaq = parseInt(s.target_sabaq) || 20;
                 let totalJuz = 0;
                 if (s.hafalan_manual) {
@@ -321,19 +332,39 @@ function useDashboard(uiData, userSession, activeChildId) {
                     avgUjian = totalScore / myUjian.length;
                 }
 
+                // Tilawah Actual
+                const myTilawah = filteredSetoran.filter(x => x.santri_id === s._id || x.santri_id === s.santri_id);
+                const actualTilawah = myTilawah.filter(x => x.setoran_type === 'Tilawah').reduce((acc, curr) => acc + (parseFloat(curr.pages) || 0), 0);
+                const targetTilawah = s.target_tilawah || 600;
+
                 const myPelanggaran = filteredPelanggaran.filter(x => x.santri_id === s._id || x.santri_id === s.santri_id);
                 const totalPointsPelanggaran = myPelanggaran.reduce((acc, curr) => acc + (parseInt(curr.points) || 0), 0);
 
-                // Formula
-                const scoreSabaqRaw = targetSabaq > 0 ? (actualSabaq / targetSabaq) * 100 : 0;
-                const scoreSabaqWeighted = scoreSabaqRaw * 0.5;
+                // Formula Dynamically linked to Rekap Settings
+                let scoreSabaqWeighted = 0;
+                if (settings.visibility.sabaq) {
+                    const scoreSabaqRaw = targetSabaq > 0 ? (actualSabaq / targetSabaq) * 100 : 0;
+                    scoreSabaqWeighted = scoreSabaqRaw * (settings.weights.sabaq / 100);
+                }
 
-                const scoreManzilRaw = targetManzil > 0 ? (actualManzil / targetManzil) * 100 : 0;
-                const scoreManzilWeighted = scoreManzilRaw * 0.3;
+                let scoreManzilWeighted = 0;
+                if (settings.visibility.manzil) {
+                    const scoreManzilRaw = targetManzil > 0 ? (actualManzil / targetManzil) * 100 : 0;
+                    scoreManzilWeighted = scoreManzilRaw * (settings.weights.manzil / 100);
+                }
 
-                const scoreUjianWeighted = avgUjian * 0.2;
+                let scoreUjianWeighted = 0;
+                if (settings.visibility.ujian) {
+                    scoreUjianWeighted = avgUjian * (settings.weights.ujian / 100);
+                }
 
-                let finalScore = scoreSabaqWeighted + scoreManzilWeighted + scoreUjianWeighted;
+                let scoreTilawahWeighted = 0;
+                if (settings.visibility.tilawah) {
+                    const scoreTilawahRaw = (actualTilawah / targetTilawah) * 100;
+                    scoreTilawahWeighted = scoreTilawahRaw * (settings.weights.tilawah / 100);
+                }
+
+                let finalScore = scoreSabaqWeighted + scoreManzilWeighted + scoreUjianWeighted + scoreTilawahWeighted;
                 finalScore -= totalPointsPelanggaran;
                 finalScore = Math.round(finalScore * 10) / 10;
 
@@ -437,8 +468,8 @@ function useDashboard(uiData, userSession, activeChildId) {
             items = items.filter(s => s.gender === topSantriFilter.value);
         }
 
-        // Sort Descending & Take Top 10
-        return items
+        // Sort Descending & Take Top 10 (Fix Array Mutation Bug)
+        return [...items]
             .sort((a, b) => b.total - a.total)
             .slice(0, 10);
     });

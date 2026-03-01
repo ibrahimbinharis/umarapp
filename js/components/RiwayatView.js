@@ -8,6 +8,7 @@ const RiwayatView = {
         filterCounts: { type: Object, default: () => ({}) }, // Optional
         activeFilterCount: { type: Number, default: 0 }, // Optional
         userSession: { type: Object, required: true },
+        santriByLetter: { type: Array, default: () => [] },
 
         // Methods passed as props
         formatDateLong: Function,
@@ -28,7 +29,6 @@ const RiwayatView = {
     },
     template: `
     <div class="fade-in space-y-4 pb-24">
-        <!-- Header with Filter Icon -->
         <div class="px-2 flex items-center justify-between">
             <div>
                 <h2 class="text-2xl font-bold text-slate-900">Riwayat</h2>
@@ -45,6 +45,51 @@ const RiwayatView = {
             </button>
         </div>
 
+        <!-- Santri Quick Search Bar (New Implementation) -->
+        <div class="px-2">
+            <div class="relative">
+                <div class="flex items-center gap-2 bg-white border border-slate-200 p-2.5 rounded-2xl shadow-sm transition-all focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary">
+                    <span class="material-symbols-outlined text-slate-400 ml-1">person_search</span>
+                    <input type="text" 
+                        v-model="riwayatState.santriSearch"
+                        @focus="riwayatState.isSantriDropdownOpen = true"
+                        placeholder="Cari nama santri..." 
+                        class="bg-transparent w-full text-sm font-bold outline-none placeholder:text-slate-400">
+                    
+                    <!-- Clear Filter Button -->
+                    <button v-if="riwayatState.santriId" 
+                        @click="selectRiwayatSantri({ santri_id: '' })"
+                        class="size-6 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center hover:bg-red-50 hover:text-red-500 transition">
+                        <span class="material-symbols-outlined text-xs">close</span>
+                    </button>
+                    <!-- Loading/Icon if needed -->
+                    <span v-else class="material-symbols-outlined text-slate-300 text-sm mr-1">keyboard_arrow_down</span>
+                </div>
+
+                <!-- Live Results Dropdown -->
+                <div v-if="riwayatState.isSantriDropdownOpen && riwayatState.santriSearch" 
+                    class="absolute left-0 right-0 top-full mt-2 bg-white border border-slate-100 rounded-2xl shadow-2xl z-[100] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                    <div class="max-h-60 overflow-y-auto custom-scrollbar">
+                        <div v-for="s in riwayatFilteredSantriOptions" :key="s._id"
+                            @click="selectRiwayatSantri(s)"
+                            class="px-4 py-3 hover:bg-blue-50 cursor-pointer border-b border-slate-50 last:border-0 transition-colors group">
+                            <p class="text-sm font-bold text-slate-800 group-hover:text-primary">{{ s.full_name }}</p>
+                            <p class="text-[10px] text-slate-500">{{ s.santri_id }} &bull; {{ s.kelas || '-' }}</p>
+                        </div>
+                        <div v-if="riwayatFilteredSantriOptions.length === 0"
+                            class="p-4 text-center text-slate-400 text-xs italic">
+                            Santri tidak ditemukan...
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Backdrop to Close Dropdown -->
+                <div v-if="riwayatState.isSantriDropdownOpen" 
+                    @click="riwayatState.isSantriDropdownOpen = false" 
+                    class="fixed inset-0 z-[90] cursor-default"></div>
+            </div>
+        </div>
+
         <!-- Active Filters Summary (Optional - shows when filters are active) -->
         <div v-if="activeFilterCount > 0" class="mx-2 text-xs text-slate-500 flex items-center gap-2">
             <span class="font-bold">Filter aktif:</span>
@@ -54,6 +99,7 @@ const RiwayatView = {
                     riwayatState.category === 'sabaq' ? 'Sabaq' :
                     riwayatState.category === 'sabqi' ? 'Sabqi' :
                     riwayatState.category === 'manzil' ? 'Manzil' :
+                    riwayatState.category === 'tilawah' ? 'Tilawah' :
                     riwayatState.category === 'ujian' ? 'Ujian' : 'Pelanggaran'
                 }}
             </span>
@@ -96,6 +142,7 @@ const RiwayatView = {
                                 <option value="sabaq">Sabaq ({{ filterCounts.sabaq }})</option>
                                 <option value="sabqi">Sabqi ({{ filterCounts.sabqi }})</option>
                                 <option value="manzil">Manzil ({{ filterCounts.manzil }})</option>
+                                <option value="tilawah">Tilawah ({{ filterCounts.tilawah }})</option>
                                 <option value="ujian">Ujian ({{ filterCounts.ujian }})</option>
                                 <option value="pelanggaran">Pelanggaran ({{ filterCounts.pelanggaran }})</option>
                             </select>
@@ -262,10 +309,19 @@ const RiwayatView = {
                                     </div>
                                     <div v-else-if="item.setoran_type === 'Manzil'">
                                         <div class="font-bold text-slate-700 text-xs">
-                                            {{ item.page_from || '-' }} - {{ item.page_to || '-' }}
+                                            Hal {{ item.page_from || '-' }} - {{ item.page_to || '-' }}
                                         </div>
                                         <div class="text-[10px] text-slate-500">
                                             Juz {{ getJuzFromPage(item.page_from) }} - Juz {{ getJuzFromPage(item.page_to) }}
+                                        </div>
+                                    </div>
+                                    <div v-else-if="item.setoran_type === 'Tilawah'">
+                                        <div v-if="item.tilawah_mode === 'juz'" class="font-bold text-slate-700 text-xs">
+                                            Juz {{ item.juz_from }} - {{ item.juz_to }}
+                                        </div>
+                                        <div v-else>
+                                            <div class="font-bold text-slate-700 text-xs">Hal {{ item.page_from }} - {{ item.page_to }}</div>
+                                            <div class="text-[10px] text-slate-500">Juz {{ getJuzFromPage(item.page_from) }}</div>
                                         </div>
                                     </div>
                                     <div v-else>

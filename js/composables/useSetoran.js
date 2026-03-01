@@ -13,7 +13,7 @@
 
 function useSetoran(uiData, DB, refreshData) {
     // Get Vue from global (loaded via CDN)
-    const { reactive, computed, ref, watch } = Vue;
+    const { reactive, computed, ref, watch, onMounted, onUnmounted } = Vue;
 
     // ===== STATE =====
 
@@ -37,7 +37,7 @@ function useSetoran(uiData, DB, refreshData) {
         surah_from: 1,
         surah_to: 1,
         ayat_from: 1,
-        ayat_to: 10,
+        ayat_to: 1,
         surah_from_latin: '',
         surah_to_latin: '',
 
@@ -45,7 +45,7 @@ function useSetoran(uiData, DB, refreshData) {
         manzil_mode: 'page', // juz | page
         juz: 1,
         page_from: 1,
-        page_to: 20,
+        page_to: 1,
 
         // Tilawah specific
         tilawah_mode: 'juz', // juz | page
@@ -60,6 +60,15 @@ function useSetoran(uiData, DB, refreshData) {
         visible: false,
         text: ''
     });
+
+    const isClockRunning = ref(true);
+    let clockInterval = null;
+
+    const setNow = () => {
+        setoranForm.setoran_date = window.DateUtils.getTodayDateString();
+        setoranForm.setoran_time = window.DateUtils.getCurrentTimeString();
+        isClockRunning.value = true;
+    };
 
     /**
      * Surah validation hints
@@ -163,6 +172,78 @@ function useSetoran(uiData, DB, refreshData) {
     });
 
     /**
+     * Get the last submission for the selected santri and current type
+     */
+    const lastRecordForType = computed(() => {
+        if (!setoranForm.santri_id) return null;
+
+        const type = setoranForm.setoran_type;
+        const records = (uiData.setoran || [])
+            .filter(d => d.santri_id === setoranForm.santri_id && d.setoran_type === type)
+            .sort((a, b) => {
+                const da = new Date((a.setoran_date || '2000-01-01') + 'T' + (a.setoran_time || '00:00'));
+                const db = new Date((b.setoran_date || '2000-01-01') + 'T' + (b.setoran_time || '00:00'));
+                return db - da; // Newest first
+            });
+
+        return records[0] ? {
+            ...records[0],
+            detail: formatSetoranDetail(records[0]),
+            friendly_date: window.DateUtils.formatDateFriendly(records[0].setoran_date)
+        } : null;
+    });
+
+    /**
+     * Calculate progress towards target for the current month
+     */
+    const santriTargetProgress = computed(() => {
+        if (!setoranForm.santri_id) return { pct: 0, current: 0, target: 0, show: false, unit: '' };
+
+        const activeSantri = (uiData.santri || []).find(s => s.santri_id === setoranForm.santri_id);
+        if (!activeSantri) return { pct: 0, current: 0, target: 0, show: false, unit: '' };
+
+        // Target calculation
+        const type = setoranForm.setoran_type;
+        let target = 0;
+        let unit = '';
+
+        if (type === 'Sabaq') { target = activeSantri.target_sabaq || 20; unit = 'Hal'; }
+        else if (type === 'Manzil') { target = activeSantri.target_manzil || 20; unit = 'Hal'; }
+        else if (type === 'Tilawah') { target = activeSantri.target_tilawah || 600; unit = 'Hal'; }
+        else return { pct: 0, current: 0, target: 0, show: false, unit: '' };
+
+        if (!target || target <= 0) return { pct: 0, current: 0, target: 0, show: false, unit: '' };
+
+        // Current month achievement
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = now.getMonth() + 1;
+        const monthPrefix = `${year}-${String(month).padStart(2, '0')}`;
+
+        const monthlyRecords = (uiData.setoran || [])
+            .filter(d =>
+                d.santri_id === setoranForm.santri_id &&
+                d.setoran_type === type &&
+                (d.setoran_date || '').startsWith(monthPrefix)
+            );
+
+        const current = monthlyRecords.reduce((acc, curr) => {
+            const val = type === 'Sabaq' ? (parseFloat(curr.counted) || 0) : (parseFloat(curr.pages) || 0);
+            return acc + val;
+        }, 0);
+
+        const pct = Math.min(100, Math.round((current / target) * 100));
+
+        return {
+            pct,
+            current: parseFloat(current.toFixed(1)),
+            target,
+            unit,
+            show: true
+        };
+    });
+
+    /**
      * Toggle menu for specific setoran
      */
     const toggleMenu = (setoranId) => {
@@ -259,19 +340,21 @@ function useSetoran(uiData, DB, refreshData) {
 
         // Reset fields based on type
         if (type === 'Manzil') {
-            setoranForm.pages = 20; // Default 1 Juz (approx)
+            setoranForm.pages = 1;
             setoranForm.manzil_mode = 'page';
             setoranForm.page_from = 1;
-            setoranForm.page_to = 20;
+            setoranForm.page_to = 1;
         } else if (type === 'Tilawah') {
-            setoranForm.pages = 20;
-            setoranForm.tilawah_mode = 'juz';
+            setoranForm.pages = 1;
+            setoranForm.tilawah_mode = 'page';
             setoranForm.page_from = 1;
-            setoranForm.page_to = 20;
+            setoranForm.page_to = 1;
             setoranForm.juz_from = 1;
             setoranForm.juz_to = 1;
         } else if (type === 'Sabaq') {
             setoranForm.pages = 1;
+            setoranForm.ayat_from = 1;
+            setoranForm.ayat_to = 1;
             autoCalcInfo.value.visible = false;
         } else { // Sabqi or Robt
             // Auto-calculate pages for review types
@@ -346,25 +429,21 @@ function useSetoran(uiData, DB, refreshData) {
         let from = parseInt(setoranForm.page_from);
         let to = parseInt(setoranForm.page_to);
 
-        // Validation: Quran Pages 1 - 604
-        const MAX_PAGE = 604;
+        const MAX_HAL = 604;
 
-        if (from && (from < 1 || from > MAX_PAGE)) {
-            from = Math.max(1, Math.min(MAX_PAGE, from));
-            setoranForm.page_from = from;
-        }
+        // Capping logic
+        if (from > MAX_HAL) { from = MAX_HAL; setoranForm.page_from = MAX_HAL; }
+        if (to > MAX_HAL) { to = MAX_HAL; setoranForm.page_to = MAX_HAL; }
 
-        if (to && (to < 1 || to > MAX_PAGE)) {
-            to = Math.max(1, Math.min(MAX_PAGE, to));
-            setoranForm.page_to = to;
-        }
-
-        if (from > 0 && to > 0) {
-            // Calculate distance regardless of order (1-20 or 20-1)
-            // User request: "halaman dari 20 - 3 > juga terhitung"
-            setoranForm.pages = Math.abs(to - from) + 1;
+        if (!from || !to) {
+            setoranForm.pages = 1;
             updateGrade();
+            return;
         }
+
+        // Calculate distance regardless of order (1-20 or 20-1)
+        setoranForm.pages = Math.abs(to - from) + 1;
+        updateGrade();
     };
 
     /**
@@ -593,6 +672,44 @@ function useSetoran(uiData, DB, refreshData) {
         }, 5000);
     };
 
+
+    onMounted(() => {
+        document.addEventListener('click', closeAllMenus);
+
+        // Start live clock
+        clockInterval = setInterval(() => {
+            if (isClockRunning.value && !editingId.value) {
+                setoranForm.setoran_time = window.DateUtils.getCurrentTimeString();
+                // Also update date just in case it's midnight
+                setoranForm.setoran_date = window.DateUtils.getTodayDateString();
+            }
+        }, 10000); // Check every 10s is better than 60s for precision
+    });
+
+    onUnmounted(() => {
+        document.removeEventListener('click', closeAllMenus);
+        if (clockInterval) clearInterval(clockInterval);
+    });
+
+    // Stop clock if editing
+    watch(editingId, (newVal) => {
+        if (newVal) isClockRunning.value = false;
+    });
+
+    // Auto sync ayat_to from ayat_from
+    watch(() => setoranForm.ayat_from, (newVal) => {
+        if (newVal !== '' && (setoranForm.ayat_to === '' || Number(setoranForm.ayat_to) < Number(newVal))) {
+            setoranForm.ayat_to = newVal;
+        }
+    });
+
+    // Auto sync page_to from page_from
+    watch(() => setoranForm.page_from, (newVal) => {
+        if (newVal !== '' && (setoranForm.page_to === '' || Number(setoranForm.page_to) < Number(newVal))) {
+            setoranForm.page_to = newVal;
+        }
+    });
+
     // Watch for Santri change to trigger auto-calc if in Sabqi/Robt mode
     watch(() => setoranForm.santri_id, (newVal) => {
         if (newVal && (setoranForm.setoran_type === 'Sabqi' || setoranForm.setoran_type === 'Robt')) {
@@ -603,33 +720,37 @@ function useSetoran(uiData, DB, refreshData) {
     /**
      * Reset Form to Defaults
      */
-    const resetSetoranForm = () => {
+    const resetSetoranForm = (keepSantri = false) => {
         // Reset Common
-        setoranForm.santri_id = '';
-        setoranSantriSearch.value = '';
+        if (!keepSantri) {
+            setoranForm.santri_id = '';
+            setoranSantriSearch.value = '';
+        }
+
         setoranForm.setoran_date = window.DateUtils.getTodayDateString();
         setoranForm.setoran_time = window.DateUtils.getCurrentTimeString();
         setoranForm.errors = 0;
+        isClockRunning.value = true; // Restart clock on reset
 
         // Reset Type Specifics
         if (setoranForm.setoran_type === 'Sabaq') {
             setoranForm.surah_from = 1;
             setoranForm.surah_to = 1;
             setoranForm.ayat_from = 1;
-            setoranForm.ayat_to = 10;
+            setoranForm.ayat_to = 1;
             setoranForm.pages = 1;
         } else if (setoranForm.setoran_type === 'Manzil') {
             setoranForm.manzil_mode = 'page';
             setoranForm.page_from = 1;
-            setoranForm.page_to = 20;
-            setoranForm.pages = 20;
+            setoranForm.page_to = 1;
+            setoranForm.pages = 1;
         } else if (setoranForm.setoran_type === 'Tilawah') {
             setoranForm.tilawah_mode = 'juz';
             setoranForm.page_from = 1;
-            setoranForm.page_to = 20;
+            setoranForm.page_to = 1;
             setoranForm.juz_from = 1;
             setoranForm.juz_to = 1;
-            setoranForm.pages = 20;
+            setoranForm.pages = 1;
         } else {
             // Sabqi / Robt
             setoranForm.pages = 1;
@@ -722,8 +843,8 @@ function useSetoran(uiData, DB, refreshData) {
                 refreshData();
             }
 
-            // FULL RESET
-            resetSetoranForm();
+            // FULL RESET (Keep Santri for batch input)
+            resetSetoranForm(true);
 
             return true;
         } catch (error) {
@@ -832,20 +953,13 @@ function useSetoran(uiData, DB, refreshData) {
     updateGrade();
 
     // Close dropdown menus when clicking outside
-    const { onMounted, onUnmounted } = Vue;
     const closeAllMenus = () => {
         Object.keys(menuStates.value).forEach(key => {
             menuStates.value[key] = false;
         });
     };
 
-    onMounted(() => {
-        document.addEventListener('click', closeAllMenus);
-    });
 
-    onUnmounted(() => {
-        document.removeEventListener('click', closeAllMenus);
-    });
 
     // Return everything needed for template
     return {
@@ -889,12 +1003,18 @@ function useSetoran(uiData, DB, refreshData) {
         deleteSetoran,
         resetSetoranForm,
 
+        // Realtime Clock Status
+        isClockRunning,
+
         // Helpers
         getSantriName,
         formatSetoranDetail,
         formatDate: window.DateUtils.formatDate,
         formatDateFriendly: window.DateUtils.formatDateFriendly,
         formatDateLong: window.DateUtils.formatDateLong,
-        formatTime: window.DateUtils.formatTime
+        formatTime: window.DateUtils.formatTime,
+
+        lastRecordForType,
+        santriTargetProgress
     };
 }

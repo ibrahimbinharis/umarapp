@@ -9,11 +9,15 @@ const SetoranView = {
         'surahHints',
         'autoCalcInfo',
         'recentSetoran',
-        'isMenuOpen' // Function passed as prop? No, likely just use the function directly if passed, or emit
+        'isMenuOpen',
+        'isClockRunning',
+        'lastRecordForType',
+        'santriTargetProgress'
     ],
     emits: [
         'update:setoranSantriSearch',
         'update:isSetoranSantriDropdownOpen',
+        'update:isClockRunning',
         'select-setoran-santri',
         'change-setoran-type',
         'sync-surah',
@@ -95,6 +99,51 @@ const SetoranView = {
                 <div v-if="isSetoranSantriDropdownOpen"
                     @click="$emit('update:isSetoranSantriDropdownOpen', false)"
                     class="fixed inset-0 z-20 cursor-default"></div>
+                </div>
+
+            <!-- Last Record & Progress (New Section) -->
+            <div v-if="setoranForm.santri_id" 
+                class="bg-slate-50 border border-slate-100 p-4 rounded-2xl space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                
+                <!-- Target Progress Stick -->
+                <div v-if="santriTargetProgress.show" class="space-y-1.5">
+                    <div class="flex justify-between items-end text-[10px] font-bold">
+                        <span class="text-slate-400">TARGET BULAN INI</span>
+                        <span class="text-primary uppercase tracking-wider">{{ santriTargetProgress.current }} / {{ santriTargetProgress.target }} {{ santriTargetProgress.unit }}</span>
+                    </div>
+                    <div class="h-1.5 bg-slate-200 rounded-full overflow-hidden shadow-inner flex">
+                        <div class="h-full bg-primary transition-all duration-1000 relative" 
+                            :style="{ width: santriTargetProgress.pct + '%' }">
+                            <!-- Shine Effect -->
+                            <div class="absolute inset-0 bg-white/20 animate-pulse"></div>
+                        </div>
+                    </div>
+                    <div class="text-[9px] text-slate-400 font-medium text-right italic">
+                        {{ santriTargetProgress.pct }}% tercapai
+                    </div>
+                </div>
+
+                <!-- Last Record Mini Card -->
+                <div v-if="lastRecordForType" class="flex items-start gap-4">
+                    <div class="bg-white p-2 rounded-xl shadow-sm border border-slate-100 flex-shrink-0">
+                        <span class="material-symbols-outlined text-primary text-xl">history</span>
+                    </div>
+                    <div class="flex-grow">
+                        <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Riwayat {{ setoranForm.setoran_type }} Terakhir</p>
+                        <p class="text-xs font-bold text-slate-800 leading-tight mt-0.5">
+                            {{ lastRecordForType.detail }}
+                        </p>
+                        <p class="text-[10px] text-slate-400 mt-1 flex items-center gap-1">
+                            <span class="material-symbols-outlined text-[10px]">calendar_today</span>
+                            {{ lastRecordForType.friendly_date }}
+                        </p>
+                    </div>
+                </div>
+                <!-- Empty Record State -->
+                <div v-else class="flex items-center gap-2 py-1">
+                    <span class="material-symbols-outlined text-slate-300 text-sm">info</span>
+                    <p class="text-[10px] italic text-slate-400 font-medium tracking-tight">Belum ada catatan {{ setoranForm.setoran_type }} khusus bulan ini.</p>
+                </div>
             </div>
 
             <!-- Type Tabs -->
@@ -184,13 +233,13 @@ const SetoranView = {
                     <div>
                         <label class="text-xs font-bold text-slate-400">Dari Hal</label>
                         <input type="number" v-model.number="setoranForm.page_from"
-                            @input="$emit('calc-pages-from-range')"
+                            @input="$emit('calc-pages-from-range')" min="1" max="604"
                             class="w-full p-2 border rounded-xl text-center font-bold">
                     </div>
                     <div>
                         <label class="text-xs font-bold text-slate-400">Sampai Hal</label>
                         <input type="number" v-model.number="setoranForm.page_to"
-                            @input="$emit('calc-pages-from-range')"
+                            @input="$emit('calc-pages-from-range')" min="1" max="604"
                             class="w-full p-2 border rounded-xl text-center font-bold">
                     </div>
                 </div>
@@ -232,13 +281,13 @@ const SetoranView = {
                     <div>
                         <label class="text-xs font-bold text-slate-400">Dari Hal</label>
                         <input type="number" v-model.number="setoranForm.page_from"
-                            @input="$emit('calc-pages-from-range')"
+                            @input="$emit('calc-pages-from-range')" min="1" max="604"
                             class="w-full p-2 border rounded-xl text-center font-bold">
                     </div>
                     <div>
                         <label class="text-xs font-bold text-slate-400">Sampai Hal</label>
                         <input type="number" v-model.number="setoranForm.page_to"
-                            @input="$emit('calc-pages-from-range')"
+                            @input="$emit('calc-pages-from-range')" min="1" max="604"
                             class="w-full p-2 border rounded-xl text-center font-bold">
                     </div>
                 </div>
@@ -313,16 +362,29 @@ const SetoranView = {
 
             <!-- META (Date/Time) -->
             <div class="grid grid-cols-2 gap-3">
-                <input type="date" v-model="setoranForm.setoran_date"
-                    class="w-full p-2 border rounded-xl text-xs font-bold">
-                <input type="time" v-model="setoranForm.setoran_time"
-                    class="w-full p-2 border rounded-xl text-xs font-bold">
+                <div>
+                    <label class="text-[10px] font-bold text-slate-400 block mb-1">Tanggal</label>
+                    <input type="date" v-model="setoranForm.setoran_date"
+                        @change="$emit('update:isClockRunning', false)"
+                        @input="$emit('update:isClockRunning', false)"
+                        class="w-full p-2 border rounded-xl text-xs font-bold focus:ring-2 focus:ring-primary/20 outline-none">
+                </div>
+                <div>
+                    <label class="text-[10px] font-bold text-slate-400 block mb-1">Waktu</label>
+                    <div class="relative">
+                        <input type="time" v-model="setoranForm.setoran_time"
+                            @input="$emit('update:isClockRunning', false)"
+                            @change="$emit('update:isClockRunning', false)"
+                            @focus="$emit('update:isClockRunning', false)"
+                            class="w-full p-2 border rounded-xl text-xs font-bold focus:ring-2 focus:ring-primary/20 outline-none bg-white">
+                    </div>
+                </div>
             </div>
 
             <!-- Actions -->
             <button @click="$emit('reset-setoran')"
-                class="w-full bg-slate-100 text-slate-600 py-2 rounded-xl font-bold shadow-sm text-sm hover:bg-slate-200 transition mb-3">
-                Reset
+                class="w-full bg-slate-100 text-slate-600 py-2 rounded-xl font-bold shadow-sm text-sm hover:bg-slate-200 transition">
+                Reset Form
             </button>
             <button @click="$emit('save-setoran')"
                 class="w-full bg-primary text-white py-3 rounded-xl font-bold shadow-lg text-base hover:bg-blue-800 transition">

@@ -285,9 +285,11 @@
                             :setoran-filtered-santri-options="setoranFilteredSantriOptions"
                             :setoran-selected-santri-name="setoranSelectedSantriName" :surah-list="surahList"
                             :surah-hints="surahHints" :auto-calc-info="autoCalcInfo" :recent-setoran="recentSetoran"
-                            :is-menu-open="isMenuOpen" @select-setoran-santri="selectSetoranSantri"
-                            @change-setoran-type="changeSetoranType" @sync-surah="syncSurah"
-                            @validate-ayat="validateAyat" @toggle-manzil-mode="toggleManzilMode"
+                            :is-menu-open="isMenuOpen" :is-clock-running="isClockRunning"
+                            :last-record-for-type="lastRecordForType" :santri-target-progress="santriTargetProgress"
+                            @update:is-clock-running="isClockRunning = $event"
+                            @select-setoran-santri="selectSetoranSantri" @change-setoran-type="changeSetoranType"
+                            @sync-surah="syncSurah" @validate-ayat="validateAyat" @toggle-manzil-mode="toggleManzilMode"
                             @toggle-tilawah-mode="toggleTilawahMode" @calc-pages-from-juz-range="calcPagesFromJuzRange"
                             @calc-pages-from-range="calcPagesFromRange" @adjust-value="adjustValue"
                             @update-grade="updateGrade" @save-setoran="saveSetoran" @edit-setoran="editSetoran"
@@ -313,14 +315,14 @@
                             :riwayat-filtered-santri-options="riwayatFilteredSantriOptions"
                             :riwayat-selected-santri-name="riwayatSelectedSantriName" :filter-counts="filterCounts"
                             :active-filter-count="activeFilterCount" :user-session="userSession"
-                            :format-date-long="formatDateLong" :format-time="formatTime"
-                            :get-santri-name="getSantriName" :get-juz-from-page="getJuzFromPage"
-                            :select-riwayat-santri="selectRiwayatSantri" :toggle-select="toggleSelect"
-                            :toggle-select-all="toggleSelectAll" :delete-selected="deleteSelected"
-                            :toggle-action-menu="toggleActionMenu" :close-action-menu="closeActionMenu"
-                            :edit-riwayat="editRiwayat" :delete-riwayat="deleteRiwayat"
-                            :set-quick-date-filter="setQuickDateFilter" :reset-all-filters="resetAllFilters"
-                            :remove-filter="removeFilter"></riwayat-view>
+                            :santri-by-letter="santriByLetter" :format-date-long="formatDateLong"
+                            :format-time="formatTime" :get-santri-name="getSantriName"
+                            :get-juz-from-page="getJuzFromPage" :select-riwayat-santri="selectRiwayatSantri"
+                            :toggle-select="toggleSelect" :toggle-select-all="toggleSelectAll"
+                            :delete-selected="deleteSelected" :toggle-action-menu="toggleActionMenu"
+                            :close-action-menu="closeActionMenu" :edit-riwayat="editRiwayat"
+                            :delete-riwayat="deleteRiwayat" :set-quick-date-filter="setQuickDateFilter"
+                            :reset-all-filters="resetAllFilters" :remove-filter="removeFilter"></riwayat-view>
                     </div>
 
                     <!-- REKAP VIEW (New v34) -->
@@ -328,10 +330,13 @@
                     <div v-if="currentView === 'rekap'">
                         <rekap-view v-model:rekap-month="rekapMonth" v-model:rekap-year="rekapYear"
                             v-model:rekap-kelas="rekapKelas" v-model:rekap-gender="rekapGender"
-                            :month-names="monthNames" :kelas-options="uiData.kelas"
-                            :rekap-hafalan-data="rekapHafalanData" :rekap-settings="rekapSettings"
-                            :user-session="userSession" @export-to-excel="exportToExcel" @export-to-pdf="exportToPDF"
-                            @save-settings="saveSettings"></rekap-view>
+                            v-model:rekap-search="rekapSearch" v-model:rekap-santri-id="rekapSantriId"
+                            v-model:is-rekap-santri-dropdown-open="isRekapSantriDropdownOpen"
+                            :rekap-filtered-santri-options="rekapFilteredSantriOptions"
+                            :select-rekap-santri="selectRekapSantri" :month-names="monthNames"
+                            :kelas-options="uiData.kelas" :rekap-hafalan-data="rekapHafalanData"
+                            :rekap-settings="rekapSettings" :user-session="userSession" @export-to-excel="exportToExcel"
+                            @export-to-pdf="exportToPDF" @save-settings="saveSettings"></rekap-view>
                     </div>
 
                     <!-- PENGUMUMAN VIEW (Component) -->
@@ -1427,7 +1432,7 @@
 
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js?v=3.1').then(reg => {
+                navigator.serviceWorker.register('sw.js?v=3.2').then(reg => {
                     console.log('SW Registered!', reg);
 
                     // 1. Check if update is already waiting (e.g. from previous visit)

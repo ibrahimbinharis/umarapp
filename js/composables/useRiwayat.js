@@ -17,7 +17,8 @@ const useRiwayat = (uiData, DB, refreshData, modules = {}, currentView, userSess
         isSantriDropdownOpen: false,
         // Filter Modal
         isFilterOpen: false,
-        quickDateFilter: '' // 'today', 'week', 'month', 'custom'
+        quickDateFilter: '', // 'today', 'week', 'month', 'custom'
+        selectedLetter: '' // Alphabet filter
     });
 
     // --- COMPUTED ---
@@ -60,12 +61,13 @@ const useRiwayat = (uiData, DB, refreshData, modules = {}, currentView, userSess
         }
         if (riwayatState.category && riwayatState.category !== 'all') {
             // Support filtering by main category or sub-category (setoran_type)
-            if (['sabaq', 'sabqi', 'manzil'].includes(riwayatState.category.toLowerCase())) {
+            const cat = riwayatState.category.toLowerCase();
+            if (['sabaq', 'sabqi', 'manzil', 'tilawah'].includes(cat)) {
                 // Filter by setoran_type
                 merged = merged.filter(i =>
                     i.__cat === 'setoran' &&
                     i.setoran_type &&
-                    i.setoran_type.toLowerCase() === riwayatState.category.toLowerCase()
+                    i.setoran_type.toLowerCase() === cat
                 );
             } else {
                 // Filter by main category
@@ -171,9 +173,29 @@ const useRiwayat = (uiData, DB, refreshData, modules = {}, currentView, userSess
             sabaq: setoran.filter(s => s.setoran_type && s.setoran_type.toLowerCase() === 'sabaq').length,
             sabqi: setoran.filter(s => s.setoran_type && s.setoran_type.toLowerCase() === 'sabqi').length,
             manzil: setoran.filter(s => s.setoran_type && s.setoran_type.toLowerCase() === 'manzil').length,
+            tilawah: setoran.filter(s => s.setoran_type && s.setoran_type.toLowerCase() === 'tilawah').length,
             ujian: merged.filter(i => i.__cat === 'ujian').length,
             pelanggaran: merged.filter(i => i.__cat === 'pelanggaran').length
         };
+    });
+
+    /**
+     * Get list of santri grouped by their first letter
+     */
+    const santriByLetter = computed(() => {
+        const letters = {};
+        (uiData.santri || []).forEach(s => {
+            const firstLetter = (s.full_name || '#').charAt(0).toUpperCase();
+            if (!letters[firstLetter]) letters[firstLetter] = [];
+            letters[firstLetter].push(s);
+        });
+
+        // Return sorted letters
+        return Object.keys(letters).sort().map(l => ({
+            letter: l,
+            count: letters[l].length,
+            names: letters[l].sort((a, b) => (a.full_name || '').localeCompare(b.full_name || ''))
+        }));
     });
 
     /**
@@ -471,6 +493,7 @@ const useRiwayat = (uiData, DB, refreshData, modules = {}, currentView, userSess
         selectRiwayatSantri,
         setQuickDateFilter,
         resetAllFilters,
-        removeFilter
+        removeFilter,
+        santriByLetter
     };
 };

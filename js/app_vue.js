@@ -2,7 +2,7 @@ const { createApp, ref, reactive, computed, onMounted, watch, nextTick } = Vue;
 
 const MENU_CONFIG = [
     { id: 'dashboard', label: "Home", icon: "home", roles: ['admin', 'guru', 'wali'], inBottom: true },
-    { id: 'jadwal', label: "Jadwal", icon: "calendar_month", roles: ['admin', 'guru', 'wali'], inBottom: true },
+    { id: 'quran', label: "Al-Quran", icon: "auto_stories", roles: ['admin', 'guru', 'wali'], inBottom: true }, // Menempati slot jadwal
     { id: 'input', label: "Input", icon: "add", roles: ['admin', 'guru'], inBottom: true, highlight: true },
     { id: 'riwayat', label: "Riwayat", icon: "history", roles: ['admin', 'guru', 'wali'], inBottom: true },
     { id: 'pengumuman', label: "Pengumuman", icon: "campaign", roles: ['admin', 'guru', 'wali'], inBottom: false },
@@ -14,7 +14,7 @@ const MENU_CONFIG = [
     { id: 'guru', label: "Guru", icon: "supervisor_account", roles: ['admin'], inBottom: false },
     { id: 'mapel', label: "Mapel", icon: "book_2", roles: ['admin'], inBottom: false },
     { id: 'kelas', label: "Kelas", icon: "meeting_room", roles: ['admin'], inBottom: false },
-    { id: 'quran', label: "Al-Quran", icon: "auto_stories", roles: ['admin', 'guru', 'wali'], inBottom: false },
+    { id: 'jadwal', label: "Jadwal", icon: "calendar_month", roles: ['admin', 'guru', 'wali'], inBottom: false }, // Dipindahkan dari atas
     { id: 'pelanggaran', label: "Pelanggaran", icon: "warning", roles: ['admin', 'guru'], inBottom: false },
     { id: 'profile', label: "Profile", icon: "account_circle", roles: ['admin', 'guru', 'wali'], inBottom: false },
     { id: 'rekap', label: "Rekap", icon: "analytics", roles: ['admin', 'guru', 'wali'], inBottom: false },
