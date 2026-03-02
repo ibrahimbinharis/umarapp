@@ -9,8 +9,8 @@ const InstallView = {
             </div>
 
             <div class="relative z-10 flex-1 flex flex-col items-center justify-center p-6 mt-[-5vh]">
-                <!-- App Icon -->
-                <div class="size-32 bg-white rounded-[2.5rem] shadow-2xl flex items-center justify-center p-4 mb-8 animate-bounce transition-transform hover:scale-110">
+                <!-- App Icon (Simplified) -->
+                <div class="size-28 bg-white rounded-3xl shadow-lg flex items-center justify-center p-5 mb-10 transition-transform active:scale-95">
                     <img src="image/logo_new.png" alt="Logo" class="w-full h-full object-contain">
                 </div>
 
