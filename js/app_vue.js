@@ -803,7 +803,9 @@ createApp({
 
             // Ensure initial history state
             if (!window.history.state) {
-                window.history.replaceState({ view: 'login' }, '', '#login');
+                const initialView = window.location.hash ? window.location.hash.replace('#', '') : 'login';
+                window.history.replaceState({ view: initialView }, '', '#' + initialView);
+                currentView.value = initialView;
             }
 
             loading.value = true;
@@ -944,6 +946,7 @@ createApp({
         NotificationView,
         ExamCounter,
         QuranView,
-        PengumumanView
+        PengumumanView,
+        InstallView
     }
 }).mount('#app');

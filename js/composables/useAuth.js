@@ -200,8 +200,11 @@ const useAuth = (currentView, loading) => {
             localStorage.removeItem('tahfidz_session');
             userSession.value = null;
             // Always force to login if no session is active during manual refresh/init
-            currentView.value = 'login';
-            window.history.replaceState({ view: 'login' }, '', '#login');
+            // UNLESS we are in the 'install' landing page
+            if (currentView.value !== 'install') {
+                currentView.value = 'login';
+                window.history.replaceState({ view: 'login' }, '', '#login');
+            }
         }
     };
 

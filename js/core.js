@@ -1,7 +1,7 @@
 // --- 1. CONFIG & DATABASE (SUPABASE v37) ---
 const APP_CONFIG = {
     appName: "E-Umar",
-    version: "v3.2",
+    version: "v3.3",
     supabaseUrl: "https://fxtmilqvxomuvkxxzjli.supabase.co",
     supabaseKey: "sb_publishable_aXcK3znrtRo0d3gH-Wg1Ew_-0Z3262O"
 };
@@ -617,5 +617,39 @@ function formatDateLong(isoString, timeOverride = null) {
         timePart = `${hours}:${minutes}`;
     }
 
+
     return `${datePart}<br><span class="text-xs text-slate-400 font-normal">${timePart}</span>`;
 }
+
+// --- PWA INSTALLATION LOGIC ---
+window.deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+    // Prevent the mini-infobar from appearing on mobile
+    e.preventDefault();
+    // Stash the event so it can be triggered later.
+    window.deferredPrompt = e;
+    // Notify the app that installation is available
+    window.dispatchEvent(new Event('pwa-install-available'));
+    console.log('PWA Install Prompt Available');
+});
+
+window.installPWA = async () => {
+    const promptEvent = window.deferredPrompt;
+    if (!promptEvent) {
+        console.warn("No install prompt available");
+        return;
+    }
+    // Show the install prompt
+    promptEvent.prompt();
+    // Wait for the user to respond to the prompt
+    const { outcome } = await promptEvent.userChoice;
+    console.log(`User response to the install prompt: ${outcome}`);
+    // We've used the prompt, and can't use it again, throw it away
+    window.deferredPrompt = null;
+};
+
+// Check if app is already installed
+window.addEventListener('appinstalled', (evt) => {
+    console.log('E-Umar was installed');
+    window.deferredPrompt = null;
+});

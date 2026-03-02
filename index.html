@@ -60,6 +60,10 @@
             :login-form="loginForm" :is-register-mode="isRegisterMode" @login="handleLogin" @register="handleRegister"
             @toggle-mode="isRegisterMode = !isRegisterMode"></login-view>
 
+        <!-- INSTALLATION VIEW (Component) -->
+        <install-view v-else-if="currentView === 'install'" :app-name="appName" :app-version="appVersion"
+            @nav="navigateTo"></install-view>
+
         <!-- MAIN APP VIEW -->
         <div v-else-if="!loading && currentView" class="flex h-full w-full animate-in fade-in duration-700">
 
@@ -162,14 +166,16 @@
                             <div class="space-y-2 flex-1">
                                 <div class="h-4 bg-slate-200 rounded w-1/3"></div>
                                 <div class="h-3 bg-slate-200 rounded w-1/4"></div>
+                                <div class="h-4 skeleton rounded w-1/3"></div>
+                                <div class="h-3 skeleton rounded w-1/4"></div>
                             </div>
                         </div>
 
                         <!-- Menu Grid Skeleton -->
                         <div class="grid grid-cols-4 gap-3">
                             <div v-for="i in 8" :key="i" class="flex flex-col items-center gap-2">
-                                <div class="size-14 rounded-2xl bg-slate-200"></div>
-                                <div class="h-2 bg-slate-200 rounded w-10"></div>
+                                <div class="size-14 rounded-2xl skeleton"></div>
+                                <div class="h-2 skeleton rounded w-10"></div>
                             </div>
                         </div>
 
@@ -180,8 +186,8 @@
                                 class="bg-white p-4 rounded-xl border border-slate-100 flex gap-3">
                                 <div class="size-10 rounded-full bg-slate-200"></div>
                                 <div class="flex-1 space-y-2">
-                                    <div class="h-3 bg-slate-200 rounded w-3/4"></div>
-                                    <div class="h-2 bg-slate-200 rounded w-1/2"></div>
+                                    <div class="h-3 skeleton rounded w-3/4"></div>
+                                    <div class="h-2 skeleton rounded w-1/2"></div>
                                 </div>
                             </div>
                         </div>
@@ -216,10 +222,10 @@
                         </div>
                         <div v-for="i in 6" :key="i"
                             class="bg-white p-4 rounded-xl border border-slate-100 flex items-center gap-4">
-                            <div class="size-12 rounded-full bg-slate-200"></div>
+                            <div class="size-12 rounded-full skeleton"></div>
                             <div class="flex-1 space-y-2">
-                                <div class="h-4 bg-slate-200 rounded w-1/2"></div>
-                                <div class="h-3 bg-slate-200 rounded w-1/3"></div>
+                                <div class="h-4 skeleton rounded w-1/2"></div>
+                                <div class="h-3 skeleton rounded w-1/3"></div>
                             </div>
                         </div>
                     </div>
@@ -239,12 +245,37 @@
                     </div>
 
 
+                    <!-- GURU VIEW SKELETON -->
+                    <div v-if="loading && currentView === 'guru'" class="animate-pulse px-4 space-y-4 pt-4">
+                        <div v-for="i in 6" :key="i"
+                            class="bg-white p-4 rounded-xl border border-slate-100 flex items-center gap-4">
+                            <div class="size-12 rounded-full skeleton"></div>
+                            <div class="flex-1 space-y-2">
+                                <div class="h-4 skeleton rounded w-1/2"></div>
+                                <div class="h-3 skeleton rounded w-1/3"></div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- GURU VIEW (Component) -->
                     <div v-if="currentView === 'guru'" class="h-full w-full">
                         <guru-view :filtered-guru="filteredGuru" :active-dropdown="activeDropdown"
                             :is-modal-open="modalState.isOpen" @open-modal="openGuruModal" @delete="deleteGuru"
                             @toggle-dropdown="toggleDropdown"></guru-view>
                     </div>
+                    <!-- UJIAN VIEW SKELETON -->
+                    <div v-if="loading && currentView === 'ujian'" class="animate-pulse px-4 space-y-6 pt-4">
+                        <div class="flex gap-2">
+                            <div class="h-10 bg-slate-200 rounded-xl flex-1"></div>
+                            <div class="h-10 bg-slate-200 rounded-xl flex-1"></div>
+                        </div>
+                        <div v-for="i in 3" :key="i" class="bg-white p-5 rounded-2xl border border-slate-100 space-y-3">
+                            <div class="h-5 skeleton rounded w-1/3"></div>
+                            <div class="h-4 skeleton rounded w-full"></div>
+                            <div class="h-4 skeleton rounded w-2/3"></div>
+                        </div>
+                    </div>
+
                     <!-- UJIAN VIEW -->
 
                     <!-- UJIAN VIEW (Component) -->
@@ -262,6 +293,21 @@
 
 
 
+
+                    <!-- JADWAL VIEW SKELETON -->
+                    <div v-if="loading && currentView === 'jadwal'" class="animate-pulse px-4 space-y-4 pt-4">
+                        <div class="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
+                            <div v-for="i in 7" :key="i" class="h-10 w-20 skeleton rounded-xl flex-shrink-0"></div>
+                        </div>
+                        <div v-for="i in 4" :key="i"
+                            class="bg-white p-4 rounded-xl border border-slate-100 flex justify-between items-center">
+                            <div class="space-y-2">
+                                <div class="h-4 skeleton rounded w-32"></div>
+                                <div class="h-3 skeleton rounded w-24"></div>
+                            </div>
+                            <div class="h-8 w-8 skeleton rounded-full"></div>
+                        </div>
+                    </div>
 
                     <!-- JADWAL VIEW -->
                     <div v-if="currentView === 'jadwal'" class="h-full w-full">
@@ -296,6 +342,19 @@
                             @delete-setoran="deleteSetoran" @toggle-menu="toggleMenu"
                             @reset-setoran="resetSetoranForm"></setoran-view>
                     </div>
+                    <!-- TARGET VIEW SKELETON -->
+                    <div v-if="loading && currentView === 'target'" class="animate-pulse px-4 space-y-4 pt-4">
+                        <div class="h-10 skeleton rounded-xl w-full mb-6"></div>
+                        <div v-for="i in 5" :key="i"
+                            class="bg-white p-4 rounded-2xl border border-slate-100 flex items-center gap-4">
+                            <div class="size-12 rounded-full skeleton"></div>
+                            <div class="flex-1 space-y-2">
+                                <div class="h-4 skeleton rounded w-1/2"></div>
+                                <div class="h-3 skeleton rounded w-1/3"></div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- TARGET VIEW (Component) -->
                     <div v-if="currentView === 'target'" class="fade-in">
                         <target-view :santri-data="santriWithTarget" :user-session="userSession"
@@ -305,6 +364,19 @@
                             @toggle-selection-mode="toggleSelectionMode"
                             @toggle-santri-selection="toggleSantriSelection" @select-all-santri="selectAllSantri"
                             @open-bulk-target-modal="openBulkTargetModal"></target-view>
+                    </div>
+
+                    <!-- RIWAYAT VIEW SKELETON -->
+                    <div v-if="loading && currentView === 'riwayat'" class="animate-pulse px-4 space-y-4 pt-4">
+                        <div class="h-12 skeleton rounded-xl w-full mb-4"></div>
+                        <div v-for="i in 8" :key="i"
+                            class="bg-white p-4 rounded-xl border border-slate-100 flex items-center gap-3">
+                            <div class="size-10 rounded-full skeleton"></div>
+                            <div class="flex-1 space-y-2">
+                                <div class="h-3 skeleton rounded w-3/4"></div>
+                                <div class="h-2 skeleton rounded w-1/2"></div>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- RIWAYAT & REKAP VIEW -->
@@ -323,6 +395,15 @@
                             :close-action-menu="closeActionMenu" :edit-riwayat="editRiwayat"
                             :delete-riwayat="deleteRiwayat" :set-quick-date-filter="setQuickDateFilter"
                             :reset-all-filters="resetAllFilters" :remove-filter="removeFilter"></riwayat-view>
+                    </div>
+
+                    <!-- REKAP VIEW SKELETON -->
+                    <div v-if="loading && currentView === 'rekap'" class="animate-pulse px-4 space-y-4 pt-4">
+                        <div class="grid grid-cols-2 gap-3">
+                            <div class="h-10 skeleton rounded-xl"></div>
+                            <div class="h-10 skeleton rounded-xl"></div>
+                        </div>
+                        <div class="h-64 bg-white rounded-2xl border border-slate-100 skeleton opacity-10"></div>
                     </div>
 
                     <!-- REKAP VIEW (New v34) -->
@@ -354,6 +435,19 @@
                             @update:form-target="form.target = $event"></pengumuman-view>
                     </div>
 
+
+                    <!-- ABSENSI VIEW SKELETON -->
+                    <div v-if="loading && currentView === 'absensi'" class="animate-pulse px-4 space-y-4 pt-4">
+                        <div class="h-10 skeleton rounded-xl w-full mb-4"></div>
+                        <div v-for="i in 5" :key="i"
+                            class="bg-white p-4 rounded-xl border border-slate-100 flex items-center justify-between">
+                            <div class="h-4 skeleton rounded w-40"></div>
+                            <div class="flex gap-2">
+                                <div class="size-8 rounded-full skeleton"></div>
+                                <div class="size-8 rounded-full skeleton"></div>
+                            </div>
+                        </div>
+                    </div>
 
                     <div v-if="currentView === 'absensi'">
                         <absensi-view :absensi-state="absensiState" :daily-jadwal="dailyJadwal"
@@ -585,6 +679,19 @@
                                         </span>
                                     </button>
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- PELANGGARAN VIEW SKELETON -->
+                    <div v-if="loading && currentView === 'pelanggaran'" class="animate-pulse px-4 space-y-4 pt-4">
+                        <div class="h-48 bg-white rounded-3xl border border-slate-100 skeleton opacity-10"></div>
+                        <div v-for="i in 3" :key="i"
+                            class="bg-white p-4 rounded-xl border border-slate-100 flex items-center gap-4">
+                            <div class="size-12 rounded-2xl skeleton"></div>
+                            <div class="flex-1 space-y-2">
+                                <div class="h-4 skeleton rounded w-1/2"></div>
+                                <div class="h-3 skeleton rounded w-1/4"></div>
                             </div>
                         </div>
                     </div>
@@ -1362,6 +1469,7 @@
     <script src="js/components/AbsensiView.js"></script>
     <script src="js/components/ProfileView.js"></script>
     <script src="js/components/NotificationView.js"></script>
+    <script src="js/components/InstallView.js"></script>
     <script src="js/components/PengumumanView.js"></script>
     <script src="js/services/NotificationService.js"></script>
     <script src="js/services/PushService.js"></script>
@@ -1432,7 +1540,7 @@
 
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js?v=3.2').then(reg => {
+                navigator.serviceWorker.register('sw.js?v=3.3').then(reg => {
                     console.log('SW Registered!', reg);
 
                     // 1. Check if update is already waiting (e.g. from previous visit)
