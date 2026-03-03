@@ -249,21 +249,21 @@ const RiwayatView = {
                 </button>
             </div>
             
-            <div class="overflow-x-auto">
-                <table class="w-full text-sm text-left">
-                    <thead class="bg-slate-50 text-slate-500 font-bold uppercase text-[10px] border-b">
+            <div class="overflow-x-auto no-scrollbar">
+                <table class="w-full text-sm text-left table-fixed min-w-[500px]">
+                    <thead class="bg-slate-50 text-slate-500 font-bold uppercase text-[9px] border-b">
                         <tr>
-                            <th v-if="userSession?.role !== 'wali'" class="px-4 py-3 w-10 text-center">
+                            <th v-if="userSession?.role !== 'wali'" class="px-2 py-3 w-8 text-center">
                                 <input type="checkbox" @change="toggleSelectAll(paginatedRiwayat)"
                                     :checked="paginatedRiwayat.length > 0 && paginatedRiwayat.every(i => riwayatState.selectedIds.includes(i._id))"
-                                    class="rounded border-slate-300 text-primary focus:ring-primary">
+                                    class="rounded border-slate-300 text-primary focus:ring-primary size-3.5">
                             </th>
-                            <th class="px-4 py-3 whitespace-nowrap">Waktu</th>
-                            <th class="px-4 py-3 whitespace-nowrap">Santri</th>
-                            <th class="px-4 py-3 whitespace-nowrap">Jenis</th>
-                            <th class="px-4 py-3 whitespace-nowrap">Detail</th>
-                            <th class="px-4 py-3 whitespace-nowrap text-center">Nilai/Poin</th>
-                            <th v-if="userSession?.role !== 'wali'" class="px-4 py-3 whitespace-nowrap text-center">Aksi</th>
+                            <th class="px-2 py-3 w-20">Waktu</th>
+                            <th class="px-2 py-3 w-28">Santri</th>
+                            <th class="px-2 py-3 w-16 text-center">Jenis</th>
+                            <th class="px-2 py-3 flex-1">Detail</th>
+                            <th class="px-2 py-3 w-14 text-center">Nilai</th>
+                            <th v-if="userSession?.role !== 'wali'" class="px-2 py-3 w-10 text-center">Aksi</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100">
@@ -272,125 +272,123 @@ const RiwayatView = {
                             :class="item.__cat === 'pelanggaran' ? 'bg-red-50/30 hover:bg-red-50' : ''">
                             
                             <!-- Checkbox (Hide for Wali) -->
-                            <td v-if="userSession?.role !== 'wali'" class="px-4 py-3 text-center">
+                            <td v-if="userSession?.role !== 'wali'" class="px-2 py-3 text-center">
                                 <input type="checkbox"
                                     :checked="riwayatState.selectedIds.includes(item._id)"
                                     @change="toggleSelect(item._id)"
-                                    class="rounded border-slate-300 text-primary focus:ring-primary">
+                                    class="rounded border-slate-300 text-primary focus:ring-primary size-3.5">
                             </td>
 
                             <!-- Waktu -->
-                            <td class="px-4 py-3 whitespace-nowrap">
-                                <p class="text-xs text-slate-400 mb-0.5">{{ formatDateLong(item.date) }}</p>
-                                <p class="text-xs font-bold text-slate-700">{{ formatTime(item.time) }}</p>
+                            <td class="px-2 py-3">
+                                <p class="text-[9px] text-slate-400 leading-tight">{{ formatDateLong(item.date).split('<br>')[0] }}</p>
+                                <p class="text-[10px] font-bold text-slate-700 leading-tight mt-0.5">{{ formatTime(item.time) }}</p>
                             </td>
 
                             <!-- Santri -->
-                            <td class="px-4 py-3 whitespace-nowrap">
-                                <div class="font-bold text-xs truncate max-w-[150px]">{{ getSantriName(item.santri_id) }}</div>
+                            <td class="px-2 py-3">
+                                <div class="font-bold text-[10px] text-slate-700 line-clamp-2 leading-tight uppercase">{{ getSantriName(item.santri_id) }}</div>
                             </td>
 
                             <!-- Jenis -->
-                            <td class="px-4 py-3 whitespace-nowrap">
-                                <span class="text-[10px] font-bold uppercase"
-                                    :class="item.__cat === 'pelanggaran' ? 'text-red-500' : 'text-slate-500'">
-                                    {{ item.__cat === 'pelanggaran' ? 'PELANGGARAN' : item.setoran_type || (item.type === 'hafalan_exam' ? 'UJIAN HAFALAN' : item.type) || 'UJIAN' }}
+                            <td class="px-2 py-3 text-center">
+                                <span class="text-[8px] font-black tracking-tighter"
+                                    :class="item.__cat === 'pelanggaran' ? 'text-red-500' : 'text-slate-400'">
+                                    {{ item.__cat === 'pelanggaran' ? 'PELANGG.' : (item.setoran_type?.toUpperCase() || (item.type === 'hafalan_exam' ? 'UJIAN H.' : 'UJIAN')) }}
                                 </span>
                             </td>
 
                             <!-- Detail -->
-                            <td class="px-4 py-3">
-                                <div v-if="item.__cat === 'setoran'">
+                            <td class="px-2 py-3 overflow-hidden">
+                                <div v-if="item.__cat === 'setoran'" class="leading-tight">
                                     <div v-if="item.setoran_type === 'Sabaq'">
-                                        <div class="font-bold text-slate-700 text-xs truncate max-w-[150px]">
+                                        <div class="font-bold text-slate-700 text-[10px] truncate">
                                             {{ item.surah_from_latin ? item.surah_from_latin.replace(/^\d+\.\s*/, '') : '-' }}
                                         </div>
-                                        <div class="text-[10px] text-slate-500">{{ item.pages }} Hal</div>
+                                        <div class="text-[9px] text-slate-500 italic">{{ item.pages }} Hal</div>
                                     </div>
                                     <div v-else-if="item.setoran_type === 'Manzil'">
-                                        <div class="font-bold text-slate-700 text-xs">
+                                        <div class="font-bold text-slate-700 text-[10px]">
                                             Hal {{ item.page_from || '-' }} - {{ item.page_to || '-' }}
                                         </div>
-                                        <div class="text-[10px] text-slate-500">
-                                            Juz {{ getJuzFromPage(item.page_from) }} - Juz {{ getJuzFromPage(item.page_to) }}
-                                        </div>
+                                        <div class="text-[9px] text-slate-500">Juz {{ getJuzFromPage(item.page_from) }} - {{ getJuzFromPage(item.page_to) }}</div>
                                     </div>
                                     <div v-else-if="item.setoran_type === 'Tilawah'">
-                                        <div v-if="item.tilawah_mode === 'juz'" class="font-bold text-slate-700 text-xs">
+                                        <div v-if="item.tilawah_mode === 'juz'" class="font-bold text-slate-700 text-[10px]">
                                             Juz {{ item.juz_from }} - {{ item.juz_to }}
                                         </div>
                                         <div v-else>
-                                            <div class="font-bold text-slate-700 text-xs">Hal {{ item.page_from }} - {{ item.page_to }}</div>
-                                            <div class="text-[10px] text-slate-500">Juz {{ getJuzFromPage(item.page_from) }}</div>
+                                            <div class="font-bold text-slate-700 text-[10px] truncate">Hal {{ item.page_from }}-{{ item.page_to }}</div>
+                                            <div class="text-[9px] text-slate-500">Juz {{ getJuzFromPage(item.page_from) }}</div>
                                         </div>
                                     </div>
                                     <div v-else>
-                                        <div class="font-bold text-slate-700 text-xs">{{ item.pages }} Hal</div>
+                                        <div class="font-bold text-slate-700 text-[10px]">{{ item.pages }} Hal</div>
                                     </div>
                                 </div>
-                                <div v-else-if="item.__cat === 'ujian'">
+                                <div v-else-if="item.__cat === 'ujian'" class="leading-tight">
                                     <div v-if="item.type && item.type.toLowerCase().includes('al-qur')">
-                                        <div class="font-bold text-slate-700 text-xs">{{ item.type }}</div>
-                                        <div class="text-[10px] text-slate-500">
+                                        <div class="font-bold text-slate-700 text-[10px] truncate">{{ item.type }}</div>
+                                        <div class="text-[9px] text-slate-500">
                                             Juz {{ item.juz || (item.detail ? item.detail.replace(/[^\d]/g, '') : '-') }}
                                         </div>
                                     </div>
                                     <div v-else>
-                                        <div class="font-bold text-slate-700 text-xs">
+                                        <div class="font-bold text-slate-700 text-[10px] truncate">
                                             {{ item.type === 'hafalan_exam' ? 'Ujian Hafalan' : item.type }}
                                         </div>
-                                        <div class="text-[10px] text-slate-500 truncate max-w-[150px]">
+                                        <div class="text-[9px] text-slate-500 truncate italic">
                                             {{ (item.detail || '-').replace('menyetorkan hafalan', 'selesai') }}
                                         </div>
                                     </div>
                                 </div>
-                                <div v-else-if="item.__cat === 'pelanggaran'">
-                                    <div class="font-bold text-red-600 text-xs truncate max-w-[150px]">
+                                <div v-else-if="item.__cat === 'pelanggaran'" class="leading-tight">
+                                    <div class="font-bold text-red-600 text-[10px] line-clamp-1">
                                         {{ item.description || '-' }}
                                     </div>
                                 </div>
                             </td>
 
                             <!-- Nilai -->
-                            <td class="px-4 py-3 text-center">
+                            <td class="px-2 py-3 text-center">
                                 <span v-if="item.__cat === 'setoran'"
-                                    class="px-2 py-1 rounded text-xs font-black"
+                                    class="px-1.5 py-0.5 rounded text-[10px] font-black"
                                     :class="item.grade === 'A+' ? 'text-emerald-600 bg-emerald-50' : item.grade === 'C' ? 'text-red-600 bg-red-50' : 'text-blue-600 bg-blue-50'">
                                     {{ item.grade }}
                                 </span>
                                 <span v-else-if="item.__cat === 'ujian'"
-                                    class="px-2 py-1 rounded text-xs font-black"
+                                    class="px-1.5 py-0.5 rounded text-[10px] font-black"
                                     :class="(item.score >= 80) ? 'text-emerald-600 bg-emerald-50' : (item.score < 70) ? 'text-red-600 bg-red-50' : 'text-blue-600 bg-blue-50'">
                                     {{ item.score }}
                                 </span>
                                 <span v-else-if="item.__cat === 'pelanggaran'"
-                                    class="px-2 py-1 rounded text-xs font-black text-red-600 bg-red-100">
+                                    class="px-1.5 py-0.5 rounded text-[10px] font-black text-red-600 bg-red-100">
                                     -{{ item.points || item.poin || 0 }}
                                 </span>
                             </td>
 
                             <!-- Aksi (Hide for Wali) -->
-                            <td v-if="userSession?.role !== 'wali'" class="px-4 py-3 text-center relative">
+                            <td v-if="userSession?.role !== 'wali'" class="px-2 py-3 text-center relative">
                                 <button @click.stop="toggleActionMenu(item._id)"
-                                    class="p-1 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 transition">
-                                    <span class="material-symbols-outlined">more_vert</span>
+                                    class="p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-white border border-transparent hover:border-slate-100 transition active:scale-90 shadow-none">
+                                    <span class="material-symbols-outlined text-lg">more_horiz</span>
                                 </button>
                                 <div v-if="riwayatState.activeActionId === item._id"
-                                    class="absolute right-8 top-2 bg-white rounded-lg shadow-xl border border-slate-100 z-50 w-32 overflow-hidden text-left animate-fade-in flex flex-col">
+                                    class="absolute right-0 top-10 bg-white rounded-xl shadow-2xl border border-slate-100 z-50 w-32 overflow-hidden text-left animate-in fade-in zoom-in-95 duration-100 flex flex-col">
                                     <button @click="editRiwayat(item); closeActionMenu()"
-                                        class="px-4 py-2 hover:bg-slate-50 text-xs font-bold text-slate-600 flex items-center gap-2 w-full text-left">
-                                        <span class="material-symbols-outlined text-sm">edit</span> Edit
+                                        class="px-4 py-2.5 hover:bg-slate-50 text-[11px] font-bold text-slate-600 flex items-center gap-2 w-full text-left">
+                                        <span class="material-symbols-outlined text-base">edit</span> Edit
                                     </button>
                                     <button @click="deleteRiwayat(item); closeActionMenu()"
-                                        class="px-4 py-2 hover:bg-red-50 text-xs font-bold text-red-600 flex items-center gap-2 w-full text-left border-t border-slate-50">
-                                        <span class="material-symbols-outlined text-sm">delete</span> Hapus
+                                        class="px-4 py-2.5 hover:bg-red-50 text-[11px] font-bold text-red-600 flex items-center gap-2 w-full text-left border-t border-slate-50">
+                                        <span class="material-symbols-outlined text-base text-red-400">delete</span> Hapus
                                     </button>
                                 </div>
                                 <div v-if="riwayatState.activeActionId === item._id" @click="closeActionMenu()" class="fixed inset-0 z-40 cursor-default"></div>
                             </td>
                         </tr>
                         <tr v-if="paginatedRiwayat.length === 0">
-                            <td :colspan="userSession?.role === 'wali' ? 5 : 7" class="px-4 py-8 text-center text-slate-400 font-bold text-xs">
+                            <td :colspan="userSession?.role === 'wali' ? 5 : 7" class="px-4 py-12 text-center text-slate-400 font-bold text-xs italic">
                                 Belum ada riwayat setoran/ujian.
                             </td>
                         </tr>
@@ -399,18 +397,18 @@ const RiwayatView = {
             </div>
 
             <!-- Pagination -->
-            <div class="p-4 border-t border-slate-50 flex flex-col items-center gap-2">
-                <div class="flex gap-2">
+            <div class="p-3 border-t border-slate-50 bg-slate-50/30 flex flex-col items-center">
+                <div class="flex items-center gap-4">
                     <button @click="riwayatState.page--" :disabled="riwayatState.page === 1"
-                        class="px-3 py-1 rounded border hover:bg-slate-50 disabled:opacity-50 text-xs font-bold">
-                        Prev
+                        class="size-8 rounded-lg border bg-white flex items-center justify-center hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed transition shadow-sm active:scale-90">
+                        <span class="material-symbols-outlined text-lg">chevron_left</span>
                     </button>
-                    <span class="px-3 py-1 text-xs font-bold text-slate-600">
-                        Hal {{ riwayatState.page }} / {{ riwayatTotalPages || 1 }}
+                    <span class="text-[10px] font-black text-slate-500 uppercase tracking-widest bg-white border border-slate-100 px-4 py-1.5 rounded-full shadow-sm">
+                        Hal {{ riwayatState.page }} <span class="mx-1 opacity-30">/</span> {{ riwayatTotalPages || 1 }}
                     </span>
                     <button @click="riwayatState.page++" :disabled="riwayatState.page >= riwayatTotalPages"
-                        class="px-3 py-1 rounded border hover:bg-slate-50 disabled:opacity-50 text-xs font-bold">
-                        Next
+                        class="size-8 rounded-lg border bg-white flex items-center justify-center hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed transition shadow-sm active:scale-90">
+                        <span class="material-symbols-outlined text-lg">chevron_right</span>
                     </button>
                 </div>
             </div>

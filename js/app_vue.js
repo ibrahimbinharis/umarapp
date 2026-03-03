@@ -46,6 +46,35 @@ createApp({
         const searchText = ref('');
         const modalState = reactive({ isOpen: false, view: '', title: '', isEdit: false });
 
+        // Global Confirm/Alert Modal State
+        const confirmState = reactive({
+            isOpen: false,
+            title: 'Konfirmasi',
+            message: '',
+            onConfirm: null,
+            onCancel: null,
+            confirmText: 'Ya',
+            cancelText: 'Batal',
+            type: 'danger' // danger, warning, info
+        });
+
+        const showConfirm = (options) => {
+            confirmState.title = options.title || 'Konfirmasi';
+            confirmState.message = options.message || 'Apakah Anda yakin?';
+            confirmState.confirmText = options.confirmText || 'Ya';
+            confirmState.cancelText = options.cancelText || 'Batal';
+            confirmState.type = options.type || 'danger';
+            confirmState.onConfirm = options.onConfirm || null;
+            confirmState.onCancel = options.onCancel || null;
+            confirmState.isOpen = true;
+        };
+
+        const closeConfirm = (confirmed) => {
+            if (confirmed && confirmState.onConfirm) confirmState.onConfirm();
+            if (!confirmed && confirmState.onCancel) confirmState.onCancel();
+            confirmState.isOpen = false;
+        };
+
         // santriForm moved to useSantri
 
 
@@ -892,6 +921,7 @@ createApp({
         return {
             formatWANumber,
             loading, appName, appVersion, currentView, userSession, loginForm,
+            confirmState, showConfirm, closeConfirm,
             dashboardStats, searchText, modalState, uiData,
             showExamControls,
             updateSalah, finishExam,

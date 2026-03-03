@@ -103,7 +103,15 @@ function useNotifications(uiData, userSession) {
                         // Update data di list (termasuk is_read)
                         const idx = dbNotifications.value.findIndex(n => n._id === payload.new._id);
                         if (idx !== -1) {
-                            dbNotifications.value[idx] = { ...dbNotifications.value[idx], ...payload.new };
+                            // Cek apakah data benar-benar berubah untuk menghindari re-render yang tidak perlu
+                            const oldItem = dbNotifications.value[idx];
+                            const isChanged = oldItem.is_read !== payload.new.is_read ||
+                                oldItem._deleted !== payload.new._deleted ||
+                                oldItem.message !== payload.new.message;
+
+                            if (isChanged) {
+                                dbNotifications.value[idx] = { ...dbNotifications.value[idx], ...payload.new };
+                            }
                         } else {
                             dbNotifications.value.unshift(payload.new);
                         }
@@ -173,6 +181,24 @@ function useNotifications(uiData, userSession) {
             .eq('_id', notifId);
     };
 
+    const clearReadNotifications = async () => {
+        const userId = getCurrentUserId();
+        if (!userId) return;
+
+        // Tulis ke Supabase langsung
+        const { error } = await sb.from('notifications')
+            .update({ _deleted: true })
+            .eq('user_id', userId)
+            .eq('is_read', true);
+
+        if (error) {
+            console.error('[Notifikasi] Gagal clearReadNotifications:', error);
+            await fetchNotifications();
+        } else {
+            dbNotifications.value = dbNotifications.value.filter(n => !n.is_read);
+        }
+    };
+
     const allNotifications = computed(() => dbNotifications.value);
 
     const unreadCount = computed(() =>
@@ -197,6 +223,7 @@ function useNotifications(uiData, userSession) {
         markAsRead,
         markAllRead,
         removeNotifBySource,
+        clearReadNotifications,
         refreshNotifications: fetchNotifications
     };
 }

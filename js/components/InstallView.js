@@ -9,11 +9,6 @@ const InstallView = {
             </div>
 
             <div class="relative z-10 flex-1 flex flex-col items-center justify-center p-6 mt-[-5vh]">
-                <!-- App Icon (Simplified) -->
-                <div class="size-28 bg-white rounded-3xl shadow-lg flex items-center justify-center p-5 mb-10 transition-transform active:scale-95">
-                    <img src="image/logo_new.png" alt="Logo" class="w-full h-full object-contain">
-                </div>
-
                 <!-- Text Info -->
                 <div class="text-center mb-10 max-w-sm">
                     <h1 class="text-3xl font-black text-white mb-2 tracking-tight">{{ appName }}</h1>

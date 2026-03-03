@@ -211,7 +211,8 @@
                     <div v-if="!loading && currentView === 'notifications'" class="h-full w-full">
                         <notification-view :notifications="allNotifications" :unread-count="unreadCount"
                             :ui-data="uiData" @mark-read="markAsRead" @mark-all-read="markAllRead"
-                            @navigate="navigateTo" @back="currentView = 'dashboard'"></notification-view>
+                            @clear-read="clearReadNotifications" @show-confirm="showConfirm" @navigate="navigateTo"
+                            @back="currentView = 'dashboard'"></notification-view>
                     </div>
                     <!-- SANTRI VIEW SKELETON -->
                     <div v-if="loading && currentView === 'santri'" class="animate-pulse px-4 space-y-4 pt-4">
@@ -1421,6 +1422,48 @@
             </div>
         </div>
 
+        <!-- GLOBAL CONFIRM MODAL (Premium) -->
+        <transition name="modal-fade">
+            <div v-if="confirmState.isOpen" @click.self="closeConfirm(false)"
+                class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in px-6">
+                <div
+                    class="bg-white rounded-3xl overflow-hidden shadow-2xl w-full max-w-sm animate-scale-in border border-slate-100">
+                    <!-- Icon & Header -->
+                    <div class="p-6 pb-0 flex flex-col items-center text-center">
+                        <div class="size-16 rounded-full flex items-center justify-center mb-4" :class="{
+                                'bg-red-50 text-red-500': confirmState.type === 'danger',
+                                'bg-orange-50 text-orange-500': confirmState.type === 'warning',
+                                'bg-blue-50 text-blue-500': confirmState.type === 'info'
+                            }">
+                            <span class="material-symbols-outlined text-4xl">
+                                {{ confirmState.type === 'danger' ? 'report' : confirmState.type === 'warning' ? 'error'
+                                : 'help' }}
+                            </span>
+                        </div>
+                        <h3 class="text-xl font-black text-slate-800 mb-2">{{ confirmState.title }}</h3>
+                        <p class="text-slate-500 text-sm leading-relaxed px-2">{{ confirmState.message }}</p>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="p-6 flex gap-3">
+                        <button @click="closeConfirm(false)"
+                            class="flex-1 py-3.5 rounded-2xl border border-slate-200 font-bold text-slate-600 hover:bg-slate-50 transition active:scale-95">
+                            {{ confirmState.cancelText }}
+                        </button>
+                        <button @click="closeConfirm(true)"
+                            class="flex-1 py-3.5 rounded-2xl font-bold text-white transition active:scale-95 shadow-lg"
+                            :class="{
+                                'bg-red-500 hover:bg-red-600 shadow-red-200': confirmState.type === 'danger',
+                                'bg-orange-500 hover:bg-orange-600 shadow-orange-200': confirmState.type === 'warning',
+                                'bg-primary hover:bg-blue-800 shadow-blue-200': confirmState.type === 'info'
+                            }">
+                            {{ confirmState.confirmText }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </transition>
+
     </div>
 
     <!-- Core Logic -->
@@ -1540,7 +1583,7 @@
 
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js?v=3.3').then(reg => {
+                navigator.serviceWorker.register('sw.js?v=3.5').then(reg => {
                     console.log('SW Registered!', reg);
 
                     // 1. Check if update is already waiting (e.g. from previous visit)

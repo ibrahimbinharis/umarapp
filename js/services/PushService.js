@@ -18,7 +18,7 @@ const PushService = {
         }
 
         // Cek jika user sudah login
-        const session = JSON.parse(localStorage.getItem('user_session'));
+        const session = JSON.parse(localStorage.getItem('tahfidz_session'));
         if (!session || !session._id) return;
 
         // Coba aktifkan
@@ -42,7 +42,7 @@ const PushService = {
         try {
             const permission = await Notification.requestPermission();
             if (permission === 'granted') {
-                const session = JSON.parse(localStorage.getItem('user_session'));
+                const session = JSON.parse(localStorage.getItem('tahfidz_session'));
                 if (session && session._id) {
                     await this.subscribeUser(session._id);
                     return true;

@@ -433,7 +433,7 @@ const DashboardView = {
                             <span class="text-xs">Tidak ada notifikasi dalam kategori ini</span>
                         </div>
                         
-                        <div v-else v-for="notif in currentTabNotifications" :key="notif.id" 
+                        <div v-else v-for="notif in currentTabNotifications" :key="notif._id || notif.id" 
                             class="p-3 border-b border-slate-50 hover:bg-slate-50 transition cursor-pointer relative group"
                             :class="{'bg-blue-50/30': !notif.is_read}"
                             @click="handleNotifClick(notif)">

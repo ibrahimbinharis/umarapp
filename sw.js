@@ -1,4 +1,4 @@
-const CACHE_NAME = "v3.4";
+const CACHE_NAME = "v3.5";
 const ASSETS_TO_CACHE = [
     "./",
     "./index.html",
@@ -141,7 +141,7 @@ self.addEventListener('push', (event) => {
     const options = {
         body: data.body,
         icon: data.icon || 'image/192pxlogo_new.png',
-        badge: 'image/150x150.png', // Transparent small icon for notification bar
+        badge: 'image/192pxlogo_new.png', // Transparent small icon for notification bar
         vibrate: [100, 50, 100],
         data: {
             url: data.url || './index.html'
@@ -186,4 +186,3 @@ self.addEventListener('notificationclick', (event) => {
         })
     );
 });
-

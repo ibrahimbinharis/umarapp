@@ -1,9 +1,10 @@
 const NotificationView = {
     props: ['notifications', 'unreadCount', 'uiData'],
-    emits: ['mark-read', 'mark-all-read', 'navigate', 'back'],
+    emits: ['mark-read', 'mark-all-read', 'clear-read', 'navigate', 'back', 'show-confirm'],
     setup(props, { emit }) {
         const { ref, computed } = Vue;
         const activeFilter = ref('all');
+        const clearingIds = ref([]);
 
         const formatDate = window.formatDate || ((d) => d);
 
@@ -21,6 +22,28 @@ const NotificationView = {
             if (notif.source_id && notif.source_id.startsWith('ann_')) {
                 emit('navigate', 'pengumuman');
             }
+        };
+
+        const clearRead = () => {
+            const readNotifs = props.notifications.filter(n => n.is_read);
+            if (readNotifs.length === 0) return;
+
+            emit('show-confirm', {
+                title: 'Bersihkan Notifikasi',
+                message: `Apakah Anda yakin ingin menghapus ${readNotifs.length} notifikasi yang sudah dibaca?`,
+                confirmText: 'Ya, Bersihkan',
+                type: 'danger',
+                onConfirm: () => {
+                    // 1. Mark for animation
+                    clearingIds.value = readNotifs.map(n => n._id);
+
+                    // 2. Wait for animation (500ms)
+                    setTimeout(() => {
+                        emit('clear-read');
+                        clearingIds.value = [];
+                    }, 500);
+                }
+            });
         };
 
         const filteredNotifications = computed(() => {
@@ -62,6 +85,8 @@ const NotificationView = {
             filters,
             formatDate,
             handleNotifClick,
+            clearRead,
+            clearingIds,
             stripHtml
         };
     },
@@ -76,9 +101,15 @@ const NotificationView = {
                     </button>
                     <h1 class="font-bold text-lg text-slate-800">Notifikasi</h1>
                 </div>
-                <button @click="$emit('mark-all-read')" class="text-xs font-bold text-blue-600 px-3 py-1.5 bg-blue-50 rounded-lg hover:bg-blue-100 transition">
-                    Baca Semua
-                </button>
+                <div class="flex items-center gap-2">
+                    <button v-if="notifications.some(n => n.is_read)" @click="clearRead" 
+                        class="text-[10px] font-bold text-red-500 px-2 py-1 hover:bg-red-50 rounded-md transition active:scale-95">
+                        Hapus Semua
+                    </button>
+                    <button @click="$emit('mark-all-read')" class="text-[10px] font-bold text-blue-600 px-2.5 py-1.5 bg-blue-50 rounded-lg hover:bg-blue-100 transition">
+                        Baca Semua
+                    </button>
+                </div>
             </div>
 
             <!-- Filters -->
@@ -95,7 +126,7 @@ const NotificationView = {
         </div>
 
         <!-- Content -->
-        <div class="p-4 space-y-3">
+        <div class="p-4 space-y-3 overflow-x-hidden">
             <div v-if="filteredNotifications.length === 0" class="flex flex-col items-center justify-center py-20 text-slate-400">
                 <div class="size-16 rounded-full bg-slate-50 flex items-center justify-center mb-4">
                     <span class="material-symbols-outlined text-3xl opacity-30">notifications_off</span>
@@ -106,7 +137,10 @@ const NotificationView = {
 
             <div v-else v-for="notif in filteredNotifications" :key="notif._id"
                 class="bg-white p-4 rounded-xl border border-slate-100 shadow-sm hover:shadow-md transition-all cursor-pointer relative overflow-hidden group"
-                :class="{'ring-1 ring-blue-100 bg-blue-50/20': !notif.is_read}"
+                :class="{
+                    'ring-1 ring-blue-100 bg-blue-50/20': !notif.is_read,
+                    'notif-swipe-out': clearingIds.includes(notif._id)
+                }"
                 @click="handleNotifClick(notif)">
                 
                 <!-- Unread Indicator Strip -->

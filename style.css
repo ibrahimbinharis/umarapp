@@ -269,3 +269,16 @@ textarea {
 .prose u {
     text-decoration: underline;
 }
+
+/* Notif Swipe Animation */
+.notif-swipe-out {
+    animation: swipe-out 0.5s cubic-bezier(0.65, 0, 0.35, 1) forwards;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+@keyframes swipe-out {
+    0% { transform: translateX(0); opacity: 1; max-height: 200px; margin-bottom: 0.75rem; }
+    40% { transform: translateX(110%); opacity: 0; max-height: 200px; margin-bottom: 0.75rem; }
+    100% { transform: translateX(110%); opacity: 0; max-height: 0; margin-bottom: 0; padding: 0; border-width: 0; }
+}
