@@ -75,11 +75,11 @@ const useRekap = (uiData, userSession) => { // Accept uiData and userSession
 
             // Reload local data
             if (window.refreshData) window.refreshData();
-            alert("Pengaturan Berhasil Disimpan");
+            window.showAlert("Pengaturan Berhasil Disimpan", "Sukses", "info");
             return true;
         } catch (e) {
             console.error("Save Settings Error", e);
-            alert("Gagal menyimpan pengaturan: " + e.message);
+            window.showAlert("Gagal menyimpan pengaturan: " + e.message, "Error", "danger");
             return false;
         }
     };
@@ -284,7 +284,7 @@ const useRekap = (uiData, userSession) => { // Accept uiData and userSession
 
     const exportToPDF = () => {
         if (!window.jspdf) {
-            alert("Library PDF belum dimuat. Coba refresh halaman.");
+            window.showAlert("Library PDF belum dimuat. Coba refresh halaman.", "Peringatan", "warning");
             return;
         }
 
@@ -342,7 +342,7 @@ const useRekap = (uiData, userSession) => { // Accept uiData and userSession
 
     const exportToExcel = () => {
         if (!window.XLSX) {
-            alert("Library Excel belum dimuat.");
+            window.showAlert("Library Excel belum dimuat.", "Peringatan", "warning");
             return;
         }
 

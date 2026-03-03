@@ -159,8 +159,8 @@ function useSantri(uiData, DB, userSession, modalState, refreshData, searchText)
     };
 
     const saveSantri = async () => {
-        if (!santriForm.full_name) return alert("Nama Lengkap wajib diisi");
-        if (!santriForm.class_id) return alert("Kelas wajib dipilih");
+        if (!santriForm.full_name) return window.showAlert("Nama Lengkap wajib diisi", "Peringatan", "warning");
+        if (!santriForm.class_id) return window.showAlert("Kelas wajib dipilih", "Peringatan", "warning");
 
         // Format Phone (62xxx)
         let phone = String(santriForm.parent_phone || '').replace(/\D/g, '');
@@ -193,7 +193,7 @@ function useSantri(uiData, DB, userSession, modalState, refreshData, searchText)
             } else {
                 // Check Duplicate NIS
                 const exist = uiData.santri.find(s => s.nis === santriForm.nis);
-                if (exist) return alert("NIS sudah digunakan!");
+                if (exist) return window.showAlert("NIS sudah digunakan!", "Duplikat", "warning");
 
                 // Add default password for new santri if empty
                 if (!payload.password) payload.password = '123';
@@ -203,112 +203,113 @@ function useSantri(uiData, DB, userSession, modalState, refreshData, searchText)
 
             modalState.isOpen = false;
             refreshData(); // Call global refresh
-            alert("Data Santri Berhasil Disimpan");
+            window.showAlert("Data Santri Berhasil Disimpan", "Sukses", "info");
         } catch (e) {
             console.error(e);
-            alert("Gagal menyimpan: " + e.message);
+            window.showAlert("Gagal menyimpan: " + e.message, "Error", "danger");
         }
     };
 
     const deleteSantri = async (item) => {
-        if (!confirm(`Hapus santri ${item.full_name}? SEMUA data terkait akan dipindahkan ke sampah (Soft Delete).`)) return;
+        window.showConfirm({
+            title: 'Hapus Santri',
+            message: `Hapus santri ${item.full_name}? SEMUA data terkait akan dipindahkan ke sampah (Soft Delete).`,
+            confirmText: 'Ya, Hapus',
+            type: 'danger',
+            onConfirm: async () => {
+                try {
+                    // Cascading Soft Delete
+                    const targetId = item._id;
+                    const targetNis = item.nis || item.santri_id; // Linking key
 
-        try {
-            // Cascading Soft Delete
-            const targetId = item._id;
-            const targetNis = item.nis || item.santri_id; // Linking key
+                    const allData = DB.getAll();
+                    const itemsToSoftDelete = [];
 
-            const allData = DB.getAll();
+                    // Identify items to soft delete
+                    for (const d of allData) {
+                        let shouldDelete = false;
 
-            // We don't remove from array anymore, we update _deleted = true
-            // But for UI reactivity, we might need to trigger reactivity or filter it out.
-            // Since loadData() filters _deleted, we just need to mark them and call refreshData().
+                        // 1. The Santri itself
+                        if (d._id === targetId) shouldDelete = true;
 
-            const itemsToSoftDelete = [];
+                        // 2. Related Data (Setoran, Ujian, Absensi, Pelanggaran, etc)
+                        else if (d.santri_id && (String(d.santri_id) === String(targetNis) || d.santri_id === targetId)) shouldDelete = true;
+                        else if (d.user_id && (d.user_id === targetId || String(d.user_id) === String(targetNis))) shouldDelete = true;
 
-            // Identify items to soft delete
-            for (const d of allData) {
-                let shouldDelete = false;
+                        if (shouldDelete) {
+                            d._deleted = true; // Mark local data
+                            d.updated_at = new Date().toISOString();
+                            itemsToSoftDelete.push(d);
+                        }
+                    }
 
-                // 1. The Santri itself
-                if (d._id === targetId) shouldDelete = true;
+                    // Queue UPDATES for Cloud
+                    for (const d of itemsToSoftDelete) {
+                        if (d.__type) {
+                            DB.addToQueue('update', d.__type, { _id: d._id, _deleted: true });
+                        }
+                    }
 
-                // 2. Related Data (Setoran, Ujian, Absensi, Pelanggaran, etc)
-                else if (d.santri_id && (String(d.santri_id) === String(targetNis) || d.santri_id === targetId)) shouldDelete = true;
-                else if (d.user_id && (d.user_id === targetId || String(d.user_id) === String(targetNis))) shouldDelete = true;
+                    DB.saveAll(allData);
+                    DB.triggerAutoSync();
 
-                if (shouldDelete) {
-                    d._deleted = true; // Mark local data
-                    d.updated_at = new Date().toISOString();
-                    itemsToSoftDelete.push(d);
+                    refreshData();
+                    window.showAlert("Santri dan data terkait berhasil dihapus", "Informasi", "info");
+                } catch (e) {
+                    console.error(e);
+                    window.showAlert("Gagal hapus: " + e.message, "Error", "danger");
                 }
             }
-
-            // Queue UPDATES for Cloud (Action: Update, Payload: { _id, _deleted: true })
-            for (const d of itemsToSoftDelete) {
-                if (d.__type) {
-                    DB.addToQueue('update', d.__type, { _id: d._id, _deleted: true });
-                }
-            }
-
-            DB.saveAll(allData); // Save the modifications (filtering happens in loadData)
-            DB.triggerAutoSync();
-
-            refreshData(); // Re-runs loadData which filters out _deleted
-            alert("Santri dan data terkait berhasil dihapus (Soft Delete)");
-        } catch (e) {
-            console.error(e);
-            alert("Gagal hapus: " + e.message);
-        }
+        });
     };
 
     const restoreSantri = async (item) => {
-        if (!confirm(`Kembalikan santri ${item.full_name} beserta seluruh datanya?`)) return;
+        window.showConfirm({
+            title: 'Kembalikan Santri',
+            message: `Kembalikan santri ${item.full_name} beserta seluruh datanya?`,
+            confirmText: 'Ya, Balikkan',
+            type: 'info',
+            onConfirm: async () => {
+                try {
+                    // Cascading Restore
+                    const targetId = item._id;
+                    const targetNis = item.nis || item.santri_id;
 
-        try {
-            // Cascading Restore
-            const targetId = item._id;
-            const targetNis = item.nis || item.santri_id;
+                    const allData = DB.getAll();
+                    const itemsToRestore = [];
 
-            const allData = DB.getAll(); // Contains _deleted items
-            const itemsToRestore = [];
+                    for (const d of allData) {
+                        if (d._deleted !== true && d._deleted !== 'true') continue;
 
-            // Identify items to restore (Must be currently deleted)
-            for (const d of allData) {
-                if (d._deleted !== true && d._deleted !== 'true') continue;
+                        let shouldRestore = false;
+                        if (d._id === targetId) shouldRestore = true;
+                        else if (d.santri_id && (String(d.santri_id) === String(targetNis) || d.santri_id === targetId)) shouldRestore = true;
+                        else if (d.user_id && (d.user_id === targetId || String(d.user_id) === String(targetNis))) shouldRestore = true;
 
-                let shouldRestore = false;
+                        if (shouldRestore) {
+                            d._deleted = false;
+                            d.updated_at = new Date().toISOString();
+                            itemsToRestore.push(d);
+                        }
+                    }
 
-                // 1. The Santri itself
-                if (d._id === targetId) shouldRestore = true;
+                    for (const d of itemsToRestore) {
+                        if (d.__type) {
+                            DB.addToQueue('update', d.__type, { _id: d._id, _deleted: false });
+                        }
+                    }
 
-                // 2. Related Data
-                else if (d.santri_id && (String(d.santri_id) === String(targetNis) || d.santri_id === targetId)) shouldRestore = true;
-                else if (d.user_id && (d.user_id === targetId || String(d.user_id) === String(targetNis))) shouldRestore = true;
+                    DB.saveAll(allData);
+                    DB.triggerAutoSync();
 
-                if (shouldRestore) {
-                    d._deleted = false; // RESTORE
-                    d.updated_at = new Date().toISOString();
-                    itemsToRestore.push(d);
+                    refreshData();
+                    window.showAlert("Santri dan data terkait berhasil dikembalikan", "Informasi", "info");
+                } catch (e) {
+                    console.error(e);
+                    window.showAlert("Gagal restore: " + e.message, "Error", "danger");
                 }
             }
-
-            // Queue UPDATES for Cloud (Action: Update, Payload: { _id, _deleted: false })
-            for (const d of itemsToRestore) {
-                if (d.__type) {
-                    DB.addToQueue('update', d.__type, { _id: d._id, _deleted: false });
-                }
-            }
-
-            DB.saveAll(allData);
-            DB.triggerAutoSync();
-
-            refreshData();
-            alert("Santri dan data terkait berhasil dikembalikan (Restore)");
-        } catch (e) {
-            console.error(e);
-            alert("Gagal restore: " + e.message);
-        }
+        });
     };
 
     return {

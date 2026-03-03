@@ -244,24 +244,30 @@ const useRiwayat = (uiData, DB, refreshData, modules = {}, currentView, userSess
 
     const deleteSelected = async () => {
         if (!riwayatState.selectedIds.length) return;
-        if (!confirm(`Yakin hapus ${riwayatState.selectedIds.length} data terpilih?`)) return;
 
-        try {
-            await Promise.all(riwayatState.selectedIds.map(async id => {
-                await DB.delete(id);
-                // --- NOTIFICATION RECALL (v36) ---
-                if (window.NotificationService) {
-                    await window.NotificationService.removeBySource(id);
+        window.showConfirm({
+            title: 'Hapus Terpilih',
+            message: `Yakin hapus ${riwayatState.selectedIds.length} data terpilih?`,
+            confirmText: 'Ya, Hapus',
+            type: 'danger',
+            onConfirm: async () => {
+                try {
+                    await Promise.all(riwayatState.selectedIds.map(async id => {
+                        await DB.delete(id);
+                        if (window.NotificationService) {
+                            await window.NotificationService.removeBySource(id);
+                        }
+                    }));
+
+                    refreshData();
+                    riwayatState.selectedIds = [];
+                    window.showAlert("Data terpilih berhasil dihapus", "Sukses", "info");
+                } catch (e) {
+                    console.error("Gagal hapus banyak:", e);
+                    window.showAlert("Gagal menghapus sebagian data: " + e.message, "Error", "danger");
                 }
-            }));
-
-            refreshData();
-            riwayatState.selectedIds = [];
-            alert("Data terpilih berhasil dihapus");
-        } catch (e) {
-            console.error("Gagal hapus banyak:", e);
-            alert("Gagal menghapus sebagian data: " + e.message);
-        }
+            }
+        });
     };
 
     const toggleActionMenu = (id) => {
@@ -360,25 +366,26 @@ const useRiwayat = (uiData, DB, refreshData, modules = {}, currentView, userSess
         // Handle input: arg can be ID string or Item object
         const id = (typeof arg === 'object' && arg !== null) ? arg._id : arg;
 
-        if (!id) return alert("ID invalid");
+        if (!id) return window.showAlert("ID tidak valid", "Peringatan", "warning");
 
-        // type might be useful if we have different collections, but DB.delete(id) uses global ID
-        if (!confirm("Yakin hapus data riwayat ini? Data tidak bisa dikembalikan.")) return;
-
-        try {
-            await DB.delete(id);
-
-            // --- NOTIFICATION RECALL (v36) ---
-            if (window.NotificationService) {
-                await window.NotificationService.removeBySource(id);
+        window.showConfirm({
+            title: 'Hapus Riwayat',
+            message: 'Yakin hapus data riwayat ini? Data tidak bisa dikembalikan.',
+            confirmText: 'Ya, Hapus',
+            type: 'danger',
+            onConfirm: async () => {
+                try {
+                    await DB.delete(id);
+                    if (window.NotificationService) {
+                        await window.NotificationService.removeBySource(id);
+                    }
+                    refreshData();
+                } catch (e) {
+                    console.error("Gagal hapus riwayat:", e);
+                    window.showAlert("Gagal menghapus data: " + e.message, "Error", "danger");
+                }
             }
-
-            refreshData(); // Refresh UI
-            // alert("Data berhasil dihapus"); // Optional feedback
-        } catch (e) {
-            console.error("Gagal hapus riwayat:", e);
-            alert("Gagal menghapus data: " + e.message);
-        }
+        });
     };
 
     // --- HELPERS ---

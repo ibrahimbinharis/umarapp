@@ -114,12 +114,12 @@ function usePelanggaran(uiData, DB, refreshData) {
     const submitPelanggaran = async () => {
         // Validation
         if (!pelanggaranForm.santri_id) {
-            alert('Pilih santri terlebih dahulu');
+            window.showAlert('Pilih santri terlebih dahulu', 'Peringatan', 'warning');
             return;
         }
 
         if (!pelanggaranForm.description) {
-            alert('Pilih jenis pelanggaran');
+            window.showAlert('Pilih jenis pelanggaran', 'Peringatan', 'warning');
             return;
         }
 
@@ -136,7 +136,7 @@ function usePelanggaran(uiData, DB, refreshData) {
 
             if (editingId.value) {
                 await DB.update(editingId.value, payload);
-                alert('Pelanggaran berhasil diupdate');
+                window.showAlert('Pelanggaran berhasil diupdate', 'Sukses', 'info');
 
                 // --- NOTIFICATION UPDATE (v36) ---
                 const santri = uiData.santri.find(s => s._id === payload.santri_id || s.santri_id === payload.santri_id);
@@ -147,7 +147,7 @@ function usePelanggaran(uiData, DB, refreshData) {
                 editingId.value = null; // Reset
             } else {
                 const res = await DB.create('pelanggaran', payload);
-                alert('Pelanggaran berhasil disimpan');
+                window.showAlert('Pelanggaran berhasil disimpan', 'Sukses', 'info');
 
                 // --- NOTIFICATION TRIGGER (v36) ---
                 const santri = uiData.santri.find(s => s._id === payload.santri_id || s.santri_id === payload.santri_id);
@@ -167,7 +167,7 @@ function usePelanggaran(uiData, DB, refreshData) {
             }
         } catch (error) {
             console.error('Error submitting pelanggaran:', error);
-            alert('Gagal menyimpan pelanggaran: ' + error.message);
+            window.showAlert('Gagal menyimpan pelanggaran: ' + error.message, 'Error', 'danger');
         }
     };
 
@@ -202,28 +202,25 @@ function usePelanggaran(uiData, DB, refreshData) {
      * @param {string} id - Record ID to delete
      */
     const deletePelanggaran = async (id) => {
-        if (!confirm('Hapus data pelanggaran ini?')) {
-            return;
-        }
-
-        try {
-            await DB.delete(id);
-
-            // --- NOTIFICATION RECALL (v36) ---
-            if (window.NotificationService) {
-                window.NotificationService.removeBySource(id);
+        window.showConfirm({
+            title: 'Hapus Pelanggaran',
+            message: 'Hapus data pelanggaran ini?',
+            confirmText: 'Ya, Hapus',
+            type: 'danger',
+            onConfirm: async () => {
+                try {
+                    await DB.delete(id);
+                    if (window.NotificationService) {
+                        window.NotificationService.removeBySource(id);
+                    }
+                    window.showAlert('Data berhasil dihapus', 'Sukses', 'info');
+                    if (refreshData) refreshData();
+                } catch (error) {
+                    console.error('Error deleting pelanggaran:', error);
+                    window.showAlert('Gagal menghapus data: ' + error.message, 'Error', 'danger');
+                }
             }
-
-            alert('Data berhasil dihapus');
-
-            // Trigger refresh if available
-            if (refreshData) {
-                refreshData();
-            }
-        } catch (error) {
-            console.error('Error deleting pelanggaran:', error);
-            alert('Gagal menghapus data: ' + error.message);
-        }
+        });
     };
 
     /**
@@ -253,12 +250,12 @@ function usePelanggaran(uiData, DB, refreshData) {
      */
     const saveMasterPelanggaran = async () => {
         if (!masterPelanggaranForm.name) {
-            alert('Nama pelanggaran wajib diisi');
+            window.showAlert('Nama pelanggaran wajib diisi', 'Peringatan', 'warning');
             return;
         }
 
         if (!masterPelanggaranForm.points || masterPelanggaranForm.points < 0) {
-            alert('Poin harus diisi dengan angka positif');
+            window.showAlert('Poin harus diisi dengan angka positif', 'Peringatan', 'warning');
             return;
         }
 
@@ -281,7 +278,7 @@ function usePelanggaran(uiData, DB, refreshData) {
             masterPelanggaranForm.name = '';
             masterPelanggaranForm.points = 10;
 
-            alert('Data berhasil disimpan');
+            window.showAlert('Data berhasil disimpan', 'Sukses', 'info');
 
             // Trigger refresh if available
             if (window.refreshData) {
@@ -291,7 +288,7 @@ function usePelanggaran(uiData, DB, refreshData) {
             return { success: true };
         } catch (error) {
             console.error('Error saving master pelanggaran:', error);
-            alert('Gagal menyimpan data: ' + error.message);
+            window.showAlert('Gagal menyimpan data: ' + error.message, 'Error', 'danger');
             return { success: false, error };
         }
     };
@@ -301,22 +298,22 @@ function usePelanggaran(uiData, DB, refreshData) {
      * @param {string} id - Master type ID to delete
      */
     const deleteMasterPelanggaran = async (id) => {
-        if (!confirm('Hapus jenis pelanggaran ini?')) {
-            return;
-        }
-
-        try {
-            await DB.delete(id);
-            alert('Jenis pelanggaran berhasil dihapus');
-
-            // Trigger refresh if available
-            if (window.refreshData) {
-                window.refreshData();
+        window.showConfirm({
+            title: 'Hapus Jenis',
+            message: 'Hapus jenis pelanggaran ini?',
+            confirmText: 'Ya, Hapus',
+            type: 'danger',
+            onConfirm: async () => {
+                try {
+                    await DB.delete(id);
+                    window.showAlert('Jenis pelanggaran berhasil dihapus', 'Sukses', 'info');
+                    if (window.refreshData) window.refreshData();
+                } catch (error) {
+                    console.error('Error deleting master pelanggaran:', error);
+                    window.showAlert('Gagal menghapus data: ' + error.message, 'Error', 'danger');
+                }
             }
-        } catch (error) {
-            console.error('Error deleting master pelanggaran:', error);
-            alert('Gagal menghapus data: ' + error.message);
-        }
+        });
     };
 
     /**

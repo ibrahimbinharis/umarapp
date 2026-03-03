@@ -72,7 +72,8 @@ function useKelas(uiData, DB) {
     const saveKelas = async () => {
         // Validation
         if (!kelasForm.name || !kelasForm.name.trim()) {
-            return alert("Nama Kelas wajib diisi");
+            window.showAlert("Nama Kelas wajib diisi", "Peringatan", "warning");
+            return;
         }
 
         try {
@@ -95,11 +96,11 @@ function useKelas(uiData, DB) {
 
             // Close modal and show success
             closeKelasModal();
-            alert(kelasForm.id ? "Kelas berhasil diupdate!" : "Kelas berhasil ditambahkan!");
+            window.showAlert(kelasForm.id ? "Kelas berhasil diupdate!" : "Kelas berhasil ditambahkan!", "Sukses", "info");
 
         } catch (error) {
             console.error('Error saving kelas:', error);
-            alert('Gagal menyimpan kelas: ' + error.message);
+            window.showAlert('Gagal menyimpan kelas: ' + error.message, "Error", "danger");
         }
     };
 
@@ -108,21 +109,22 @@ function useKelas(uiData, DB) {
      * @param {string} id - Kelas ID to delete
      */
     const deleteKelas = async (id) => {
-        if (!confirm("Hapus kelas ini?")) return;
-
-        try {
-            await DB.delete(id);
-
-            // Refresh UI
-            if (window.refreshData) {
-                window.refreshData();
+        window.showConfirm({
+            title: 'Hapus Kelas',
+            message: 'Hapus kelas ini?',
+            confirmText: 'Ya, Hapus',
+            type: 'danger',
+            onConfirm: async () => {
+                try {
+                    await DB.delete(id);
+                    if (window.refreshData) window.refreshData();
+                    window.showAlert("Kelas berhasil dihapus!", "Sukses", "info");
+                } catch (error) {
+                    console.error('Error deleting kelas:', error);
+                    window.showAlert('Gagal menghapus kelas: ' + error.message, "Error", "danger");
+                }
             }
-
-            alert("Kelas berhasil dihapus!");
-        } catch (error) {
-            console.error('Error deleting kelas:', error);
-            alert('Gagal menghapus kelas: ' + error.message);
-        }
+        });
     };
 
     // FAB Click State

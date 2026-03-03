@@ -1,7 +1,7 @@
 // --- 1. CONFIG & DATABASE (SUPABASE v37) ---
 const APP_CONFIG = {
     appName: "E-Umar",
-    version: "v3.5",
+    version: "v3.6",
     supabaseUrl: "https://fxtmilqvxomuvkxxzjli.supabase.co",
     supabaseKey: "sb_publishable_aXcK3znrtRo0d3gH-Wg1Ew_-0Z3262O"
 };
@@ -582,10 +582,24 @@ function updateSyncUI(status, msg) {
 }
 
 async function deleteData(id, pageToReload) {
-    if (!confirm("Yakin hapus data ini?")) return;
-    await DB.delete(id);
-    if (window.navigate) window.navigate(pageToReload);
-    else console.warn("Navigate not found");
+    if (window.showConfirm) {
+        window.showConfirm({
+            title: 'Hapus Data',
+            message: 'Yakin hapus data ini?',
+            confirmText: 'Ya, Hapus',
+            type: 'danger',
+            onConfirm: async () => {
+                await DB.delete(id);
+                if (window.refreshData) window.refreshData();
+                else window.location.reload();
+            }
+        });
+    } else {
+        if (!confirm("Yakin hapus data ini?")) return;
+        await DB.delete(id);
+        if (window.refreshData) window.refreshData();
+        else window.location.reload();
+    }
 }
 
 function formatDateLong(isoString, timeOverride = null) {

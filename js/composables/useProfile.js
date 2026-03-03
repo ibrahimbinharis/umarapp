@@ -35,8 +35,8 @@ function useProfile(uiData, DB, userSession, refreshData) {
     };
 
     const saveProfile = async () => {
-        if (!profileForm.full_name) return alert("Nama wajib diisi");
-        if (!profileForm.username) return alert("Username wajib diisi");
+        if (!profileForm.full_name) return window.showAlert("Nama wajib diisi", "Peringatan", "warning");
+        if (!profileForm.username) return window.showAlert("Username wajib diisi", "Peringatan", "warning");
 
         // We can't access 'loading' ref from here directly unless passed or we use a local one?
         // Usually composables return 'loading' or we rely on parent's loading if passed.
@@ -99,7 +99,7 @@ function useProfile(uiData, DB, userSession, refreshData) {
             // Persistence
             localStorage.setItem('tahfidz_session', JSON.stringify(userSession.value));
 
-            alert("Profil berhasil disimpan");
+            window.showAlert("Profil berhasil disimpan", "Sukses", "info");
 
             // Clear password and re-sync form
             profileForm.password = '';
@@ -113,24 +113,31 @@ function useProfile(uiData, DB, userSession, refreshData) {
             return true;
         } catch (e) {
             console.error("Save Profile Error:", e);
-            alert("Gagal menyimpan profil: " + e.message);
+            window.showAlert("Gagal menyimpan profil: " + e.message, "Error", "danger");
             return false;
         }
     };
 
     const deletePhoto = async () => {
         if (!userSession.value.photo_url) return;
-        if (!confirm("Hapus foto profil?")) return;
 
-        try {
-            await DB.update(userSession.value._id, { photo_url: null });
-            userSession.value.photo_url = null;
-            localStorage.setItem('tahfidz_session', JSON.stringify(userSession.value));
-            alert("Foto profil berhasil dihapus");
-        } catch (e) {
-            console.error(e);
-            alert("Gagal menghapus foto profil");
-        }
+        window.showConfirm({
+            title: 'Hapus Foto',
+            message: 'Hapus foto profil?',
+            confirmText: 'Ya, Hapus',
+            type: 'danger',
+            onConfirm: async () => {
+                try {
+                    await DB.update(userSession.value._id, { photo_url: null });
+                    userSession.value.photo_url = null;
+                    localStorage.setItem('tahfidz_session', JSON.stringify(userSession.value));
+                    window.showAlert("Foto profil berhasil dihapus", "Sukses", "info");
+                } catch (e) {
+                    console.error(e);
+                    window.showAlert("Gagal menghapus foto profil", "Error", "danger");
+                }
+            }
+        });
     };
 
     // --- PHOTO UPLOAD LOGIC ---
@@ -196,13 +203,13 @@ function useProfile(uiData, DB, userSession, refreshData) {
                 await DB.update(userSession.value._id, { photo_url: json.url });
                 userSession.value.photo_url = json.url;
                 localStorage.setItem('tahfidz_session', JSON.stringify(userSession.value));
-                alert("Foto berhasil diubah! (Mungkin butuh waktu untuk muncul)");
+                window.showAlert("Foto berhasil diubah! (Mungkin butuh waktu untuk muncul)", "Sukses", "info");
             } else {
                 throw new Error(json.error || "Upload gagal");
             }
         } catch (e) {
             console.error(e);
-            alert("Gagal upload foto: " + e.message);
+            window.showAlert("Gagal upload foto: " + e.message, "Error", "danger");
         }
     };
 
@@ -238,8 +245,8 @@ function useProfile(uiData, DB, userSession, refreshData) {
      * @param {string} nis - NIS Santri
      */
     const linkSantri = async (nis) => {
-        if (!nis) return alert('NIS wajib diisi');
-        if (userSession.value?.role !== 'wali') return alert('Fitur ini khusus Wali');
+        if (!nis) return window.showAlert('NIS wajib diisi', 'Peringatan', 'warning');
+        if (userSession.value?.role !== 'wali') return window.showAlert('Fitur ini khusus Wali', 'Peringatan', 'warning');
 
         try {
             console.log('🔍 Searching for NIS:', nis.trim());
@@ -257,52 +264,55 @@ function useProfile(uiData, DB, userSession, refreshData) {
             // Get first result
             const santri = santriList && santriList.length > 0 ? santriList[0] : null;
 
-            if (!santri) return alert('NIS tidak ditemukan');
-
-            // 2. Check if already linked to another Wali
             // 2. Check if already linked to another Wali (Allow override with confirmation)
             if (santri.wali_id && santri.wali_id !== userSession.value._id) {
-                const proceed = confirm(`Santri ini sudah terhubung ke akun Wali lain. Ambil alih sambungan ke akun Anda?`);
-                if (!proceed) return;
+                window.showConfirm({
+                    title: 'Ambil Alih Hubungan',
+                    message: `Santri ini sudah terhubung ke akun Wali lain. Ambil alih sambungan ke akun Anda?`,
+                    confirmText: 'Ya, Ambil Alih',
+                    type: 'warning',
+                    onConfirm: async () => {
+                        // Recurse or just perform the update part here
+                        await performLink(santri);
+                    }
+                });
+                return;
             }
 
-            // 3. Link to current Wali
+            await performLink(santri);
+        } catch (e) {
+            console.error('Error linking santri:', e);
+            window.showAlert('Gagal menghubungkan santri: ' + e.message, 'Error', 'danger');
+        }
+    };
+
+    // Helper for Linking logic to avoid duplication after confirm
+    const performLink = async (santri) => {
+        try {
             const { error: updateError } = await sb.from('santri')
                 .update({ wali_id: userSession.value._id })
                 .eq('_id', santri._id);
 
             if (updateError) throw updateError;
 
-            // 4. Update local state immediately
-            // Manual update ensures instant UI feedback without waiting for network
             await DB.update(santri._id, { wali_id: userSession.value._id });
 
             const linked = { ...santri, wali_id: userSession.value._id };
-            // Remove if exists to prevent duplicates
             linkedSantri.value = linkedSantri.value.filter(s => s._id !== linked._id);
             linkedSantri.value.push(linked);
 
-            // Background fetch to ensure sync
             getLinkedSantri();
+            nisInput.value = '';
+            window.showAlert(`Berhasil menghubungkan dengan ${santri.full_name}`, "Sukses", "info");
 
-            nisInput.value = ''; // Reset input
-            alert(`Berhasil menghubungkan dengan ${santri.full_name}`);
-
-            // Manual update of global UI state for immediate Dashboard visibility
             if (uiData && uiData.santri) {
                 const existingInUi = uiData.santri.find(s => s._id === linked._id);
-                if (!existingInUi) {
-                    uiData.santri.push(linked);
-                }
+                if (!existingInUi) uiData.santri.push(linked);
             }
 
-            if (refreshData) {
-                console.log("Refreshing global data...");
-                refreshData();
-            }
+            if (refreshData) refreshData();
         } catch (e) {
-            console.error('Error linking santri:', e);
-            alert('Gagal menghubungkan santri: ' + e.message);
+            window.showAlert('Gagal menghubungkan: ' + e.message, 'Error', 'danger');
         }
     };
 
@@ -311,24 +321,29 @@ function useProfile(uiData, DB, userSession, refreshData) {
      * @param {string} santriId - ID Santri
      */
     const unlinkSantri = async (santriId) => {
-        if (!confirm('Putuskan hubungan dengan santri ini?')) return;
+        window.showConfirm({
+            title: 'Putus Hubungan',
+            message: 'Putuskan hubungan dengan santri ini?',
+            confirmText: 'Ya, Putuskan',
+            type: 'danger',
+            onConfirm: async () => {
+                try {
+                    const { error } = await sb.from('santri')
+                        .update({ wali_id: null })
+                        .eq('_id', santriId);
+                    if (error) throw error;
 
-        try {
-            const { error } = await sb.from('santri')
-                .update({ wali_id: null })
-                .eq('_id', santriId);
+                    await DB.update(santriId, { wali_id: null });
+                    await getLinkedSantri();
 
-            if (error) throw error;
-
-            await DB.update(santriId, { wali_id: null });
-            await getLinkedSantri();
-
-            alert('Hubungan berhasil diputuskan');
-            if (refreshData) refreshData();
-        } catch (e) {
-            console.error('Error unlinking santri:', e);
-            alert('Gagal memutuskan hubungan: ' + e.message);
-        }
+                    window.showAlert('Hubungan berhasil diputuskan', 'Sukses', 'info');
+                    if (refreshData) refreshData();
+                } catch (e) {
+                    console.error('Error unlinking santri:', e);
+                    window.showAlert('Gagal memutuskan hubungan: ' + e.message, 'Error', 'danger');
+                }
+            }
+        });
     };
 
     return {

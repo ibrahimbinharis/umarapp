@@ -98,7 +98,7 @@ function usePengumuman(uiData, DB, userSession, refreshData) {
     /** Simpan (create atau edit) pengumuman */
     const savePengumuman = async () => {
         if (!form.judul.trim() || !form.isi.trim()) {
-            alert('Judul dan isi pengumuman tidak boleh kosong.');
+            window.showAlert('Judul dan isi pengumuman tidak boleh kosong.', 'Peringatan', 'warning');
             return;
         }
 
@@ -126,7 +126,7 @@ function usePengumuman(uiData, DB, userSession, refreshData) {
 
                 // Update notifications (v37: Upsert will update existing records by ID)
                 await broadcastNotification(form._id, form.judul, form.isi, form.target, form.kategori);
-                alert('Pengumuman berhasil diperbarui dan notifikasi telah diupdate.');
+                window.showAlert('Pengumuman berhasil diperbarui dan notifikasi telah diupdate.', 'Sukses', 'info');
             } else {
                 // CREATE
                 const newId = `ann_${Date.now()}_${Math.random().toString(36).slice(-4)}`;
@@ -144,14 +144,14 @@ function usePengumuman(uiData, DB, userSession, refreshData) {
 
                 // Broadcast notifikasi ke semua user target
                 await broadcastNotification(newId, form.judul, form.isi, form.target, form.kategori);
-                alert('Pengumuman berhasil dipublish dan notifikasi telah dikirim.');
+                window.showAlert('Pengumuman berhasil dipublish dan notifikasi telah dikirim.', 'Sukses', 'info');
             }
 
             showFormModal.value = false;
             await loadPengumuman();
         } catch (err) {
             console.error('[Pengumuman] Gagal simpan:', err.message);
-            alert('Gagal menyimpan pengumuman: ' + err.message);
+            window.showAlert('Gagal menyimpan pengumuman: ' + err.message, 'Error', 'danger');
         } finally {
             isLoading.value = false;
         }
@@ -226,30 +226,35 @@ function usePengumuman(uiData, DB, userSession, refreshData) {
 
     /** Hapus pengumuman (soft delete) */
     const deletePengumuman = async (id) => {
-        if (!confirm('Hapus pengumuman ini? Notifikasi di lonceng user juga akan ditarik.')) return;
+        window.showConfirm({
+            title: 'Hapus Pengumuman',
+            message: 'Hapus pengumuman ini? Notifikasi di lonceng user juga akan ditarik.',
+            confirmText: 'Ya, Hapus',
+            type: 'danger',
+            onConfirm: async () => {
+                try {
+                    // 1. Soft delete pengumuman
+                    const { error: annErr } = await sb
+                        .from('pengumuman')
+                        .update({ _deleted: true })
+                        .eq('_id', id);
+                    if (annErr) throw annErr;
 
-        try {
-            // 1. Soft delete pengumuman
-            const { error: annErr } = await sb
-                .from('pengumuman')
-                .update({ _deleted: true })
-                .eq('_id', id);
+                    // 2. Recall notifikasi terkait (v37)
+                    const { error: notifErr } = await sb
+                        .from('notifications')
+                        .update({ _deleted: true })
+                        .eq('source_id', id);
+                    if (notifErr) console.warn('[Pengumuman] Gagal recall notif:', notifErr.message);
 
-            if (annErr) throw annErr;
-
-            // 2. Recall notifikasi terkait (v37)
-            const { error: notifErr } = await sb
-                .from('notifications')
-                .update({ _deleted: true })
-                .eq('source_id', id);
-
-            if (notifErr) console.warn('[Pengumuman] Gagal recall notif:', notifErr.message);
-
-            await loadPengumuman();
-        } catch (err) {
-            console.error('[Pengumuman] Gagal hapus:', err.message);
-            alert('Gagal menghapus: ' + err.message);
-        }
+                    await loadPengumuman();
+                    window.showAlert('Berhasil dihapus', 'Sukses', 'info');
+                } catch (err) {
+                    console.error('[Pengumuman] Gagal hapus:', err.message);
+                    window.showAlert('Gagal menghapus: ' + err.message, 'Error', 'danger');
+                }
+            }
+        });
     };
 
     /** Buka modal detail pengumuman */

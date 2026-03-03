@@ -765,7 +765,7 @@ function useSetoran(uiData, DB, refreshData) {
      */
     const saveSetoran = async () => {
         if (!setoranForm.santri_id) {
-            alert('Pilih Santri terlebih dahulu');
+            window.showAlert('Pilih Santri terlebih dahulu', 'Peringatan', 'warning');
             return;
         }
 
@@ -825,11 +825,11 @@ function useSetoran(uiData, DB, refreshData) {
                     window.NotificationService.notifySetoran(santri, setoranForm.setoran_type, setoranForm.pages, editingId.value);
                 }
 
-                alert('Setoran berhasil diupdate!');
+                window.showAlert('Setoran berhasil diupdate!', 'Sukses', 'info');
             } else {
                 // CREATE mode
                 const res = await DB.create('setoran', payload);
-                alert('Setoran berhasil disimpan!');
+                window.showAlert('Setoran berhasil disimpan!', 'Sukses', 'info');
 
                 // --- NOTIFICATION TRIGGER (v36) ---
                 const santri = uiData.santri.find(s => s.santri_id === setoranForm.santri_id || s._id === setoranForm.santri_id);
@@ -849,7 +849,7 @@ function useSetoran(uiData, DB, refreshData) {
             return true;
         } catch (error) {
             console.error('Error saving setoran:', error);
-            alert('Gagal menyimpan setoran: ' + error.message);
+            window.showAlert('Gagal menyimpan setoran: ' + error.message, 'Error', 'danger');
             return false;
         }
     };
@@ -860,30 +860,25 @@ function useSetoran(uiData, DB, refreshData) {
     const deleteSetoran = async (setoranId) => {
         if (!setoranId) return;
 
-        if (!confirm('Hapus data setoran ini?')) {
-            return;
-        }
-
-        try {
-            await DB.delete(setoranId);
-
-            // --- NOTIFICATION RECALL (v36) ---
-            if (window.NotificationService) {
-                window.NotificationService.removeBySource(setoranId);
+        window.showConfirm({
+            title: 'Hapus Setoran',
+            message: 'Hapus data setoran ini?',
+            confirmText: 'Ya, Hapus',
+            type: 'danger',
+            onConfirm: async () => {
+                try {
+                    await DB.delete(setoranId);
+                    if (window.NotificationService) {
+                        window.NotificationService.removeBySource(setoranId);
+                    }
+                    if (refreshData) refreshData();
+                    window.showAlert('Setoran berhasil dihapus!', 'Sukses', 'info');
+                } catch (error) {
+                    console.error('Error deleting setoran:', error);
+                    window.showAlert('Gagal menghapus setoran: ' + error.message, 'Error', 'danger');
+                }
             }
-
-            // Refresh data
-            if (refreshData) {
-                refreshData();
-            }
-
-            alert('Setoran berhasil dihapus!');
-            return true;
-        } catch (error) {
-            console.error('Error deleting setoran:', error);
-            alert('Gagal menghapus setoran: ' + error.message);
-            return false;
-        }
+        });
     };
 
     /**

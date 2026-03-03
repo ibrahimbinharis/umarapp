@@ -87,13 +87,13 @@ function useGuru(uiData, DB, modalState) {
     const saveGuru = async () => {
         // Validation
         if (!guruForm.full_name) {
-            alert('Nama wajib diisi');
+            window.showAlert('Nama wajib diisi', 'Peringatan', 'warning');
             return;
         }
 
         // For new guru, password is required
         if (!guruForm.id && !guruForm.password) {
-            alert('Password wajib diisi untuk guru baru');
+            window.showAlert('Password wajib diisi untuk guru baru', 'Peringatan', 'warning');
             return;
         }
 
@@ -120,15 +120,15 @@ function useGuru(uiData, DB, modalState) {
 
             modalState.isOpen = false; // Close generic modal
 
-            // Refresh data FIRST (before blocking alert)
+            // Refresh data FIRST
             if (window.refreshData) {
                 window.refreshData();
             }
 
-            alert('Data berhasil disimpan');
+            window.showAlert('Data berhasil disimpan', 'Sukses', 'info');
         } catch (error) {
             console.error('Error saving guru:', error);
-            alert('Gagal menyimpan data: ' + error.message);
+            window.showAlert('Gagal menyimpan data: ' + error.message, 'Error', 'danger');
         }
     };
 
@@ -137,23 +137,22 @@ function useGuru(uiData, DB, modalState) {
      * @param {string} id - Guru ID to delete
      */
     const deleteGuru = async (id) => {
-        if (!confirm('Hapus data guru ini?')) {
-            return;
-        }
-
-        try {
-            await DB.delete(id);
-
-            // Refresh data FIRST (before blocking alert)
-            if (window.refreshData) {
-                window.refreshData();
+        window.showConfirm({
+            title: 'Hapus Guru',
+            message: 'Hapus data guru ini?',
+            confirmText: 'Ya, Hapus',
+            type: 'danger',
+            onConfirm: async () => {
+                try {
+                    await DB.delete(id);
+                    if (window.refreshData) window.refreshData();
+                    window.showAlert('Data berhasil dihapus', 'Sukses', 'info');
+                } catch (error) {
+                    console.error('Error deleting guru:', error);
+                    window.showAlert('Gagal menghapus data: ' + error.message, 'Error', 'danger');
+                }
             }
-
-            alert('Data berhasil dihapus');
-        } catch (error) {
-            console.error('Error deleting guru:', error);
-            alert('Gagal menghapus data: ' + error.message);
-        }
+        });
     };
 
     // ===== PUBLIC API =====

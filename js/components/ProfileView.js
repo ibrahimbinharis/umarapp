@@ -90,14 +90,14 @@ const ProfileView = {
             if (Notification.permission === 'granted') {
                 // Already granted, just re-sync token
                 if (window.PushService) await window.PushService.subscribeUser(props.userSession._id);
-                alert('Notifikasi sudah aktif.');
+                window.showAlert('Notifikasi sudah aktif.', 'Info', 'info');
             } else {
                 const ok = await window.PushService.requestPermission();
                 if (ok) {
                     isPushEnabled.value = true;
-                    alert('Notifikasi berhasil diaktifkan!');
+                    window.showAlert('Notifikasi berhasil diaktifkan!', 'Sukses', 'info');
                 } else {
-                    alert('Gagal mengaktifkan notifikasi. Pastikan Anda mengizinkan notifikasi di pengaturan browser.');
+                    window.showAlert('Gagal mengaktifkan notifikasi. Pastikan Anda mengizinkan notifikasi di pengaturan browser.', 'Error', 'danger');
                 }
             }
         };

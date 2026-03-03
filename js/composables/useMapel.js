@@ -72,7 +72,8 @@ function useMapel(uiData, DB) {
     const saveMapel = async () => {
         // Validation
         if (!mapelForm.name || !mapelForm.name.trim()) {
-            return alert("Nama Mapel wajib diisi");
+            window.showAlert("Nama Mapel wajib diisi", "Peringatan", "warning");
+            return;
         }
 
         try {
@@ -95,11 +96,11 @@ function useMapel(uiData, DB) {
 
             // Close modal and show success
             closeMapelModal();
-            alert(mapelForm.id ? "Mapel berhasil diupdate!" : "Mapel berhasil ditambahkan!");
+            window.showAlert(mapelForm.id ? "Mapel berhasil diupdate!" : "Mapel berhasil ditambahkan!", "Sukses", "info");
 
         } catch (error) {
             console.error('Error saving mapel:', error);
-            alert('Gagal menyimpan mapel: ' + error.message);
+            window.showAlert('Gagal menyimpan mapel: ' + error.message, "Error", "danger");
         }
     };
 
@@ -108,21 +109,22 @@ function useMapel(uiData, DB) {
      * @param {string} id - Mapel ID to delete
      */
     const deleteMapel = async (id) => {
-        if (!confirm("Hapus mata pelajaran ini?")) return;
-
-        try {
-            await DB.delete(id);
-
-            // Refresh UI
-            if (window.refreshData) {
-                window.refreshData();
+        window.showConfirm({
+            title: 'Hapus Mapel',
+            message: 'Hapus mata pelajaran ini?',
+            confirmText: 'Ya, Hapus',
+            type: 'danger',
+            onConfirm: async () => {
+                try {
+                    await DB.delete(id);
+                    if (window.refreshData) window.refreshData();
+                    window.showAlert("Mapel berhasil dihapus!", "Sukses", "info");
+                } catch (error) {
+                    console.error('Error deleting mapel:', error);
+                    window.showAlert('Gagal menghapus mapel: ' + error.message, "Error", "danger");
+                }
             }
-
-            alert("Mapel berhasil dihapus!");
-        } catch (error) {
-            console.error('Error deleting mapel:', error);
-            alert('Gagal menghapus mapel: ' + error.message);
-        }
+        });
     };
 
     // FAB Click State

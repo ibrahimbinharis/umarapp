@@ -37,7 +37,7 @@ const RekapView = {
 
         const handleSave = async () => {
             if (totalWeight.value !== 100) {
-                alert("Total bobot harus tepat 100%");
+                window.showAlert("Total bobot harus tepat 100%", "Peringatan", "warning");
                 return;
             }
             // Propagate tempSettings to parent via proxy-like object or just let rekapSettings be updated

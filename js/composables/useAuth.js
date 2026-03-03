@@ -13,7 +13,7 @@ const useAuth = (currentView, loading) => {
 
     const handleLogin = async () => {
         if (!loginForm.username || !loginForm.password) {
-            alert("Username dan Password wajib diisi!");
+            window.showAlert("Username dan Password wajib diisi!", "Login", "warning");
             return;
         }
 
@@ -42,11 +42,11 @@ const useAuth = (currentView, loading) => {
                 loginForm.username = '';
                 loginForm.password = '';
             } else {
-                alert(res.message || "Username atau Password salah!");
+                window.showAlert(res.message || "Username atau Password salah!", "Login Gagal", "danger");
             }
         } catch (e) {
             console.error("Login error:", e);
-            alert("Gagal login: " + (e.message || "Periksa koneksi internet"));
+            window.showAlert("Gagal login: " + (e.message || "Periksa koneksi internet"), "Error", "danger");
         } finally {
             loading.value = false;
         }
@@ -54,7 +54,7 @@ const useAuth = (currentView, loading) => {
 
     const handleRegister = async () => {
         if (!loginForm.username || !loginForm.password) {
-            alert("Username dan Password wajib diisi!");
+            window.showAlert("Username dan Password wajib diisi!", "Peringatan", "warning");
             return;
         }
 
@@ -117,43 +117,41 @@ const useAuth = (currentView, loading) => {
                     }
                 }
 
-                alert("Registrasi berhasil! Silakan login.");
+                window.showAlert("Registrasi berhasil! Silakan login.", "Sukses", "info");
                 isRegisterMode.value = false;
             }
 
         } catch (e) {
             console.error("Register error:", e);
-            alert("Gagal registrasi: " + e.message);
+            window.showAlert("Gagal registrasi: " + e.message, "Error", "danger");
         } finally {
             loading.value = false;
         }
     };
 
     const logout = async () => {
-        if (confirm("Keluar dari aplikasi?")) {
-            try {
-                // Try to sign out from Supabase (might fail if offline)
-                await sb.auth.signOut();
-            } catch (e) {
-                console.error("SignOut error:", e);
-            } finally {
-                // ALWAYS clear local state and redirect
-                localStorage.removeItem('tahfidz_session');
-                userSession.value = null;
-                currentView.value = 'login';
-                loginForm.username = '';
-                loginForm.password = '';
-
-                // Clear Hash and history to prevent "back" to protected area
-                window.location.hash = '#login';
-                window.history.replaceState({ view: 'login' }, '', '#login');
-
-                // Hard reload to clear all sensitive state (filtered data, etc.)
-                // and ensure we are back at login screen.
-                console.log("Logout successful, performing clean reload...");
-                window.location.reload();
+        window.showConfirm({
+            title: 'Keluar Akun',
+            message: 'Keluar dari aplikasi?',
+            confirmText: 'Ya, Keluar',
+            onConfirm: async () => {
+                try {
+                    await sb.auth.signOut();
+                } catch (e) {
+                    console.error("SignOut error:", e);
+                } finally {
+                    localStorage.removeItem('tahfidz_session');
+                    userSession.value = null;
+                    currentView.value = 'login';
+                    loginForm.username = '';
+                    loginForm.password = '';
+                    window.location.hash = '#login';
+                    window.history.replaceState({ view: 'login' }, '', '#login');
+                    console.log("Logout successful, performing clean reload...");
+                    window.location.reload();
+                }
             }
-        }
+        });
     };
 
     const checkSession = async () => {

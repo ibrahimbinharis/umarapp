@@ -176,7 +176,7 @@ function useTarget(uiData, DB) {
 
     const openBulkTargetModal = () => {
         if (selectedSantriIds.value.length === 0) {
-            alert('Pilih minimal satu santri');
+            window.showAlert('Pilih minimal satu santri', 'Peringatan', 'warning');
             return;
         }
         targetModalState.isBulkOpen = true;
@@ -195,7 +195,7 @@ function useTarget(uiData, DB) {
         if (bulkTargetForm.updateTilawah) payload.target_tilawah = parseInt(bulkTargetForm.tilawah) || 0;
 
         if (Object.keys(payload).length === 0) {
-            alert('Pilih minimal satu kriteria target untuk diupdate');
+            window.showAlert('Pilih minimal satu kriteria target untuk diupdate', 'Peringatan', 'warning');
             return;
         }
 
@@ -212,12 +212,12 @@ function useTarget(uiData, DB) {
 
             if (window.refreshData) window.refreshData();
 
-            alert('Target massal berhasil diterapkan!');
+            window.showAlert('Target massal berhasil diterapkan!', 'Sukses', 'info');
             closeBulkTargetModal();
             toggleSelectionMode(); // Exit selection mode
         } catch (error) {
             console.error('Bulk update error:', error);
-            alert('Gagal update massal: ' + error.message);
+            window.showAlert('Gagal update massal: ' + error.message, 'Error', 'danger');
         } finally {
             showLoading(false);
         }
@@ -238,7 +238,7 @@ function useTarget(uiData, DB) {
      */
     const saveTarget = async () => {
         if (!targetForm.id) {
-            alert('Santri ID tidak ditemukan');
+            window.showAlert('Santri ID tidak ditemukan', 'Error', 'danger');
             return;
         }
 
@@ -261,12 +261,12 @@ function useTarget(uiData, DB) {
                 window.refreshData();
             }
 
-            alert('Target berhasil disimpan!');
+            window.showAlert('Target berhasil disimpan!', 'Sukses', 'info');
             closeTargetModal();
 
         } catch (error) {
             console.error('Error saving target:', error);
-            alert('Gagal menyimpan target: ' + error.message);
+            window.showAlert('Gagal menyimpan target: ' + error.message, 'Error', 'danger');
         }
     };
 
@@ -276,35 +276,32 @@ function useTarget(uiData, DB) {
      */
     const resetTarget = async (santriId) => {
         if (!santriId) {
-            alert('Santri ID tidak ditemukan');
+            window.showAlert('Santri ID tidak ditemukan', 'Error', 'danger');
             return;
         }
 
-        if (!confirm('Reset target santri ini ke default sistem?')) {
-            return;
-        }
-
-        try {
-            const payload = {
-                target_sabaq: null,
-                target_manzil: null,
-                target_tilawah: null,
-                target_manzil_pct: null
-            };
-
-            await DB.update(santriId, payload);
-
-            // Refresh data
-            if (window.refreshData) {
-                window.refreshData();
+        window.showConfirm({
+            title: 'Reset Target',
+            message: 'Reset target santri ini ke default sistem?',
+            confirmText: 'Ya, Reset',
+            type: 'warning',
+            onConfirm: async () => {
+                try {
+                    const payload = {
+                        target_sabaq: null,
+                        target_manzil: null,
+                        target_tilawah: null,
+                        target_manzil_pct: null
+                    };
+                    await DB.update(santriId, payload);
+                    if (window.refreshData) window.refreshData();
+                    window.showAlert('Target berhasil direset ke default!', 'Sukses', 'info');
+                } catch (error) {
+                    console.error('Error resetting target:', error);
+                    window.showAlert('Gagal mereset target: ' + error.message, 'Error', 'danger');
+                }
             }
-
-            alert('Target berhasil direset ke default!');
-
-        } catch (error) {
-            console.error('Error resetting target:', error);
-            alert('Gagal mereset target: ' + error.message);
-        }
+        });
     };
 
     // ===== RETURN =====

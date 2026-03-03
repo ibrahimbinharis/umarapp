@@ -178,7 +178,7 @@ function useUjian(uiData, DB, userSession, refreshData, quranControls = null, cu
      */
     const selectUjianJuz = (juz, navigateToQuran = false, navControls = quranControls, viewRef = currentViewRef) => {
         if (!ujianForm.santri_id) {
-            alert("Pilih Santri dahulu!");
+            window.showAlert("Pilih Santri dahulu!", "Peringatan", "warning");
             return;
         }
 
@@ -205,7 +205,7 @@ function useUjian(uiData, DB, userSession, refreshData, quranControls = null, cu
      * Start Bulanan Exam (Navigate to first sabaq of month)
      */
     const startBulananExam = async () => {
-        if (!ujianForm.santri_id) return alert("Pilih Santri");
+        if (!ujianForm.santri_id) return window.showAlert("Pilih Santri", "Peringatan", "warning");
 
         const history = (window.allData || []).filter(d =>
             d.__type === 'setoran' &&
@@ -214,11 +214,11 @@ function useUjian(uiData, DB, userSession, refreshData, quranControls = null, cu
             new Date(d.setoran_date).getMonth() === new Date().getMonth()
         ).sort((a, b) => new Date(a.setoran_date) - new Date(b.setoran_date));
 
-        if (history.length === 0) return alert("Belum ada setoran hafalan (Sabaq) bulan ini.");
+        if (history.length === 0) return window.showAlert("Belum ada setoran hafalan (Sabaq) bulan ini.", "Peringatan", "warning");
 
         const first = history[0];
         // Expect surah_from, ayat_from
-        if (!first.surah_from) return alert("Data setoran tidak lengkap (Surat/Ayat).");
+        if (!first.surah_from) return window.showAlert("Data setoran tidak lengkap (Surat/Ayat).", "Peringatan", "warning");
 
         // Fetch Page
         try {
@@ -235,11 +235,11 @@ function useUjian(uiData, DB, userSession, refreshData, quranControls = null, cu
                     console.warn("Navigation controls not found");
                 }
             } else {
-                alert("Gagal mendeteksi halaman awal.");
+                window.showAlert("Gagal mendeteksi halaman awal.", "Error", "danger");
             }
         } catch (e) {
             console.error(e);
-            alert("Gagal koneksi untuk mengambil halaman.");
+            window.showAlert("Gagal koneksi untuk mengambil halaman.", "Error", "danger");
         }
     };
 
@@ -319,7 +319,7 @@ function useUjian(uiData, DB, userSession, refreshData, quranControls = null, cu
      */
     const submitUjian = async () => {
         if (!ujianForm.santri_id) {
-            alert("Pilih Santri");
+            window.showAlert("Pilih Santri", "Peringatan", "warning");
             return;
         }
 
@@ -371,7 +371,7 @@ function useUjian(uiData, DB, userSession, refreshData, quranControls = null, cu
                 // TIDAK membuat record ujian/riwayat agar tidak muncul
                 // di Riwayat, Aktivitas, dan Rekap.
 
-                alert("Status Hafalan Diupdate");
+                window.showAlert("Status Hafalan Diupdate", "Sukses", "info");
 
                 if (refreshData) refreshData();
                 ujianForm.s_juz = null;
@@ -459,11 +459,11 @@ function useUjian(uiData, DB, userSession, refreshData, quranControls = null, cu
                     window.NotificationService.notifyUjian(santri, payload.detail || payload.type, payload.score, editingId.value);
                 }
 
-                alert("Data Ujian Berhasil Diupdate");
+                window.showAlert("Data Ujian Berhasil Diupdate", "Sukses", "info");
                 editingId.value = null;
             } else {
                 const res = await DB.create('ujian', payload);
-                alert("Nilai Ujian Berhasil Disimpan");
+                window.showAlert("Nilai Ujian Berhasil Disimpan", "Sukses", "info");
 
                 // --- NOTIFICATION TRIGGER (v36) ---
                 const santri = uiData.santri.find(s => s.santri_id === ujianForm.santri_id || s._id === ujianForm.santri_id);
@@ -481,7 +481,7 @@ function useUjian(uiData, DB, userSession, refreshData, quranControls = null, cu
 
         } catch (e) {
             console.error(e);
-            alert("Gagal: " + e.message);
+            window.showAlert("Gagal: " + e.message, "Error", "danger");
         }
     };
 

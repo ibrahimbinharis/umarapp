@@ -210,10 +210,9 @@ function useAbsensi(uiData, DB, modalState) {
         const jId = jadwalId || absensiState.activeJadwal?._id;
 
         if (!jId) {
-            alert('Jadwal tidak ditemukan');
+            window.showAlert('Jadwal tidak ditemukan', 'Error', 'danger');
             return;
         }
-
         try {
             // Build details array from formState
             const details = [];
@@ -242,10 +241,10 @@ function useAbsensi(uiData, DB, modalState) {
 
             if (existing) {
                 await DB.update(existing._id, payload);
-                alert('Absensi berhasil diupdate!');
+                window.showAlert('Absensi berhasil diupdate!', 'Sukses', 'info');
             } else {
                 await DB.create('absensi', payload);
-                alert('Absensi berhasil disimpan!');
+                window.showAlert('Absensi berhasil disimpan!', 'Sukses', 'info');
             }
 
             // Refresh data
@@ -262,7 +261,7 @@ function useAbsensi(uiData, DB, modalState) {
 
         } catch (error) {
             console.error('Error saving absensi:', error);
-            alert('Gagal menyimpan absensi: ' + error.message);
+            window.showAlert('Gagal menyimpan absensi: ' + error.message, 'Error', 'danger');
             return false;
         }
     };

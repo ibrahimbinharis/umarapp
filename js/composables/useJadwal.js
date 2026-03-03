@@ -159,16 +159,16 @@ function useJadwal(uiData, DB, modalState) {
     const saveJadwal = async () => {
         // Validation
         if (!jadwalForm.mapel || !jadwalForm.mapel.trim()) {
-            return alert("Mata pelajaran wajib diisi");
+            return window.showAlert("Mata pelajaran wajib diisi", "Peringatan", "warning");
         }
         if (!jadwalForm.class_name || !jadwalForm.class_name.trim()) {
-            return alert("Kelas wajib diisi");
+            return window.showAlert("Kelas wajib diisi", "Peringatan", "warning");
         }
         if (!jadwalForm.teacher || !jadwalForm.teacher.trim()) {
-            return alert("Guru pengampu wajib diisi");
+            return window.showAlert("Guru pengampu wajib diisi", "Peringatan", "warning");
         }
         if (!jadwalForm.time_start || !jadwalForm.time_end) {
-            return alert("Jam mulai dan selesai wajib diisi");
+            return window.showAlert("Jam mulai dan selesai wajib diisi", "Peringatan", "warning");
         }
 
         try {
@@ -187,11 +187,11 @@ function useJadwal(uiData, DB, modalState) {
             if (jadwalForm.id) {
                 // Update existing
                 await DB.update(jadwalForm.id, payload);
-                alert("Jadwal berhasil diupdate!");
+                window.showAlert("Jadwal berhasil diupdate!", "Sukses", "info");
             } else {
                 // Create new
                 await DB.create('jadwal', payload);
-                alert("Jadwal berhasil ditambahkan!");
+                window.showAlert("Jadwal berhasil ditambahkan!", "Sukses", "info");
             }
 
             // Refresh UI
@@ -204,7 +204,7 @@ function useJadwal(uiData, DB, modalState) {
 
         } catch (error) {
             console.error('Error saving jadwal:', error);
-            alert('Gagal menyimpan jadwal: ' + error.message);
+            window.showAlert('Gagal menyimpan jadwal: ' + error.message, 'Error', 'danger');
         }
     };
 
@@ -213,21 +213,22 @@ function useJadwal(uiData, DB, modalState) {
      * @param {string} id - Jadwal ID to delete
      */
     const deleteJadwal = async (id) => {
-        if (!confirm("Hapus jadwal ini?")) return;
-
-        try {
-            await DB.delete(id);
-
-            // Refresh UI
-            if (window.refreshData) {
-                window.refreshData();
+        window.showConfirm({
+            title: 'Hapus Jadwal',
+            message: 'Hapus jadwal ini?',
+            confirmText: 'Ya, Hapus',
+            type: 'danger',
+            onConfirm: async () => {
+                try {
+                    await DB.delete(id);
+                    if (window.refreshData) window.refreshData();
+                    window.showAlert("Jadwal berhasil dihapus!", "Sukses", "info");
+                } catch (error) {
+                    console.error('Error deleting jadwal:', error);
+                    window.showAlert('Gagal menghapus jadwal: ' + error.message, 'Error', 'danger');
+                }
             }
-
-            alert("Jadwal berhasil dihapus!");
-        } catch (error) {
-            console.error('Error deleting jadwal:', error);
-            alert('Gagal menghapus jadwal: ' + error.message);
-        }
+        });
     };
 
     // ===== RETURN =====

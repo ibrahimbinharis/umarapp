@@ -90,7 +90,7 @@ function useQuran(uiData) {
             quranState.page = p;
             quranState.showDrawer = false;
         } else {
-            alert('Halaman harus 1-604');
+            window.showAlert('Halaman harus 1-604', 'Peringatan', 'warning');
         }
     };
 
@@ -107,7 +107,7 @@ function useQuran(uiData) {
     const jumpToAyat = async () => {
         const sNo = quranState.jumpSurah;
         const ayat = quranState.jumpAyat;
-        if (!sNo) return alert("Pilih surat dahulu");
+        if (!sNo) return window.showAlert("Pilih surat dahulu", "Peringatan", "warning");
         if (!ayat) return goToSurah(sNo);
 
         // Use API to find page
@@ -118,10 +118,10 @@ function useQuran(uiData) {
                 quranState.page = json.data.page;
                 quranState.showDrawer = false;
             } else {
-                alert("Ayat tidak ditemukan");
+                window.showAlert("Ayat tidak ditemukan", "Error", "danger");
             }
         } catch (e) {
-            alert("Gagal koneksi API");
+            window.showAlert("Gagal koneksi API", "Error", "danger");
         }
     };
 

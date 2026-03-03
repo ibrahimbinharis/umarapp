@@ -75,6 +75,21 @@ createApp({
             confirmState.isOpen = false;
         };
 
+        const showAlert = (message, title = 'Informasi', type = 'info') => {
+            showConfirm({
+                title,
+                message,
+                confirmText: 'OK',
+                cancelText: '',
+                type,
+                onConfirm: null
+            });
+        };
+
+        // Expose to window for all components/composables
+        window.showConfirm = showConfirm;
+        window.showAlert = showAlert;
+
         // santriForm moved to useSantri
 
 
@@ -328,7 +343,7 @@ createApp({
                 cancelCrop();
             } catch (err) {
                 console.error("Error in saveCrop:", err);
-                alert("Terjadi kesalahan saat memproses gambar: " + err.message);
+                window.showAlert("Terjadi kesalahan saat memproses gambar: " + err.message, "Error", "danger");
             }
         };
 
@@ -410,7 +425,10 @@ createApp({
         };
 
         const saveJadwal = async () => {
-            if (!jadwalForm.mapel || !jadwalForm.class_name || !jadwalForm.teacher) return alert("Lengkapi data jadwal");
+            if (!jadwalForm.mapel || !jadwalForm.class_name || !jadwalForm.teacher) {
+                window.showAlert("Lengkapi data jadwal", "Peringatan", "warning");
+                return;
+            }
             const payload = {
                 day: jadwalForm.day,
                 mapel: jadwalForm.mapel,
@@ -427,10 +445,17 @@ createApp({
         };
 
         const deleteJadwal = async (id) => {
-            if (confirm('Hapus jadwal ini?')) {
-                await DB.delete(id, 'jadwal'); // Ensure collection is passed if generic delete needs it, mostly id is enough
-                refreshData();
-            }
+            window.showConfirm({
+                title: 'Hapus Jadwal',
+                message: 'Hapus jadwal ini?',
+                confirmText: 'Ya, Hapus',
+                type: 'danger',
+                onConfirm: async () => {
+                    await DB.delete(id, 'jadwal');
+                    refreshData();
+                    window.showAlert("Jadwal dihapus", "Sukses", "info");
+                }
+            });
         };
 
 
@@ -921,7 +946,7 @@ createApp({
         return {
             formatWANumber,
             loading, appName, appVersion, currentView, userSession, loginForm,
-            confirmState, showConfirm, closeConfirm,
+            confirmState, showConfirm, closeConfirm, showAlert,
             dashboardStats, searchText, modalState, uiData,
             showExamControls,
             updateSalah, finishExam,
