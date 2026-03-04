@@ -26,7 +26,17 @@ function usePengumuman(uiData, DB, userSession, refreshData) {
         isi: '',
         kategori: 'info',    // info | penting | darurat
         target: 'semua',     // semua | guru | wali
-        created_at: null
+        created_at: null,
+        file_url: null,      // Link file/foto dari Supabase
+        file_name: null,     // Nama asli file
+        file_type: null      // Jenis file (image/pdf/dll)
+    });
+
+    const fileUpload = reactive({
+        file: null,
+        preview: null,
+        isUploading: false,
+        error: null
     });
 
     // ===== COMPUTED =====
@@ -81,6 +91,15 @@ function usePengumuman(uiData, DB, userSession, refreshData) {
         form.kategori = 'info';
         form.target = 'semua';
         form.created_at = null;
+        form.file_url = null;
+        form.file_name = null;
+        form.file_type = null;
+
+        fileUpload.file = null;
+        fileUpload.preview = null;
+        fileUpload.isUploading = false;
+        fileUpload.error = null;
+
         showFormModal.value = true;
     };
 
@@ -92,6 +111,15 @@ function usePengumuman(uiData, DB, userSession, refreshData) {
         form.kategori = item.kategori || 'info';
         form.target = item.target || 'semua';
         form.created_at = item.created_at;
+        form.file_url = item.file_url || null;
+        form.file_name = item.file_name || null;
+        form.file_type = item.file_type || null;
+
+        fileUpload.file = null;
+        fileUpload.preview = item.file_url || null; // Jika ada URL, tampilkan sebagai preview
+        fileUpload.isUploading = false;
+        fileUpload.error = null;
+
         showFormModal.value = true;
     };
 
@@ -112,7 +140,10 @@ function usePengumuman(uiData, DB, userSession, refreshData) {
                 isi: form.isi.trim(),
                 kategori: form.kategori,
                 target: form.target,
-                _deleted: false
+                _deleted: false,
+                file_url: form.file_url || null,
+                file_name: form.file_name || null,
+                file_type: form.file_type || null
             };
 
             if (isEdit) {
@@ -148,6 +179,14 @@ function usePengumuman(uiData, DB, userSession, refreshData) {
             }
 
             showFormModal.value = false;
+            fileUpload.file = null;
+            fileUpload.preview = null;
+
+            // Reset form file data
+            form.file_url = null;
+            form.file_name = null;
+            form.file_type = null;
+
             await loadPengumuman();
         } catch (err) {
             console.error('[Pengumuman] Gagal simpan:', err.message);
@@ -155,6 +194,103 @@ function usePengumuman(uiData, DB, userSession, refreshData) {
         } finally {
             isLoading.value = false;
         }
+    };
+
+    /** Fungsi handling file selection dari UI */
+    const handleFileChange = (event) => {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        // Validasi ukuran (max 10MB)
+        if (file.size > 10 * 1024 * 1024) {
+            window.showAlert('Ukuran file terlalu besar (Maksimal 10MB)', 'Peringatan', 'warning');
+            return;
+        }
+
+        fileUpload.file = file;
+        fileUpload.isUploading = true;
+        fileUpload.error = null;
+
+        // Buat preview lokal jika itu gambar
+        if (file.type.startsWith('image/')) {
+            const reader = new FileReader();
+            reader.onload = (e) => fileUpload.preview = e.target.result;
+            reader.readAsDataURL(file);
+        } else {
+            fileUpload.preview = null; // Bukan gambar, tidak ada preview
+        }
+
+        // Langsung upload ke Supabase Storage
+        uploadFileToStorage(file);
+    };
+
+    /** Upload file ke Supabase Storage Bucket 'announcements' */
+    const uploadFileToStorage = async (file) => {
+        try {
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${Date.now()}_${Math.random().toString(36).slice(-4)}.${fileExt}`;
+            const filePath = `uploads/${fileName}`;
+
+            // 1. Upload ke Storage
+            const { data, error } = await sb.storage
+                .from('announcements')
+                .upload(filePath, file);
+
+            if (error) throw error;
+
+            // 2. Dapatkan Public URL (Karena bucket public)
+            const { data: { publicUrl } } = sb.storage
+                .from('announcements')
+                .getPublicUrl(filePath);
+
+            // 3. Simpan link ke form state
+            form.file_url = publicUrl;
+            form.file_name = file.name;
+            form.file_type = file.type;
+
+            console.log('[Pengumuman] File terunggah:', publicUrl);
+        } catch (err) {
+            console.error('[Pengumuman] Gagal upload file:', err.message);
+            fileUpload.error = "Gagal upload: " + err.message;
+            window.showAlert('Gagal mengunggah file ke storage', 'Error', 'danger');
+        } finally {
+            fileUpload.isUploading = false;
+        }
+    };
+
+    /** Upload gambar untuk disematkan di dalam teks pengumuman */
+    const uploadInlineImage = async ({ file, callback }) => {
+        try {
+            const fileExt = file.name.split('.').pop();
+            const fileName = `inline_${Date.now()}_${Math.random().toString(36).slice(-4)}.${fileExt}`;
+            const filePath = `inline/${fileName}`;
+
+            const { data, error } = await sb.storage
+                .from('announcements')
+                .upload(filePath, file);
+
+            if (error) throw error;
+
+            const { data: { publicUrl } } = sb.storage
+                .from('announcements')
+                .getPublicUrl(filePath);
+
+            // Jalankan callback untuk memasukkan URL ke editor
+            if (callback) callback(publicUrl);
+
+            console.log('[Pengumuman] Inline image terunggah:', publicUrl);
+        } catch (err) {
+            console.error('[Pengumuman] Gagal upload inline image:', err.message);
+            window.showAlert('Gagal mengunggah gambar ke dalam teks', 'Error', 'danger');
+        }
+    };
+
+    const removeFile = () => {
+        form.file_url = null;
+        form.file_name = null;
+        form.file_type = null;
+        fileUpload.file = null;
+        fileUpload.preview = null;
     };
 
     /**
@@ -306,6 +442,11 @@ function usePengumuman(uiData, DB, userSession, refreshData) {
         kategoriLabel,
         targetLabel,
         kategoriClass,
-        formatDate
+        formatDate,
+        // File Upload
+        fileUpload,
+        handleFileChange,
+        removeFile,
+        uploadInlineImage
     };
 }

@@ -427,13 +427,14 @@
                             :paginated-list="paginatedList" :current-page="currentPage" :total-pages="totalPages"
                             :is-loading="isLoading" :show-form-modal="showFormModal"
                             :show-detail-modal="showDetailModal" :detail-item="detailItem" :form="form"
-                            :page-size="PAGE_SIZE" @load="loadPengumuman" @open-add="openAddForm"
-                            @open-edit="item => { openEditForm(item); $nextTick(() => $refs.pengumumanView?.initEditor?.()) }"
-                            @save="savePengumuman" @delete="deletePengumuman" @open-detail="openDetail"
-                            @go-page="goToPage" @close-form="showFormModal = false"
-                            @close-detail="showDetailModal = false" @update:form-judul="form.judul = $event"
-                            @update:form-isi="form.isi = $event" @update:form-kategori="form.kategori = $event"
-                            @update:form-target="form.target = $event"></pengumuman-view>
+                            :page-size="PAGE_SIZE" :file-upload="fileUpload" @load="loadPengumuman"
+                            @open-add="openAddForm" @open-edit="openEditForm" @save="savePengumuman"
+                            @delete="deletePengumuman" @open-detail="openDetail" @go-page="goToPage"
+                            @close-form="showFormModal = false" @close-detail="showDetailModal = false"
+                            @update:form-judul="form.judul = $event" @update:form-isi="form.isi = $event"
+                            @update:form-kategori="form.kategori = $event" @update:form-target="form.target = $event"
+                            @handle-file="handleFileChange" @remove-file="removeFile"
+                            @upload-inline-image="uploadInlineImage"></pengumuman-view>
                     </div>
 
 
@@ -1583,7 +1584,7 @@
 
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js?v=3.6').then(reg => {
+                navigator.serviceWorker.register('sw.js?v=3.7').then(reg => {
                     console.log('SW Registered!', reg);
 
                     // 1. Check if update is already waiting (e.g. from previous visit)

@@ -278,7 +278,38 @@ textarea {
 }
 
 @keyframes swipe-out {
-    0% { transform: translateX(0); opacity: 1; max-height: 200px; margin-bottom: 0.75rem; }
-    40% { transform: translateX(110%); opacity: 0; max-height: 200px; margin-bottom: 0.75rem; }
-    100% { transform: translateX(110%); opacity: 0; max-height: 0; margin-bottom: 0; padding: 0; border-width: 0; }
+    0% {
+        transform: translateX(0);
+        opacity: 1;
+        max-height: 200px;
+        margin-bottom: 0.75rem;
+    }
+
+    40% {
+        transform: translateX(110%);
+        opacity: 0;
+        max-height: 200px;
+        margin-bottom: 0.75rem;
+    }
+
+    100% {
+        transform: translateX(110%);
+        opacity: 0;
+        max-height: 0;
+        margin-bottom: 0;
+        padding: 0;
+        border-width: 0;
+    }
+}
+
+/* Announcement embedded images */
+.announcement-content img,
+[ref="editorRef"] img,
+[contenteditable] img {
+    max-width: 100% !important;
+    height: auto !important;
+    display: block;
+    margin: 1.5rem auto;
+    border-radius: 1rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }

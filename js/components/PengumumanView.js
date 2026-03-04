@@ -1,10 +1,11 @@
 const PengumumanView = {
     props: ['userSession', 'pengumumanList', 'paginatedList', 'currentPage', 'totalPages',
-        'isLoading', 'showFormModal', 'showDetailModal', 'detailItem', 'form', 'PAGE_SIZE'],
+        'isLoading', 'showFormModal', 'showDetailModal', 'detailItem', 'form', 'PAGE_SIZE', 'fileUpload'],
     emits: [
         'load', 'open-add', 'open-edit', 'save', 'delete', 'open-detail',
-        'go-page', 'close-form', 'close-detail',
-        'update:form-judul', 'update:form-isi', 'update:form-kategori', 'update:form-target'
+        'go-page', 'close-form', 'close-detail', 'handle-file', 'remove-file',
+        'update:form-judul', 'update:form-isi', 'update:form-kategori', 'update:form-target',
+        'upload-inline-image'
     ],
     setup(props, { emit }) {
         const { ref, computed, watch, nextTick, onMounted } = Vue;
@@ -22,6 +23,33 @@ const PengumumanView = {
             if (editorRef.value) {
                 emit('update:form-isi', editorRef.value.innerHTML);
             }
+        };
+
+        const insertImageAtCursor = (url) => {
+            if (!editorRef.value) return;
+            editorRef.value.focus();
+
+            // Modern way to insert HTML at cursor
+            const imgHtml = `<img src="${url}" class="max-w-full h-auto rounded-xl my-3 shadow-md inline-block" />`;
+            document.execCommand('insertHTML', false, imgHtml);
+
+            // Add a new line after image for easier typing
+            document.execCommand('insertHTML', false, '<p><br></p>');
+            syncIsi();
+        };
+
+        const handleInlineImage = (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            // Emit to parent (app_vue -> usePengumuman) to handle upload
+            emit('upload-inline-image', {
+                file,
+                callback: (url) => insertImageAtCursor(url)
+            });
+
+            // Reset input
+            event.target.value = '';
         };
 
         const onEditorInput = () => syncIsi();
@@ -63,7 +91,7 @@ const PengumumanView = {
 
         onMounted(() => emit('load'));
 
-        return { editorRef, execCmd, syncIsi, onEditorInput, pageNumbers, formatDate, getPlainText };
+        return { editorRef, execCmd, syncIsi, onEditorInput, pageNumbers, formatDate, getPlainText, handleInlineImage, insertImageAtCursor };
     },
     template: `
     <div class="fade-in pb-32 relative">
@@ -142,6 +170,12 @@ const PengumumanView = {
                     <p class="text-xs text-slate-500 line-clamp-2 leading-relaxed">
                         {{ getPlainText(item.isi) }}
                     </p>
+
+                    <!-- Attachment indicator in list -->
+                    <div v-if="item.file_url" class="mt-2 flex items-center gap-1.5 text-[10px] font-bold text-slate-400">
+                        <span class="material-symbols-outlined text-sm">attach_file</span>
+                        {{ item.file_name || 'Lampiran Tersedia' }}
+                    </div>
                 </div>
 
                 <!-- Card Footer -->
@@ -307,6 +341,14 @@ const PengumumanView = {
                                         class="size-8 rounded-lg hover:bg-white hover:shadow-sm flex items-center justify-center transition" title="Hapus format">
                                         <span class="material-symbols-outlined text-base text-slate-400">format_clear</span>
                                     </button>
+                                    <div class="w-px h-5 bg-slate-200 mx-0.5"></div>
+                                    
+                                    <!-- Embedded Image Button -->
+                                    <div class="relative overflow-hidden size-8 rounded-lg hover:bg-white hover:shadow-sm flex items-center justify-center transition group">
+                                        <span class="material-symbols-outlined text-base text-primary">image</span>
+                                        <input type="file" accept="image/*" @change="handleInlineImage" 
+                                            class="absolute inset-0 opacity-0 cursor-pointer" title="Sematkan Gambar" />
+                                    </div>
                                 </div>
 
                                 <!-- Editable content area -->
@@ -322,6 +364,50 @@ const PengumumanView = {
                                 </p>
                             </div>
 
+                            <!-- File Upload Section -->
+                            <div class="pt-2">
+                                <label class="block text-xs font-bold text-slate-700 mb-2">Lampiran (Foto/File)</label>
+                                
+                                <!-- File Preview / Info -->
+                                <div v-if="form.file_url" class="mb-3 p-3 rounded-xl border border-slate-100 bg-slate-50 flex items-center justify-between gap-3">
+                                    <div class="flex items-center gap-3 overflow-hidden">
+                                        <div v-if="fileUpload.preview" class="size-12 rounded-lg bg-white border border-slate-200 overflow-hidden shrink-0">
+                                            <img :src="fileUpload.preview" class="w-full h-full object-cover" />
+                                        </div>
+                                        <div v-else class="size-12 rounded-lg bg-white border border-slate-200 flex items-center justify-center shrink-0">
+                                            <span class="material-symbols-outlined text-slate-400">description</span>
+                                        </div>
+                                        <div class="overflow-hidden">
+                                            <p class="text-xs font-bold text-slate-700 truncate">{{ form.file_name || 'File terlampir' }}</p>
+                                            <p class="text-[10px] text-slate-400">Siap untuk disimpan</p>
+                                        </div>
+                                    </div>
+                                    <button @click="$emit('remove-file')" class="size-8 rounded-full hover:bg-red-50 text-slate-400 hover:text-red-500 flex items-center justify-center transition">
+                                        <span class="material-symbols-outlined text-base">delete</span>
+                                    </button>
+                                </div>
+
+                                <!-- Upload Button -->
+                                <div v-if="!form.file_url" class="relative">
+                                    <input type="file" @change="$emit('handle-file', $event)" 
+                                        class="absolute inset-0 opacity-0 cursor-pointer z-10" 
+                                        :disabled="fileUpload.isUploading" />
+                                    <div :class="[
+                                        'w-full py-4 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center gap-2 transition-all',
+                                        fileUpload.isUploading ? 'bg-slate-50 border-slate-200' : 'bg-white border-slate-200 hover:border-primary hover:bg-blue-50/30'
+                                    ]">
+                                        <template v-if="fileUpload.isUploading">
+                                            <div class="size-6 border-2 border-primary/20 border-t-primary rounded-full animate-spin"></div>
+                                            <span class="text-xs font-bold text-slate-400">Mengunggah...</span>
+                                        </template>
+                                        <template v-else>
+                                            <span class="material-symbols-outlined text-slate-400">cloud_upload</span>
+                                            <span class="text-xs font-bold text-slate-500">Klik untuk pilih file (Maks 10MB)</span>
+                                        </template>
+                                    </div>
+                                </div>
+                            </div>
+
                             <!-- Action Buttons -->
                             <div class="flex gap-3 pt-2 pb-1">
                                 <button @click="$emit('close-form')"
@@ -333,7 +419,7 @@ const PengumumanView = {
                                     class="flex-1 py-3 rounded-xl bg-primary text-white font-bold text-sm shadow-lg shadow-blue-900/20 hover:bg-blue-800 active:scale-95 transition flex items-center justify-center gap-2 disabled:opacity-60">
                                     <span v-if="isLoading" class="size-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
                                     <span class="material-symbols-outlined text-base" v-else>send</span>
-                                    {{ form._id ? 'Simpan Perubahan' : 'Publish' }}
+                                    {{ form._id ? 'Simpan' : 'Publish' }}
                                 </button>
                             </div>
                         </div>
@@ -383,8 +469,33 @@ const PengumumanView = {
 
                         <!-- Content -->
                         <div class="p-6">
-                            <div class="prose prose-sm max-w-none text-slate-700 leading-relaxed text-sm"
+                            <div class="prose prose-sm max-w-none text-slate-700 leading-relaxed text-sm announcement-content"
                                  v-html="detailItem.isi">
+                            </div>
+
+                            <!-- Attachment in Detail -->
+                            <div v-if="detailItem.file_url" class="mt-8 pt-6 border-t border-slate-100">
+                                <h4 class="text-xs font-black text-slate-800 uppercase tracking-wider mb-3">Lampiran</h4>
+                                
+                                <!-- Photo Preview -->
+                                <div v-if="detailItem.file_type && detailItem.file_type.startsWith('image/')" class="mb-4 rounded-2xl overflow-hidden border border-slate-100 shadow-sm">
+                                    <img :src="detailItem.file_url" class="w-full h-auto max-h-[400px] object-contain bg-slate-50" />
+                                </div>
+
+                                <!-- Download Button -->
+                                <a :href="detailItem.file_url" target="_blank" download 
+                                    class="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-100 group hover:bg-primary/5 hover:border-primary/20 transition-all duration-200">
+                                    <div class="flex items-center gap-3 overflow-hidden">
+                                        <div class="size-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center shrink-0">
+                                            <span class="material-symbols-outlined text-slate-400">{{ detailItem.file_type && detailItem.file_type.startsWith('image/') ? 'image' : 'description' }}</span>
+                                        </div>
+                                        <div class="overflow-hidden text-left">
+                                            <p class="text-xs font-bold text-slate-700 truncate group-hover:text-primary transition-colors">{{ detailItem.file_name || 'Buka Lampiran' }}</p>
+                                            <p class="text-[10px] text-slate-400 uppercase tracking-tighter">{{ detailItem.file_type || 'File' }}</p>
+                                        </div>
+                                    </div>
+                                    <span class="material-symbols-outlined text-primary group-hover:translate-x-0.5 transition-transform">download</span>
+                                </a>
                             </div>
                         </div>
 

@@ -170,46 +170,49 @@ function useProfile(uiData, DB, userSession, refreshData) {
         });
     };
 
-    // Refactored to accept base64 string directly (from Cropper)
+    // Refactored to use Supabase Storage Bucket 'profiles'
     const uploadPhoto = async (base64Data) => {
         if (!base64Data) return;
 
         isUploading.value = true;
         try {
-            // No resize needed here, assume Cropper output is already sized/compressed
             const filename = `profile_${userSession.value._id}_${Date.now()}.jpg`;
+            const filePath = `uploads/${filename}`;
 
-            // Key must match core.js 'tahfidz_sync_url'
-            const url = localStorage.getItem('tahfidz_sync_url');
+            // Convert base64 to Blob
+            const response = await fetch(base64Data);
+            const blob = await response.blob();
 
-            if (!url) throw new Error("URL Sync belum di-set");
+            // 1. Upload to Supabase Storage
+            const { data, error } = await sb.storage
+                .from('profiles')
+                .upload(filePath, blob, {
+                    contentType: 'image/jpeg',
+                    upsert: true
+                });
 
-            // Strip header if present to ensure raw base64
-            const rawBase64 = String(base64Data).includes(',') ? String(base64Data).split(',')[1] : String(base64Data);
+            if (error) throw error;
 
-            const res = await fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify({
-                    action: 'upload_profile',
-                    image_data: rawBase64,
-                    mime_type: 'image/jpeg',
-                    filename: filename
-                })
-            });
+            // 2. Get Public URL
+            const { data: { publicUrl } } = sb.storage
+                .from('profiles')
+                .getPublicUrl(filePath);
 
-            const json = await res.json();
-            if (json.success) {
-                await DB.update(userSession.value._id, { photo_url: json.url });
-                userSession.value.photo_url = json.url;
-                localStorage.setItem('tahfidz_session', JSON.stringify(userSession.value));
-                window.showAlert("Foto berhasil diubah! (Mungkin butuh waktu untuk muncul)", "Sukses", "info");
-            } else {
-                throw new Error(json.error || "Upload gagal");
-            }
+            // 3. Update DB and local storage
+            await DB.update(userSession.value._id, { photo_url: publicUrl });
+
+            // Also update Supabase 'users' table directly to ensure cloud sync
+            await sb.from('users').update({ photo_url: publicUrl }).eq('_id', userSession.value._id);
+
+            userSession.value.photo_url = publicUrl;
+            localStorage.setItem('tahfidz_session', JSON.stringify(userSession.value));
+
+            window.showAlert("Foto profil berhasil diperbarui!", "Sukses", "info");
         } catch (e) {
-            console.error(e);
+            console.error("Upload Photo Error:", e);
             window.showAlert("Gagal upload foto: " + e.message, "Error", "danger");
+        } finally {
+            isUploading.value = false;
         }
     };
 
