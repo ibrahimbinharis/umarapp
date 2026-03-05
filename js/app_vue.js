@@ -1,23 +1,23 @@
 const { createApp, ref, reactive, computed, onMounted, watch, nextTick } = Vue;
 
 const MENU_CONFIG = [
-    { id: 'dashboard', label: "Home", icon: "home", roles: ['admin', 'guru', 'wali'], inBottom: true },
-    { id: 'quran', label: "Al-Quran", icon: "auto_stories", roles: ['admin', 'guru', 'wali'], inBottom: true }, // Menempati slot jadwal
+    { id: 'dashboard', label: "Home", icon: "home", roles: ['admin', 'guru', 'wali', 'santri'], inBottom: true },
+    { id: 'quran', label: "Al-Quran", icon: "auto_stories", roles: ['admin', 'guru', 'wali', 'santri'], inBottom: true },
     { id: 'input', label: "Input", icon: "add", roles: ['admin', 'guru'], inBottom: true, highlight: true },
-    { id: 'riwayat', label: "Riwayat", icon: "history", roles: ['admin', 'guru', 'wali'], inBottom: true },
-    { id: 'pengumuman', label: "Pengumuman", icon: "campaign", roles: ['admin', 'guru', 'wali'], inBottom: false },
+    { id: 'riwayat', label: "Riwayat", icon: "history", roles: ['admin', 'guru', 'wali', 'santri'], inBottom: true },
+    { id: 'pengumuman', label: "Pengumuman", icon: "campaign", roles: ['admin', 'guru', 'wali', 'santri'], inBottom: false },
     { id: 'absensi', label: "Absensi", icon: "event_available", roles: ['admin', 'guru'], inBottom: true },
     { id: 'santri', label: "Santri", icon: "group", roles: ['admin', 'guru'], inBottom: false },
-    { id: 'hafalan', label: "Hafalan", icon: "menu_book", roles: ['admin', 'guru', 'wali'], inBottom: false },
+    { id: 'hafalan', label: "Hafalan", icon: "menu_book", roles: ['admin', 'guru', 'wali', 'santri'], inBottom: false },
     { id: 'ujian', label: "Ujian", icon: "assignment_turned_in", roles: ['admin', 'guru'], inBottom: false },
     { id: 'target', label: "Target", icon: "track_changes", roles: ['admin'], inBottom: false },
     { id: 'guru', label: "Guru", icon: "supervisor_account", roles: ['admin'], inBottom: false },
     { id: 'mapel', label: "Mapel", icon: "book_2", roles: ['admin'], inBottom: false },
     { id: 'kelas', label: "Kelas", icon: "meeting_room", roles: ['admin'], inBottom: false },
-    { id: 'jadwal', label: "Jadwal", icon: "calendar_month", roles: ['admin', 'guru', 'wali'], inBottom: false }, // Dipindahkan dari atas
+    { id: 'jadwal', label: "Jadwal", icon: "calendar_month", roles: ['admin', 'guru', 'wali', 'santri'], inBottom: false },
     { id: 'pelanggaran', label: "Pelanggaran", icon: "warning", roles: ['admin', 'guru'], inBottom: false },
-    { id: 'profile', label: "Profile", icon: "account_circle", roles: ['admin', 'guru', 'wali'], inBottom: false },
-    { id: 'rekap', label: "Rekap", icon: "analytics", roles: ['admin', 'guru', 'wali'], inBottom: false },
+    { id: 'profile', label: "Profile", icon: "account_circle", roles: ['admin', 'guru', 'wali', 'santri'], inBottom: false },
+    { id: 'rekap', label: "Rekap", icon: "analytics", roles: ['admin', 'guru', 'wali', 'santri'], inBottom: false },
     { id: 'connect_santri', label: "Sambungkan Santri", icon: "family_restroom", roles: ['wali'], inBottom: false },
 ];
 
@@ -34,6 +34,28 @@ createApp({
         // --- AUTH (v34 Refactor) ---
         const { userSession, loginForm, handleLogin, handleRegister, logout, checkSession, isRegisterMode } = useAuth(currentView, loading);
         const syncStatus = reactive({ status: 'idle', message: '', icon: 'sync' });
+
+        // App Config (Holiday Mode & Notifications)
+        const appConfig = computed(() => {
+            const stored = (uiData.settings || []).find(s => s._id === 'app_config') || {};
+
+            // Auto Holiday Logic
+            const today = new Date().toISOString().split('T')[0];
+            const isAutoHoliday = stored.holiday_start && stored.holiday_end &&
+                today >= stored.holiday_start && today <= stored.holiday_end;
+
+            return {
+                // If dates are set, they dictate the mode. Otherwise, use manual switch.
+                isHolidayMode: (stored.holiday_start && stored.holiday_end) ? isAutoHoliday : (stored.isHolidayMode || false),
+                holiday_start: stored.holiday_start || '',
+                holiday_end: stored.holiday_end || '',
+                notifications: stored.notifications || {
+                    enabled: true,
+                    targets: ['admin', 'guru', 'wali']
+                }
+            };
+        });
+
         const dataStats = computed(() => ({
             total: window.allData ? window.allData.length : 0,
             users: window.allData ? window.allData.filter(d => d.__type === 'user').length : 0,
@@ -80,7 +102,7 @@ createApp({
                 title,
                 message,
                 confirmText: 'OK',
-                cancelText: '',
+                cancelText: '', // Empty cancel text hides the button in most designs or we can use it for 'Tutup'
                 type,
                 onConfirm: null
             });
@@ -134,7 +156,7 @@ createApp({
         const target = useTarget(uiData, DB);
 
         // Initialize Setoran Composable
-        const setoran = useSetoran(uiData, DB, refreshData);
+        const setoran = useSetoran(uiData, DB, refreshData, userSession, appConfig);
 
         // Initialize Quran Composable (Moved up for dependency injection)
         const quran = useQuran(uiData);
@@ -158,7 +180,7 @@ createApp({
         const activeChildId = ref(localStorage.getItem('active_child_id'));
 
         // Initialize Dashboard Composable
-        const { dashboardStats, calculateStats, initCharts, activityFilter, filteredActivities, topSantriFilter, filteredTopSantri } = useDashboard(uiData, userSession, activeChildId);
+        const { dashboardStats, calculateStats, initCharts, activityFilter, filteredActivities, topSantriFilter, filteredTopSantri } = useDashboard(uiData, userSession, activeChildId, appConfig);
 
         const selectChild = (id) => {
             console.log('🎯 Switching to child:', id);
@@ -467,16 +489,30 @@ createApp({
         // --- NAVIGATION STATE ---
         const myMenus = computed(() => {
             if (!userSession.value) return [];
-            return MENU_CONFIG.filter(m => m.roles.includes(userSession.value.role));
+            const role = userSession.value.role;
+            const isHoliday = appConfig.value.isHolidayMode;
+
+            return MENU_CONFIG.filter(m => {
+                // Special holiday logic for input menu
+                if (m.id === 'input' && isHoliday && (role === 'wali' || role === 'santri')) {
+                    return true;
+                }
+                return m.roles.includes(role);
+            });
         });
 
         const bottomMenus = computed(() => {
             if (!userSession.value) return [];
 
-            // Special bottom bar for Wali: Home, Hafalan, Rekap, Al-Quran, Profile
-            if (userSession.value.role === 'wali') {
-                const waliOrder = ['dashboard', 'hafalan', 'rekap', 'quran', 'profile'];
-                return waliOrder.map(id => myMenus.value.find(m => m.id === id)).filter(Boolean);
+            // Special bottom bar for Wali: Home, Hafalan, Rekap, Al-Quran, Profile (and Input if Holiday)
+            if (userSession.value.role === 'wali' || userSession.value.role === 'santri') {
+                const isHoliday = appConfig.value.isHolidayMode;
+                const simplifiedOrder = ['dashboard', 'hafalan', 'rekap', 'input', 'quran', 'profile'];
+
+                return simplifiedOrder
+                    .filter(id => id !== 'input') // Always remove input from bottom orders for wali/santri
+                    .map(id => myMenus.value.find(m => m.id === id))
+                    .filter(Boolean);
             }
 
             return myMenus.value.filter(m => m.inBottom).slice(0, 5);
@@ -602,13 +638,22 @@ createApp({
             // 2. APPLY WALI FILTER (Wali only sees their linked children's data)
             if (userSession.value && userSession.value.role === 'wali') {
                 const myWaliId = userSession.value._id;
-
-                // My Santri and their IDs/NIS
                 const mySantri = santriList.filter(s => s.wali_id === myWaliId);
                 const mySantriIds = mySantri.map(s => s._id);
                 const mySantriNISs = mySantri.map(s => s.nis || s.santri_id);
 
-                // Filter everything by these IDs
+                santriList = mySantri;
+                setoranList = setoranList.filter(d => mySantriIds.includes(d.santri_id) || mySantriNISs.includes(d.santri_id));
+                ujianList = ujianList.filter(d => mySantriIds.includes(d.santri_id) || mySantriNISs.includes(d.santri_id));
+                pelanggaranList = pelanggaranList.filter(d => mySantriIds.includes(d.santri_id) || mySantriNISs.includes(d.santri_id));
+            } else if (userSession.value && userSession.value.role === 'santri') {
+                const myId = userSession.value._id;
+                const myNis = userSession.value.username; // Often NIS is stored in username for santri role
+
+                const mySantri = santriList.filter(s => s._id === myId || s.santri_id === myNis);
+                const mySantriIds = mySantri.map(s => s._id);
+                const mySantriNISs = mySantri.map(s => s.nis || s.santri_id);
+
                 santriList = mySantri;
                 setoranList = setoranList.filter(d => mySantriIds.includes(d.santri_id) || mySantriNISs.includes(d.santri_id));
                 ujianList = ujianList.filter(d => mySantriIds.includes(d.santri_id) || mySantriNISs.includes(d.santri_id));
@@ -650,6 +695,43 @@ createApp({
             if (currentView.value === 'dashboard') {
                 nextTick(initCharts);
             }
+        };
+
+        const saveAppConfig = async (updates) => {
+            window.showConfirm({
+                title: 'Konfirmasi',
+                message: 'Apakah Anda yakin ingin memperbarui konfigurasi?',
+                confirmText: 'Ya, Simpan',
+                cancelText: 'Batal',
+                type: 'info',
+                onConfirm: async () => {
+                    // v36 Fix: Use raw stored data as base, NOT the computed appConfig which has logic status
+                    const current = JSON.parse(JSON.stringify((uiData.settings || []).find(s => s._id === 'app_config') || {}));
+                    for (const key in updates) {
+                        if (key.includes('.')) {
+                            const [parent, child] = key.split('.');
+                            if (!current[parent]) current[parent] = {};
+                            current[parent][child] = updates[key];
+                        } else {
+                            current[key] = updates[key];
+                        }
+                    }
+
+                    const payload = {
+                        _id: 'app_config',
+                        __type: 'settings',
+                        ...current,
+                        // Fix for Supabase DATE type (empty string not allowed)
+                        holiday_start: current.holiday_start || null,
+                        holiday_end: current.holiday_end || null,
+                        updated_at: new Date().toISOString()
+                    };
+
+                    await DB.updateOrInsert(payload, 'settings');
+                    refreshData();
+                    window.showAlert("Konfigurasi berhasil diperbarui", "Sukses", "info");
+                }
+            });
         };
 
         // Expose to global for composables to use
@@ -981,7 +1063,8 @@ createApp({
             ...pengumuman,
             // Dashboard
             initCharts, activityFilter, filteredActivities, topSantriFilter, filteredTopSantri,
-            activeChildId, selectChild
+            activeChildId, selectChild,
+            appConfig, saveAppConfig
         };
     },
     components: {

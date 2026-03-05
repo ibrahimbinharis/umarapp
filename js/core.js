@@ -174,6 +174,15 @@ const DB = {
             DB.triggerAutoSync();
         }
     },
+    updateOrInsert: async (payload, collection) => {
+        const id = payload._id;
+        const exists = allData.some(d => d._id === id);
+        if (exists) {
+            return await DB.update(id, payload);
+        } else {
+            return await DB.create(collection, payload);
+        }
+    },
 
     // --- SUPABASE SYNC ---
     _syncTimer: null,
@@ -452,6 +461,13 @@ const DB = {
                     res = await sb.from(collection).insert(cleanPayload);
                 } else if (action === 'update') {
                     const { _id, ...fields } = cleanPayload;
+
+                    // v36 Fix: Sanitize date fields for settings table to prevent 'invalid input syntax for type date: ""'
+                    if (collection === 'settings') {
+                        if (fields.holiday_start === "") fields.holiday_start = null;
+                        if (fields.holiday_end === "") fields.holiday_end = null;
+                    }
+
                     console.log(`[CloudSync] Updating ${collection} ID: ${_id}...`);
                     res = await sb.from(collection).update(fields).eq('_id', _id);
                 } else if (action === 'delete') {
@@ -464,6 +480,7 @@ const DB = {
                     const isUnrecoverable =
                         res.error.code === '23505' ||
                         res.error.code === 'PGRST204' ||
+                        res.error.code === '22007' || // Invalid date syntax
                         res.status === 409 ||
                         (res.error.message && res.error.message.includes('duplicate key'));
 

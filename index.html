@@ -201,7 +201,7 @@
                             :filtered-activities="filteredActivities" :loading="loading"
                             :top-santri-filter="topSantriFilter" :filtered-top-santri="filteredTopSantri"
                             :notifications="allNotifications" :unread-count="unreadCount" :ui-data="uiData"
-                            :active-child-id="activeChildId" :select-child="selectChild"
+                            :active-child-id="activeChildId" :select-child="selectChild" :app-config="appConfig"
                             @update:activity-filter="activityFilter = $event"
                             @update:top-santri-filter="topSantriFilter = $event" @mark-read="markAsRead"
                             @mark-all-read="markAllRead" @navigate="navigateTo"></dashboard-view>
@@ -334,6 +334,7 @@
                             :surah-hints="surahHints" :auto-calc-info="autoCalcInfo" :recent-setoran="recentSetoran"
                             :is-menu-open="isMenuOpen" :is-clock-running="isClockRunning"
                             :last-record-for-type="lastRecordForType" :santri-target-progress="santriTargetProgress"
+                            :user-session="userSession" :app-config="appConfig"
                             @update:is-clock-running="isClockRunning = $event"
                             @select-setoran-santri="selectSetoranSantri" @change-setoran-type="changeSetoranType"
                             @sync-surah="syncSurah" @validate-ayat="validateAyat" @toggle-manzil-mode="toggleManzilMode"
@@ -467,7 +468,8 @@
                             :delete-photo="deletePhoto" :is-uploading="isUploading" :get-initials="getInitials"
                             :app-version="appVersion" :linked-santri="linkedSantri" :get-linked-santri="getLinkedSantri"
                             :link-santri="linkSantri" :unlink-santri="unlinkSantri" :active-child-id="activeChildId"
-                            :select-child="selectChild"></profile-view>
+                            :select-child="selectChild" :app-config="appConfig"
+                            :save-app-config="saveAppConfig"></profile-view>
                     </div>
 
 
@@ -1447,7 +1449,7 @@
 
                     <!-- Actions -->
                     <div class="p-6 flex gap-3">
-                        <button @click="closeConfirm(false)"
+                        <button v-if="confirmState.cancelText" @click="closeConfirm(false)"
                             class="flex-1 py-3.5 rounded-2xl border border-slate-200 font-bold text-slate-600 hover:bg-slate-50 transition active:scale-95">
                             {{ confirmState.cancelText }}
                         </button>

@@ -9,7 +9,7 @@
  * Dependencies: uiData (from parent), userSession
  */
 
-function useDashboard(uiData, userSession, activeChildId) {
+function useDashboard(uiData, userSession, activeChildId, appConfig) {
     const { reactive, computed, ref, nextTick } = Vue;
 
     // --- STATE ---
@@ -87,11 +87,15 @@ function useDashboard(uiData, userSession, activeChildId) {
         if (uiData.setoran) {
             uiData.setoran.forEach(s => {
                 if (!santriExists(s.santri_id)) return; // Filter Orphan
+
+                const labelBase = s.category || s.setoran_type;
+                const typeLabel = labelBase.includes('(Mandiri)') ? labelBase : (s.is_holiday ? `${labelBase} (Mandiri)` : labelBase);
+
                 acts.push({
                     type: 'setoran',
                     date: s.created_at || s.setoran_date || new Date().toISOString(),
                     label: 'Setoran Hafalan',
-                    desc: `${getSantriName(s.santri_id)} menyetor ${s.setoran_type} ${s.pages} Hal.`,
+                    desc: `${getSantriName(s.santri_id)} menyetor ${typeLabel} ${s.pages} Hal.`,
                     icon: 'menu_book',
                     color: 'text-emerald-600',
                     bg: 'bg-emerald-50'

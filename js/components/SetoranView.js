@@ -12,7 +12,9 @@ const SetoranView = {
         'isMenuOpen',
         'isClockRunning',
         'lastRecordForType',
-        'santriTargetProgress'
+        'santriTargetProgress',
+        'appConfig',
+        'userSession'
     ],
     emits: [
         'update:setoranSantriSearch',
@@ -46,7 +48,21 @@ const SetoranView = {
     },
     template: `
     <div class="fade-in pb-48">
-        <!-- Header Removed -->
+        <!-- Holiday Mode Banner (Added v36) -->
+        <div v-if="appConfig?.isHolidayMode" 
+            class="mx-1 mb-6 p-4 rounded-2xl bg-gradient-to-br from-orange-400 to-amber-500 text-white shadow-lg relative overflow-hidden group">
+            <div class="relative z-10 flex items-center gap-3">
+                <div class="bg-white/20 p-2 rounded-xl backdrop-blur-sm shadow-inner group-hover:scale-110 transition-transform">
+                    <span class="material-symbols-outlined text-2xl">beach_access</span>
+                </div>
+                <div>
+                    <h3 class="font-black text-xs uppercase tracking-widest leading-none mb-1">Mode Liburan Aktif</h3>
+                    <p class="text-[9px] opacity-90 font-bold leading-tight max-w-[200px]">Input mandiri diperbolehkan. Gunakan fitur ini untuk tetap istiqomah!</p>
+                </div>
+            </div>
+            <!-- Decorative Icon -->
+            <span class="material-symbols-outlined absolute -right-4 -bottom-4 text-7xl opacity-10 rotate-12 group-hover:rotate-45 transition-transform duration-700">sunny</span>
+        </div>
 
         <div class="bg-white p-6 rounded-3xl border shadow-sm space-y-5">
             <!-- Santri Custom Searchable Dropdown -->
@@ -407,7 +423,7 @@ const SetoranView = {
                             {{ r.santri_name || 'Santri' }}
                         </div>
                         <div class="text-xs text-slate-500 font-medium truncate">
-                            {{ r.setoran_type }} &bull; {{ r.detail || '-' }}
+                            {{ r.category || r.setoran_type }} &bull; {{ r.detail || '-' }}
                         </div>
                     </div>
                     <div class="flex items-center gap-2 flex-shrink-0">

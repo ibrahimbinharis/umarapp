@@ -17,7 +17,10 @@ const ProfileView = {
         // Child Selection Props
         activeChildId: { type: String },
         selectChild: { type: Function },
-        activeSubMenu: { type: [String, Object], default: null } // Added from composable
+        activeSubMenu: { type: [String, Object], default: null },
+        // App Settings Props
+        appConfig: { type: Object },
+        saveAppConfig: { type: Function }
     },
     setup(props, { emit }) {
         const { ref, watch } = Vue;
@@ -133,7 +136,7 @@ const ProfileView = {
                 <button @click="goBack" class="size-10 rounded-xl hover:bg-slate-50 flex items-center justify-center text-slate-600 transition active:scale-90">
                     <span class="material-symbols-outlined text-xl">arrow_back</span>
                 </button>
-                <h3 class="font-bold text-slate-800">{{ activeSubMenu === 'account' ? 'Akun & Keamanan' : 'Sambungkan Santri' }}</h3>
+                <h3 class="font-bold text-slate-800">{{ activeSubMenu === 'account' ? 'Akun & Keamanan' : activeSubMenu === 'config' ? 'Konfigurasi Aplikasi' : 'Sambungkan Santri' }}</h3>
             </div>
 
             <!-- MAIN VIEW (PROFIL + MENU) -->
@@ -206,6 +209,19 @@ const ProfileView = {
                         <div class="flex items-center gap-4 text-slate-700">
                             <span class="material-symbols-outlined text-slate-400">family_restroom</span>
                             <span class="font-bold text-sm">Sambungkan Santri</span>
+                        </div>
+                        <span class="material-symbols-outlined text-slate-300 text-lg">chevron_right</span>
+                    </button>
+
+                    <!-- Admin Config -->
+                    <button v-if="userSession.role === 'admin'" @click="navigateToSub('config')" 
+                        class="w-full flex items-center justify-between p-5 hover:bg-slate-50/50 transition active:bg-slate-50">
+                        <div class="flex items-center gap-4 text-slate-700">
+                            <span class="material-symbols-outlined text-slate-400">settings_suggest</span>
+                            <div class="text-left">
+                                <p class="font-bold text-sm">Konfigurasi Aplikasi</p>
+                                <p class="text-[10px] text-slate-400 font-medium">Holiday Mode & Notifikasi</p>
+                            </div>
                         </div>
                         <span class="material-symbols-outlined text-slate-300 text-lg">chevron_right</span>
                     </button>
@@ -355,8 +371,94 @@ const ProfileView = {
                 </div>
             </div>
 
+            <!-- APP CONFIG SUB-MENU (Admin) -->
+            <div v-if="activeSubMenu === 'config'" class="p-6 space-y-8 flex-1 animate-fade-in-right overflow-y-auto">
+                <!-- Holiday Mode -->
+                <div>
+                    <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-4 px-1">Global Mode</h4>
+                    <div @click="saveAppConfig({ isHolidayMode: !appConfig.isHolidayMode })" 
+                        class="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm flex items-center justify-between group hover:border-orange-200 transition-all duration-300 cursor-pointer">
+                        <div class="flex items-center gap-4">
+                            <div class="size-12 rounded-2xl bg-orange-50 text-orange-600 flex items-center justify-center transition-transform group-hover:rotate-12">
+                                <span class="material-symbols-outlined text-2xl">beach_access</span>
+                            </div>
+                            <div class="min-w-0">
+                                <p class="text-sm font-bold text-slate-800">Mode Liburan</p>
+                                <p class="text-[10px] text-slate-400 font-medium leading-tight mt-0.5">Wali & Santri diizinkan input mandiri</p>
+                            </div>
+                        </div>
+                        <div class="w-14 h-8 rounded-full transition-all duration-500 relative p-1"
+                            :class="appConfig.isHolidayMode ? 'bg-orange-500 shadow-lg shadow-orange-200' : 'bg-slate-200'">
+                            <div class="size-6 bg-white rounded-full shadow-md transition-all duration-500 transform"
+                                :class="appConfig.isHolidayMode ? 'translate-x-6' : 'translate-x-0'"></div>
+                        </div>
+                    </div>
+
+                    <!-- Tanggal Libur (v36) -->
+                    <div class="mt-4 grid grid-cols-2 gap-3 p-4 bg-orange-50/30 rounded-2xl border border-orange-100/50">
+                        <div>
+                            <label class="text-[9px] font-black text-orange-400 uppercase tracking-widest mb-1 block">Mulai Libur</label>
+                            <input type="date" :value="appConfig.holiday_start" 
+                                @change="(e) => saveAppConfig({ 'holiday_start': e.target.value })"
+                                class="w-full p-2.5 rounded-xl border border-orange-100/50 text-xs font-bold text-slate-700 bg-white shadow-sm focus:ring-2 focus:ring-orange-200 outline-none transition">
+                        </div>
+                        <div>
+                            <label class="text-[9px] font-black text-orange-400 uppercase tracking-widest mb-1 block">Tgl Masuk</label>
+                            <input type="date" :value="appConfig.holiday_end" 
+                                @change="(e) => saveAppConfig({ 'holiday_end': e.target.value })"
+                                class="w-full p-2.5 rounded-xl border border-orange-100/50 text-xs font-bold text-slate-700 bg-white shadow-sm focus:ring-2 focus:ring-orange-200 outline-none transition">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Notification Routing -->
+                <div>
+                    <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-4 px-1 text-center">Rute Notifikasi Otomatis</h4>
+                    <div class="bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-6">
+                        <!-- Global Toggle -->
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-bold text-slate-600">Aktifkan Semua Notifikasi</span>
+                            <button @click="saveAppConfig({ 'notifications.enabled': !appConfig.notifications.enabled })" 
+                                class="w-12 h-6 rounded-full transition-all duration-300 relative p-1"
+                                :class="appConfig.notifications.enabled ? 'bg-indigo-600' : 'bg-slate-300'">
+                                <div class="size-4 bg-white rounded-full shadow-sm transition-all duration-300 transform"
+                                    :class="appConfig.notifications.enabled ? 'translate-x-6' : 'translate-x-0'"></div>
+                            </button>
+                        </div>
+
+                        <!-- Target Roles -->
+                        <div class="space-y-3">
+                            <p class="text-[10px] text-slate-400 font-black uppercase text-center">Dikirim Kepada:</p>
+                            <div class="grid grid-cols-1 gap-2">
+                                <button v-for="role in ['admin', 'guru', 'wali']" :key="role"
+                                    @click="() => {
+                                        const targets = [...(appConfig.notifications.targets || [])];
+                                        const idx = targets.indexOf(role);
+                                        const newTargets = idx > -1 ? targets.filter(t => t !== role) : [...targets, role];
+                                        saveAppConfig({ 'notifications.targets': newTargets });
+                                    }"
+                                    class="p-4 rounded-2xl border-2 flex items-center justify-between group transition-all duration-300"
+                                    :class="(appConfig.notifications.targets || []).includes(role) ? 'bg-white border-primary shadow-lg shadow-blue-100' : 'bg-white border-slate-100 opacity-60'">
+                                    <div class="flex items-center gap-3">
+                                        <div class="size-8 rounded-lg flex items-center justify-center font-bold text-xs"
+                                            :class="(appConfig.notifications.targets || []).includes(role) ? 'bg-primary text-white' : 'bg-slate-100 text-slate-400'">
+                                            {{ role.charAt(0).toUpperCase() }}
+                                        </div>
+                                        <span class="text-sm font-bold text-slate-700 capitalize">{{ role }}</span>
+                                    </div>
+                                    <span class="material-symbols-outlined text-lg"
+                                        :class="(appConfig.notifications.targets || []).includes(role) ? 'text-primary' : 'text-slate-200'">
+                                        {{ (appConfig.notifications.targets || []).includes(role) ? 'check_circle' : 'circle' }}
+                                    </span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- VERSION INFO (Always at bottom inside card) -->
-            <div class="p-6 border-t border-slate-50 bg-slate-50/20 text-center">
+            <div class="p-6 border-t border-slate-50 bg-slate-50/20 text-center mt-auto">
                 <p class="text-[9px] font-black text-slate-300 uppercase tracking-[0.4em]">Tahfidz App v{{ appVersion }}</p>
             </div>
         </div>

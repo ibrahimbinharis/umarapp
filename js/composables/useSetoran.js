@@ -11,7 +11,7 @@
  * Dependencies: DB (from core.js), uiData (from parent)
  */
 
-function useSetoran(uiData, DB, refreshData) {
+function useSetoran(uiData, DB, refreshData, userSession, appConfig) {
     // Get Vue from global (loaded via CDN)
     const { reactive, computed, ref, watch, onMounted, onUnmounted } = Vue;
 
@@ -780,7 +780,12 @@ function useSetoran(uiData, DB, refreshData) {
                 errors: setoranForm.errors,
                 score: setoranForm.score,
                 grade: setoranForm.grade,
-                counted: setoranForm.counted
+                counted: setoranForm.counted,
+                // Holiday Mode Flag & Category (v36)
+                is_holiday: appConfig?.value?.isHolidayMode || false,
+                category: (appConfig?.value?.isHolidayMode)
+                    ? `${setoranForm.setoran_type} (Mandiri)`
+                    : setoranForm.setoran_type
             };
 
             // Add type-specific fields

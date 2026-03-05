@@ -12,7 +12,8 @@ const DashboardView = {
         'unreadCount',
         'uiData',
         'activeChildId',
-        'selectChild'
+        'selectChild',
+        'appConfig'
     ],
     emits: [
         'update:activityFilter',
@@ -336,6 +337,36 @@ const DashboardView = {
             });
         };
 
+        const holidayCountdown = computed(() => {
+            if (!props.appConfig?.holiday_start || !props.appConfig?.holiday_end) return null;
+
+            const start = new Date(props.appConfig.holiday_start);
+            const end = new Date(props.appConfig.holiday_end);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            if (today < start) {
+                const diffDays = Math.ceil(Math.abs(start - today) / (1000 * 60 * 60 * 24));
+                return {
+                    status: 'upcoming',
+                    days: diffDays,
+                    label: 'Menuju Liburan',
+                    color: 'from-blue-600 to-indigo-600',
+                    icon: 'calendar_month'
+                };
+            } else if (today <= end) {
+                const diffDays = Math.ceil(Math.abs(end - today) / (1000 * 60 * 60 * 24));
+                return {
+                    status: 'ongoing',
+                    days: diffDays,
+                    label: 'Libur Sedang Berlangsung',
+                    color: 'from-orange-500 to-red-600',
+                    icon: 'beach_access'
+                };
+            }
+            return null;
+        });
+
         onMounted(() => {
             if (props.userSession?.role === 'wali' && !props.activeChildId && props.uiData?.santri?.length > 0) {
                 props.selectChild(props.uiData.santri[0]._id || props.uiData.santri[0].santri_id);
@@ -361,7 +392,8 @@ const DashboardView = {
             infoNotifications,
             hasUnreadAlerts,
             handleNotifClick,
-            stripHtml
+            stripHtml,
+            holidayCountdown
         };
     },
     template: `
@@ -374,130 +406,141 @@ const DashboardView = {
         </div>
 
         <!-- CONTENT -->
-        <div class="space-y-6 pt-0 relative z-10 px-0.5">
-                <!-- Notification Bell -->
-            <div class="absolute top-4 right-4 z-50">
-                <button @click="showNotifications = !showNotifications" class="relative p-2 rounded-full text-white transition hover:scale-110 active:scale-95">
-                    <span class="material-symbols-outlined">notifications</span>
-                    
-                    <!-- Badge: Red Circle with White Text -->
-                    <span v-if="unreadCount > 0" class="absolute top-0 right-0 size-4 bg-red-500 rounded-full text-[10px] text-white flex items-center justify-center font-bold border border-white shadow-sm animate-pulse">
-                        {{ unreadCount > 9 ? '9+' : unreadCount }}
-                    </span>
-                </button>
-
-                <!-- Dropdown -->
-                <div v-if="showNotifications" class="absolute right-0 top-12 w-80 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden animate-fade-in-up origin-top-right z-[60]">
-                    <!-- Header with Tabs -->
-                    <div class="p-2 border-b border-slate-100 bg-slate-50 flex flex-col gap-2">
-                        <div class="flex justify-between items-center px-1">
-                            <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Notifikasi</span>
-                            <button @click="$emit('mark-all-read')" class="text-[10px] text-blue-600 font-bold hover:underline">
-                                Baca Semua
-                            </button>
-                        </div>
-                        <div class="flex gap-1 overflow-x-auto pb-1 no-scrollbar">
-                            <button @click="activeNotifTab = 'all'" 
-                                class="px-2.5 py-1.5 rounded-full text-[10px] font-bold transition-all whitespace-nowrap"
-                                :class="activeNotifTab === 'all' ? 'bg-slate-800 text-white shadow-sm' : 'bg-white text-slate-400 border border-slate-100 hover:text-slate-600'">
-                                Semua
-                            </button>
-                            <button @click="activeNotifTab = 'info'" 
-                                class="px-2.5 py-1.5 rounded-full text-[10px] font-bold transition-all whitespace-nowrap"
-                                :class="activeNotifTab === 'info' ? 'bg-blue-600 text-white shadow-sm' : 'bg-white text-blue-400 border border-blue-50 hover:text-blue-600'">
-                                Info
-                            </button>
-                            <button @click="activeNotifTab = 'monitoring'" 
-                                class="px-2.5 py-1.5 rounded-full text-[10px] font-bold transition-all whitespace-nowrap"
-                                :class="activeNotifTab === 'monitoring' ? 'bg-indigo-500 text-white shadow-sm' : 'bg-white text-indigo-400 border border-indigo-50 hover:text-indigo-600'">
-                                Monitoring
-                            </button>
-                            <button @click="activeNotifTab = 'important'" 
-                                class="px-2.5 py-1.5 rounded-full text-[10px] font-bold transition-all whitespace-nowrap"
-                                :class="activeNotifTab === 'important' ? 'bg-orange-500 text-white shadow-sm' : 'bg-white text-orange-500 border border-orange-50 hover:text-orange-600'">
-                                Penting
-                            </button>
-                            <button @click="activeNotifTab = 'emergency'" 
-                                class="px-2.5 py-1.5 rounded-full text-[10px] font-bold transition-all whitespace-nowrap relative"
-                                :class="activeNotifTab === 'emergency' ? 'bg-red-500 text-white shadow-sm' : 'bg-white text-red-500 border border-red-50 hover:text-red-600'">
-                                Darurat
-                                <span v-if="notifications.some(n => !n.is_read && n.type === 'alert' && String(n._id).includes('_ann_'))" class="absolute top-0 right-0 size-2 bg-white rounded-full border-2 border-red-500"></span>
-                            </button>
+        <div class="space-y-6 pt-1 relative z-10 px-0.5">
+            
+            <!-- HEADER SECTION: Countdown & Profile/Bell Row -->
+            <div class="relative px-5 pt-1">
+                <!-- HOLIDAY COUNTDOWN (Simple & Centered) -->
+                <transition name="fade">
+                    <div v-if="holidayCountdown" 
+                        class="flex justify-center mb-3 animate-in fade-in slide-in-from-top-4 duration-700">
+                        <div class="px-3 py-1 bg-white/10 backdrop-blur-sm rounded-full border border-white/20 flex items-center gap-2">
+                            <span class="material-symbols-outlined text-[10px] text-white">{{ holidayCountdown.icon }}</span>
+                            <span class="text-[9px] font-black text-white uppercase tracking-widest">{{ holidayCountdown.label }}: {{ holidayCountdown.days }} Hari Lagi</span>
                         </div>
                     </div>
+                </transition>
 
-                    <!-- List Content -->
-                    <div class="max-h-80 overflow-y-auto custom-scrollbar bg-white">
-                        <div v-if="currentTabNotifications.length === 0" class="p-8 text-center flex flex-col items-center justify-center text-slate-400 gap-2">
-                            <span class="material-symbols-outlined text-3xl opacity-20">notifications_off</span>
-                            <span class="text-xs">Tidak ada notifikasi dalam kategori ini</span>
+                <!-- Profile & Bell Row -->
+                <div class="flex items-center justify-between gap-3">
+                    <!-- Profile (Greeting) -->
+                    <div @click="$emit('navigate', 'profile')"
+                        class="flex items-center gap-3 cursor-pointer active:scale-95 transition flex-1 min-w-0">
+                        <!-- Photo or Initials -->
+                        <div v-if="userSession.photo_url"
+                            class="size-10 rounded-full overflow-hidden border-2 border-white/50 shadow-md flex-shrink-0">
+                            <img :src="userSession.photo_url" alt="Profile" class="w-full h-full object-cover"
+                                referrerpolicy="no-referrer">
                         </div>
-                        
-                        <div v-else v-for="notif in currentTabNotifications" :key="notif._id || notif.id" 
-                            class="p-3 border-b border-slate-50 hover:bg-slate-50 transition cursor-pointer relative group"
-                            :class="{'bg-blue-50/30': !notif.is_read}"
-                            @click="handleNotifClick(notif)">
+                        <div v-else
+                            class="size-10 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center text-white font-bold text-base border border-white/30 flex-shrink-0">
+                            {{ getInitials(userSession.full_name) }}
+                        </div>
+                        <div class="min-w-0">
+                            <h2 class="text-lg font-bold text-white drop-shadow-sm leading-tight truncate">Ahlan,
+                                {{ userSession.full_name ? userSession.full_name.split(' ')[0] : 'User' }}!</h2>
+                            <p class="text-[10px] text-blue-100 font-medium opacity-90 mt-0.5 whitespace-nowrap">Selamat datang kembali</p>
                             
-                            <!-- Unread Indicator Dot -->
-                            <div v-if="!notif.is_read" class="absolute left-2 top-4 size-1.5 rounded-full bg-blue-500"></div>
-
-                            <div class="flex gap-3 pl-3">
-                                <!-- Icon Removed -->
-                                <div class="flex-1 min-w-0">
-                                    <div class="flex justify-between items-start mb-0.5">
-                                        <h4 class="text-xs font-bold text-slate-800 line-clamp-1" 
-                                            :class="{
-                                                'text-red-600': notif.type === 'alert' && !notif.is_read,
-                                                'text-orange-600': notif.type === 'warning' && !notif.is_read,
-                                                'text-blue-600': notif.type === 'info' && !notif.is_read
-                                            }">{{ notif.title }}</h4>
-                                        <span class="text-[9px] text-slate-400 whitespace-nowrap ml-2">{{ formatDate(notif.created_at || notif.timestamp) }}</span>
-                                    </div>
-                                    <p class="text-[11px] text-slate-500 leading-snug line-clamp-2">{{ stripHtml(notif.message) }}</p>
-                                </div>
+                            <!-- Connection Status Badge (Wali Only) -->
+                            <div v-if="userSession.role === 'wali' && uiData.santri && uiData.santri.length > 0" 
+                                class="flex items-center gap-1.5 mt-1">
+                                <div class="size-1 bg-emerald-400 rounded-full animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.8)]"></div>
+                                <span class="text-[8px] font-bold text-white/80 uppercase tracking-widest truncate">
+                                    {{ getSantriName(activeChildId) }}
+                                </span>
                             </div>
                         </div>
                     </div>
-                    
-                    <!-- Footer Action -->
-                    <div class="p-3 bg-slate-50 border-t border-slate-100/50 text-center">
-                        <button @click="$emit('navigate', 'notifications')" class="text-xs font-bold text-blue-600 hover:text-blue-700 hover:underline flex items-center justify-center gap-1 w-full py-1">
-                            Lihat Selengkapnya
-                            <span class="material-symbols-outlined text-sm">arrow_forward</span>
+
+                    <!-- Notification Bell (Aligned with Profile) -->
+                    <div class="relative flex-shrink-0">
+                        <button @click="showNotifications = !showNotifications" class="relative p-2 rounded-full text-white transition hover:scale-110 active:scale-95">
+                            <span class="material-symbols-outlined">notifications</span>
+                            <span v-if="unreadCount > 0" class="absolute top-0 right-0 size-4 bg-red-500 rounded-full text-[10px] text-white flex items-center justify-center font-bold border border-white shadow-sm animate-pulse">
+                                {{ unreadCount > 9 ? '9+' : unreadCount }}
+                            </span>
                         </button>
+
+                        <!-- Dropdown -->
+                        <div v-if="showNotifications" class="absolute right-0 top-12 w-80 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden animate-fade-in-up origin-top-right z-[60]">
+                            <!-- Header with Tabs -->
+                            <div class="p-2 border-b border-slate-100 bg-slate-50 flex flex-col gap-2">
+                                <div class="flex justify-between items-center px-1">
+                                    <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Notifikasi</span>
+                                    <button @click="$emit('mark-all-read')" class="text-[10px] text-blue-600 font-bold hover:underline">
+                                        Baca Semua
+                                    </button>
+                                </div>
+                                <div class="flex gap-1 overflow-x-auto pb-1 no-scrollbar text-left">
+                                    <button @click="activeNotifTab = 'all'" 
+                                        class="px-2.5 py-1.5 rounded-full text-[10px] font-bold transition-all whitespace-nowrap"
+                                        :class="activeNotifTab === 'all' ? 'bg-slate-800 text-white shadow-sm' : 'bg-white text-slate-400 border border-slate-100 hover:text-slate-600'">
+                                        Semua
+                                    </button>
+                                    <button @click="activeNotifTab = 'info'" 
+                                        class="px-2.5 py-1.5 rounded-full text-[10px] font-bold transition-all whitespace-nowrap"
+                                        :class="activeNotifTab === 'info' ? 'bg-blue-600 text-white shadow-sm' : 'bg-white text-blue-400 border border-blue-50 hover:text-blue-600'">
+                                        Info
+                                    </button>
+                                    <button @click="activeNotifTab = 'monitoring'" 
+                                        class="px-2.5 py-1.5 rounded-full text-[10px] font-bold transition-all whitespace-nowrap"
+                                        :class="activeNotifTab === 'monitoring' ? 'bg-indigo-500 text-white shadow-sm' : 'bg-white text-indigo-400 border border-indigo-50 hover:text-indigo-600'">
+                                        Monitoring
+                                    </button>
+                                    <button @click="activeNotifTab = 'important'" 
+                                        class="px-2.5 py-1.5 rounded-full text-[10px] font-bold transition-all whitespace-nowrap"
+                                        :class="activeNotifTab === 'important' ? 'bg-orange-500 text-white shadow-sm' : 'bg-white text-orange-500 border border-orange-50 hover:text-orange-600'">
+                                        Penting
+                                    </button>
+                                    <button @click="activeNotifTab = 'emergency'" 
+                                        class="px-2.5 py-1.5 rounded-full text-[10px] font-bold transition-all whitespace-nowrap relative"
+                                        :class="activeNotifTab === 'emergency' ? 'bg-red-500 text-white shadow-sm' : 'bg-white text-red-500 border border-red-50 hover:text-red-600'">
+                                        Darurat
+                                        <span v-if="notifications.some(n => !n.is_read && n.type === 'alert' && String(n._id).includes('_ann_'))" class="absolute top-0 right-0 size-2 bg-white rounded-full border-2 border-red-500"></span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- List Content -->
+                            <div class="max-h-80 overflow-y-auto custom-scrollbar bg-white">
+                                <div v-if="currentTabNotifications.length === 0" class="p-8 text-center flex flex-col items-center justify-center text-slate-400 gap-2">
+                                    <span class="material-symbols-outlined text-3xl opacity-20">notifications_off</span>
+                                    <span class="text-xs">Tidak ada notifikasi dalam kategori ini</span>
+                                </div>
+                                <div v-else v-for="notif in currentTabNotifications" :key="notif._id || notif.id" 
+                                    class="p-3 border-b border-slate-50 hover:bg-slate-50 transition cursor-pointer relative group text-left"
+                                    :class="{'bg-blue-50/30': !notif.is_read}"
+                                    @click="handleNotifClick(notif)">
+                                    <div v-if="!notif.is_read" class="absolute left-2 top-4 size-1.5 rounded-full bg-blue-500"></div>
+                                    <div class="flex gap-3 pl-3 text-left">
+                                        <div class="flex-1 min-w-0 text-left">
+                                            <div class="flex justify-between items-start mb-0.5">
+                                                <h4 class="text-xs font-bold text-slate-800 line-clamp-1 text-left" 
+                                                    :class="{
+                                                        'text-red-600': notif.type === 'alert' && !notif.is_read,
+                                                        'text-orange-600': notif.type === 'warning' && !notif.is_read,
+                                                        'text-blue-600': notif.type === 'info' && !notif.is_read
+                                                    }">{{ notif.title }}</h4>
+                                                <span class="text-[9px] text-slate-400 whitespace-nowrap ml-2">{{ formatDate(notif.created_at || notif.timestamp) }}</span>
+                                            </div>
+                                            <p class="text-[11px] text-slate-500 leading-snug line-clamp-2 text-left">{{ stripHtml(notif.message) }}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Footer Action -->
+                            <div class="p-3 bg-slate-50 border-t border-slate-100/50 text-center">
+                                <button @click="$emit('navigate', 'notifications')" class="text-xs font-bold text-blue-600 hover:text-blue-700 hover:underline flex items-center justify-center gap-1 w-full py-1">
+                                    Lihat Selengkapnya
+                                    <span class="material-symbols-outlined text-sm">arrow_forward</span>
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Greeting Card -->
-            <div @click="$emit('navigate', 'profile')"
-                class="px-5 py-3 mb-0 flex items-center gap-3 cursor-pointer active:scale-95 transition">
-                <!-- Photo or Initials -->
-                <div v-if="userSession.photo_url"
-                    class="size-10 rounded-full overflow-hidden border-2 border-white/50 shadow-md">
-                    <img :src="userSession.photo_url" alt="Profile" class="w-full h-full object-cover"
-                        referrerpolicy="no-referrer">
-                </div>
-                <div v-else
-                    class="size-10 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center text-white font-bold text-base border border-white/30">
-                    {{ getInitials(userSession.full_name) }}
-                </div>
-                <div>
-                    <h2 class="text-lg font-bold text-white drop-shadow-sm leading-tight">Ahlan,
-                        {{ userSession.full_name ? userSession.full_name.split(' ')[0] : 'User' }}!</h2>
-                    
-                    <p class="text-xs text-blue-100 font-medium opacity-90 mt-0.5">Selamat datang kembali</p>
-                    
-                    <!-- Connection Status Badge (Wali Only) -->
-                    <div v-if="userSession.role === 'wali' && uiData.santri && uiData.santri.length > 0" 
-                        class="flex items-center gap-1.5 mt-1.5">
-                        <div class="size-1.5 bg-emerald-400 rounded-full animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.8)]"></div>
-                        <span class="text-[9px] font-bold text-white/80 uppercase tracking-widest">
-                            {{ getSantriName(activeChildId) }}
-                        </span>
-                    </div>
-                </div>
-            </div>
 
             <!-- Menu Grid Container -->
             <div class="bg-white px-5 pt-5 pb-8 rounded-3xl border border-slate-100 card-shadow mb-6 relative transition-all duration-300">

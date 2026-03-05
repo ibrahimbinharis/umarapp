@@ -203,11 +203,12 @@ const RekapView = {
                                     {{ row.nilai_akhir }}
                                 </td>
                                 <td class="px-4 py-3 text-center">
-                                    <span class="px-2 py-1 rounded-full font-bold text-[10px]" :class="{
-                                                'bg-green-100 text-green-700': row.predikat === 'A+' || row.predikat === 'A',
-                                                'bg-blue-100 text-blue-700': row.predikat === 'B+' || row.predikat === 'B' || row.predikat === 'B-',
-                                                'bg-red-100 text-red-700': row.predikat === 'C'
-                                            }">
+                                    <span class="px-2 py-1 rounded-full font-bold text-[10px] border" :class="{
+                                        'bg-blue-50 text-blue-700 border-blue-100': row.predikat === 'A+' || row.predikat === 'A',
+                                        'bg-emerald-50 text-emerald-700 border-emerald-100': row.predikat === 'B+' || row.predikat === 'B',
+                                        'bg-orange-50 text-orange-700 border-orange-100': row.predikat === 'B-',
+                                        'bg-red-50 text-red-700 border-red-100': row.predikat === 'C'
+                                    }">
                                         {{ row.predikat }}
                                     </span>
                                 </td>
