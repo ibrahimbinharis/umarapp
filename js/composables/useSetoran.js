@@ -302,9 +302,14 @@ function useSetoran(uiData, DB, refreshData, userSession, appConfig) {
     /**
      * Calculate grade from pages and errors
      */
-    const calculateGrade = (pages, errors) => {
+    const calculateGrade = (pages, errors, type = null) => {
         const p = parseFloat(pages) || 0;
         const e = parseInt(errors) || 0;
+
+        // Tilawah doesn't need a grade (v36)
+        if (type === 'Tilawah') {
+            return { score: 0, grade: '-', counted: p };
+        }
 
         if (p <= 0) return { score: 0, grade: 'C', counted: 0 };
 
@@ -339,18 +344,18 @@ function useSetoran(uiData, DB, refreshData, userSession, appConfig) {
         setoranForm.setoran_type = type;
 
         // Reset fields based on type
-        if (type === 'Manzil') {
+        if (type === 'Tilawah') {
+            setoranForm.pages = 20; // Default 1 Juz
+            setoranForm.tilawah_mode = 'juz';
+            setoranForm.page_from = 1;
+            setoranForm.page_to = 20;
+            setoranForm.juz_from = 1;
+            setoranForm.juz_to = 1;
+        } else if (type === 'Manzil') {
             setoranForm.pages = 1;
             setoranForm.manzil_mode = 'page';
             setoranForm.page_from = 1;
             setoranForm.page_to = 1;
-        } else if (type === 'Tilawah') {
-            setoranForm.pages = 1;
-            setoranForm.tilawah_mode = 'page';
-            setoranForm.page_from = 1;
-            setoranForm.page_to = 1;
-            setoranForm.juz_from = 1;
-            setoranForm.juz_to = 1;
         } else if (type === 'Sabaq') {
             setoranForm.pages = 1;
             setoranForm.ayat_from = 1;
@@ -368,7 +373,7 @@ function useSetoran(uiData, DB, refreshData, userSession, appConfig) {
      * Update grade display
      */
     const updateGrade = () => {
-        const result = calculateGrade(setoranForm.pages, setoranForm.errors);
+        const result = calculateGrade(setoranForm.pages, setoranForm.errors, setoranForm.setoran_type);
         setoranForm.score = result.score;
         setoranForm.grade = result.grade;
         setoranForm.counted = result.counted;
@@ -378,7 +383,12 @@ function useSetoran(uiData, DB, refreshData, userSession, appConfig) {
      * Adjust value (for +/- buttons)
      */
     const adjustValue = (field, delta) => {
-        setoranForm[field] = Math.max(0, (parseFloat(setoranForm[field]) || 0) + delta);
+        let finalDelta = delta;
+        // For Tilawah, adjustments are in half-Juz steps (0.5 * 20 = 10 pages)
+        if (field === 'pages' && setoranForm.setoran_type === 'Tilawah') {
+            finalDelta = delta * 20;
+        }
+        setoranForm[field] = Math.max(0, (parseFloat(setoranForm[field]) || 0) + finalDelta);
         updateGrade();
     };
 
@@ -707,6 +717,13 @@ function useSetoran(uiData, DB, refreshData, userSession, appConfig) {
     watch(() => setoranForm.page_from, (newVal) => {
         if (newVal !== '' && (setoranForm.page_to === '' || Number(setoranForm.page_to) < Number(newVal))) {
             setoranForm.page_to = newVal;
+        }
+    });
+
+    // Auto sync juz_to from juz_from (v36)
+    watch(() => setoranForm.juz_from, (newVal) => {
+        if (newVal !== '' && (setoranForm.juz_to === '' || Number(setoranForm.juz_to) < Number(newVal))) {
+            setoranForm.juz_to = newVal;
         }
     });
 

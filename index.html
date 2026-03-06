@@ -1334,7 +1334,7 @@
                     <div v-if="modalState.view === 'grading'" class="space-y-6">
                         <!-- Manual Score Input -->
                         <div
-                            class="bg-blue-50/50 p-4 rounded-2xl border border-blue-100 flex items-center justify-between">
+                            class="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex items-center justify-between">
                             <div class="flex flex-col">
                                 <label class="font-bold text-slate-700 text-sm">Nilai Manual</label>
                                 <span class="text-[10px] text-slate-500 uppercase font-black">Skala 0-100</span>
@@ -1581,7 +1581,7 @@
 
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js?v=4.1').then(reg => {
+                navigator.serviceWorker.register('sw.js?v=4.2').then(reg => {
                     console.log('SW Registered!', reg);
 
                     // 1. Check if update is already waiting (e.g. from previous visit)

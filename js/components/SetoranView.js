@@ -318,40 +318,50 @@ const SetoranView = {
 
             <!-- SCORING -->
             <div class="bg-slate-50 p-4 rounded-xl border space-y-4">
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid gap-4" :class="setoranForm.setoran_type === 'Tilawah' ? 'grid-cols-1' : 'grid-cols-2'">
                     <!-- Pages -->
                     <div>
-                        <label class="text-xs font-bold text-slate-400">Halaman</label>
+                        <label class="text-xs font-bold text-slate-400">
+                            {{ setoranForm.setoran_type === 'Tilawah' ? 'Total Juz' : 'Total Halaman' }}
+                        </label>
                         <div class="flex items-center gap-2">
                             <button @click="$emit('adjust-value', 'pages', -0.5)"
-                                class="size-8 rounded-lg bg-white border shadow-sm font-bold text-slate-500">
+                                class="size-8 rounded-lg bg-white border shadow-sm font-bold text-slate-500 hover:bg-slate-50 active:scale-95 transition-all">
                                 -
                             </button>
-                            <input type="number" v-model.number="setoranForm.pages"
-                                @input="$emit('update-grade')"
-                                :readonly="setoranForm.setoran_type === 'Manzil' || setoranForm.setoran_type === 'Tilawah' || setoranForm.setoran_type === 'Sabqi' || setoranForm.setoran_type === 'Robt'"
-                                class="w-full bg-white p-2 border rounded-lg text-center font-bold"
-                                :class="{ 'text-gray-400': setoranForm.setoran_type === 'Manzil' || setoranForm.setoran_type === 'Tilawah' || setoranForm.setoran_type === 'Sabqi' || setoranForm.setoran_type === 'Robt' }">
+                            <div class="flex-1 text-center">
+                                <input v-if="setoranForm.setoran_type === 'Tilawah'"
+                                    type="text" 
+                                    :value="(setoranForm.pages / 20).toFixed(1) + ' Juz'"
+                                    readonly
+                                    class="w-full bg-slate-50 p-2 border rounded-lg text-center font-bold text-slate-700">
+                                <input v-else
+                                    type="number" v-model.number="setoranForm.pages"
+                                    @input="$emit('update-grade')"
+                                    :readonly="setoranForm.setoran_type === 'Manzil' || setoranForm.setoran_type === 'Sabqi' || setoranForm.setoran_type === 'Robt'"
+                                    class="w-full bg-white p-2 border rounded-lg text-center font-bold"
+                                    :class="{ 'text-slate-400': setoranForm.setoran_type !== 'Sabaq' }">
+                            </div>
                             <button @click="$emit('adjust-value', 'pages', 0.5)"
-                                class="size-8 rounded-lg bg-white border shadow-sm font-bold text-slate-500">
+                                class="size-8 rounded-lg bg-white border shadow-sm font-bold text-slate-500 hover:bg-slate-50 active:scale-95 transition-all">
                                 +
                             </button>
                         </div>
                     </div>
 
                     <!-- Errors -->
-                    <div>
+                    <div v-if="setoranForm.setoran_type !== 'Tilawah'">
                         <label class="text-xs font-bold text-slate-400">Salah</label>
                         <div class="flex items-center gap-2">
                             <button @click="$emit('adjust-value', 'errors', -1)"
-                                class="size-8 rounded-lg bg-white border shadow-sm font-bold text-slate-500">
+                                class="size-8 rounded-lg bg-white border shadow-sm font-bold text-slate-500 hover:bg-slate-50 active:scale-95 transition-all">
                                 -
                             </button>
                             <input type="number" v-model.number="setoranForm.errors"
                                 @input="$emit('update-grade')"
                                 class="w-full bg-white p-2 border rounded-lg text-center font-bold text-red-500">
                             <button @click="$emit('adjust-value', 'errors', 1)"
-                                class="size-8 rounded-lg bg-white border shadow-sm font-bold text-slate-500">
+                                class="size-8 rounded-lg bg-white border shadow-sm font-bold text-slate-500 hover:bg-slate-50 active:scale-95 transition-all">
                                 +
                             </button>
                         </div>

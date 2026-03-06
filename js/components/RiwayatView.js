@@ -354,7 +354,7 @@ const RiwayatView = {
                                         (item.grade === 'C') ? 'text-red-600' : 
                                         'text-slate-500'
                                     ]">
-                                    {{ item.grade }}
+                                    {{ (item.category === 'Tilawah' || item.setoran_type === 'Tilawah') ? '-' : item.grade }}
                                 </div>
                                 <div v-else-if="item.__cat === 'ujian'" 
                                     class="inline-flex items-center justify-center font-black text-sm"

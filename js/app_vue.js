@@ -819,6 +819,26 @@ createApp({
         // --- SANTRI ACTIONS (Moved to useSantri.js) ---
 
 
+        // --- MODAL NAVIGATION HELPERS ---
+        watch(() => modalState.isOpen, (newVal) => {
+            if (newVal) {
+                // Push a specific state when modal opens
+                window.history.pushState({ modal: true, view: currentView.value }, '', '#' + currentView.value + '-modal');
+            } else {
+                // If closed manually (button click), and we are still in modal history state
+                if (window.history.state && window.history.state.modal) {
+                    // Check if we navigated to a new view while closing (e.g. Lihat Al-Quran)
+                    if (window.history.state.view !== currentView.value) {
+                        // Replace the modal entry with the current view state
+                        window.history.replaceState({ view: currentView.value }, '', '#' + currentView.value);
+                    } else {
+                        // Normal close: go back to the state before modal opened
+                        window.history.back();
+                    }
+                }
+            }
+        });
+
         const closeModal = () => {
             modalState.isOpen = false;
             modalState.view = '';
@@ -982,7 +1002,18 @@ createApp({
         onMounted(async () => {
             // 1. PWA History Listener
             window.addEventListener('popstate', (event) => {
-                // v36: Hafalan sub-view back logic
+                // 1. Handle Modal Back Logic (v36)
+                if (modalState.isOpen) {
+                    // If the new state is not a modal state, close the modal
+                    if (!event.state || !event.state.modal) {
+                        modalState.isOpen = false;
+                        modalState.view = '';
+                        modalState.data = null;
+                        return; // Prevent navigating away on modal back
+                    }
+                }
+
+                // 2. Hafalan sub-view back logic
                 // If we are in Hafalan and moving back from detail to list
                 if (currentView.value === 'hafalan' && ujian.ujianForm.santri_id && (!event.state || !event.state.detail)) {
                     ujian.ujianForm.santri_id = '';
