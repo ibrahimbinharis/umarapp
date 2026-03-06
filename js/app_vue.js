@@ -58,7 +58,11 @@ createApp({
                     isHolidayMode: false,
                     holiday_start: '',
                     holiday_end: '',
-                    notifications: stored.notifications || { enabled: true, targets: ['admin', 'guru', 'wali'] }
+                    notifications: {
+                        enabled: stored.notifications?.enabled !== false,
+                        targets: stored.notifications?.targets || ['admin', 'guru', 'wali'],
+                        types: stored.notifications?.types || {}
+                    }
                 };
             }
 
@@ -75,9 +79,10 @@ createApp({
                 isHolidayMode: finalStatus,
                 holiday_start: start || '',
                 holiday_end: end || '',
-                notifications: stored.notifications || {
-                    enabled: true,
-                    targets: ['admin', 'guru', 'wali']
+                notifications: {
+                    enabled: stored.notifications?.enabled !== false,
+                    targets: stored.notifications?.targets || ['admin', 'guru', 'wali'],
+                    types: stored.notifications?.types || {}
                 }
             };
         });
@@ -771,14 +776,25 @@ createApp({
                 title: 'Konfirmasi',
                 message: 'Simpan perubahan konfigurasi?',
                 onConfirm: async () => {
-                    const merged = { ...current };
+                    const merged = JSON.parse(JSON.stringify(current));
                     for (const key in updates) {
-                        if (key.includes('.')) {
-                            const [p, c] = key.split('.');
-                            if (!merged[p]) merged[p] = {};
-                            merged[p][c] = updates[key];
-                        } else {
-                            merged[key] = updates[key];
+                        const parts = key.split('.');
+                        if (parts.length === 1) {
+                            merged[parts[0]] = updates[key];
+                        } else if (parts.length === 2) {
+                            if (!merged[parts[0]]) merged[parts[0]] = {};
+                            merged[parts[0]][parts[1]] = updates[key];
+                        } else if (parts.length === 3) {
+                            // Support: 'notifications.types.setoran'
+                            if (!merged[parts[0]]) merged[parts[0]] = {};
+                            if (!merged[parts[0]][parts[1]]) merged[parts[0]][parts[1]] = {};
+                            merged[parts[0]][parts[1]][parts[2]] = updates[key];
+                        } else if (parts.length === 4) {
+                            // Support: 'notifications.types.setoran.enabled'
+                            if (!merged[parts[0]]) merged[parts[0]] = {};
+                            if (!merged[parts[0]][parts[1]]) merged[parts[0]][parts[1]] = {};
+                            if (!merged[parts[0]][parts[1]][parts[2]]) merged[parts[0]][parts[1]][parts[2]] = {};
+                            merged[parts[0]][parts[1]][parts[2]][parts[3]] = updates[key];
                         }
                     }
 

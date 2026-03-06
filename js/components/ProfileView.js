@@ -85,6 +85,12 @@ const ProfileView = {
         const showPassword = ref(false);
 
         const isPushEnabled = ref(Notification.permission === 'granted');
+        const expandedRole = ref(null); // Untuk accordion role notif
+
+        const toggleExpandRole = (role) => {
+            expandedRole.value = expandedRole.value === role ? null : role;
+        };
+
         const checkPushStatus = () => {
             isPushEnabled.value = Notification.permission === 'granted';
         };
@@ -112,6 +118,8 @@ const ProfileView = {
             localNisInput,
             santriList,
             isPushEnabled,
+            expandedRole,
+            toggleExpandRole,
             loadSantriList,
             handleUnlink,
             navigateToSub,
@@ -424,7 +432,7 @@ const ProfileView = {
                 <!-- Notification Routing -->
                 <div>
                     <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-4 px-1 text-center">Rute Notifikasi Otomatis</h4>
-                    <div class="bg-slate-50/50 p-6 rounded-[2.5rem] border border-slate-100 space-y-6">
+                    <div class="bg-slate-50/50 p-5 rounded-[2.5rem] border border-slate-100 space-y-4">
                         <!-- Global Toggle -->
                         <div class="flex items-center justify-between">
                             <span class="text-xs font-bold text-slate-600">Aktifkan Semua Notifikasi</span>
@@ -436,36 +444,103 @@ const ProfileView = {
                             </button>
                         </div>
 
-                        <!-- Target Roles -->
-                        <div class="space-y-3">
-                            <p class="text-[10px] text-slate-400 font-black uppercase text-center">Dikirim Kepada:</p>
-                            <div class="grid grid-cols-1 gap-2">
-                                <button v-for="role in ['admin', 'guru', 'wali']" :key="role"
-                                    @click="() => {
-                                        const targets = [...(appConfig.notifications.targets || [])];
-                                        const idx = targets.indexOf(role);
-                                        const newTargets = idx > -1 ? targets.filter(t => t !== role) : [...targets, role];
-                                        saveAppConfig({ 'notifications.targets': newTargets });
-                                    }"
-                                    class="p-4 rounded-2xl border-2 flex items-center justify-between group transition-all duration-300"
-                                    :class="(appConfig.notifications.targets || []).includes(role) ? 'bg-white border-primary shadow-lg shadow-blue-100' : 'bg-white border-slate-100 opacity-60'">
-                                    <div class="flex items-center gap-3">
-                                        <div class="size-8 rounded-lg flex items-center justify-center font-bold text-xs"
-                                            :class="(appConfig.notifications.targets || []).includes(role) ? 'bg-primary text-white' : 'bg-slate-100 text-slate-400'">
-                                            {{ role.charAt(0).toUpperCase() }}
+                        <!-- Role Accordion -->
+                        <div class="space-y-2">
+                            <p class="text-[10px] text-slate-400 font-black uppercase text-center pb-1">Dikirim Kepada:</p>
+
+                            <template v-for="roleDef in [
+                                { role: 'admin', label: 'Admin', types: [
+                                    { key: 'pelanggaran',  label: 'Pelanggaran',            icon: 'warning' },
+                                    { key: 'pengumuman',   label: 'Pengumuman',              icon: 'campaign' },
+                                    { key: 'alert_harian', label: 'Alert Harian (Otomatis)', icon: 'schedule' },
+                                ]},
+                                { role: 'guru', label: 'Guru', types: [
+                                    { key: 'pelanggaran',  label: 'Pelanggaran',            icon: 'warning' },
+                                    { key: 'pengumuman',   label: 'Pengumuman',              icon: 'campaign' },
+                                    { key: 'alert_harian', label: 'Alert Harian (Otomatis)', icon: 'schedule' },
+                                ]},
+                                { role: 'wali', label: 'Wali', types: [
+                                    { key: 'setoran',      label: 'Setoran Diterima',        icon: 'menu_book' },
+                                    { key: 'ujian',        label: 'Ujian Selesai',           icon: 'assignment_turned_in' },
+                                    { key: 'pelanggaran',  label: 'Pelanggaran',             icon: 'warning' },
+                                    { key: 'pengumuman',   label: 'Pengumuman',              icon: 'campaign' },
+                                    { key: 'alert_harian', label: 'Alert Harian (Otomatis)', icon: 'schedule' },
+                                ]},
+                            ]" :key="roleDef.role">
+                                <div class="rounded-2xl border overflow-hidden transition-all duration-300"
+                                    :class="(appConfig.notifications.targets || []).includes(roleDef.role) ? 'border-primary/30 bg-white shadow-sm' : 'border-slate-100 bg-slate-50/50 opacity-60'">
+
+                                    <!-- Role Header Row -->
+                                    <div class="flex items-center gap-3 px-4 py-3 cursor-pointer select-none"
+                                        @click="toggleExpandRole(roleDef.role)">
+                                        <!-- Avatar -->
+                                        <div class="size-8 rounded-xl flex items-center justify-center font-bold text-xs flex-shrink-0"
+                                            :class="(appConfig.notifications.targets || []).includes(roleDef.role) ? 'bg-primary text-white' : 'bg-slate-200 text-slate-400'">
+                                            {{ roleDef.role.charAt(0).toUpperCase() }}
                                         </div>
-                                        <span class="text-sm font-bold text-slate-700 capitalize">{{ role }}</span>
+                                        <!-- Label -->
+                                        <span class="text-sm font-bold text-slate-700 flex-1 capitalize">{{ roleDef.label }}</span>
+                                        <!-- Active types count badge -->
+                                        <span v-if="(appConfig.notifications.targets || []).includes(roleDef.role)"
+                                            class="text-[9px] font-black text-primary/70 bg-primary/10 px-2 py-0.5 rounded-full">
+                                            {{ roleDef.types.filter(t => (appConfig.notifications.types?.[t.key]?.targets || roleDef.types.map(x=>x.key)).includes(roleDef.role) && appConfig.notifications.types?.[t.key]?.enabled !== false).length }}/{{ roleDef.types.length }}
+                                        </span>
+                                        <!-- Expand Arrow -->
+                                        <span class="material-symbols-outlined text-base text-slate-400 transition-transform duration-300"
+                                            :class="expandedRole === roleDef.role ? 'rotate-180' : ''">
+                                            expand_more
+                                        </span>
                                     </div>
-                                    <span class="material-symbols-outlined text-lg"
-                                        :class="(appConfig.notifications.targets || []).includes(role) ? 'text-primary' : 'text-slate-200'">
-                                        {{ (appConfig.notifications.targets || []).includes(role) ? 'check_circle' : 'circle' }}
-                                    </span>
-                                </button>
-                            </div>
+
+                                    <!-- Expanded: Notification Types -->
+                                    <div v-if="expandedRole === roleDef.role"
+                                        class="border-t border-slate-100 divide-y divide-slate-50">
+                                        <div v-for="notifType in roleDef.types" :key="notifType.key"
+                                            class="flex items-center justify-between px-4 py-2.5">
+                                            <div class="flex items-center gap-2.5">
+                                                <span class="material-symbols-outlined text-sm"
+                                                    :class="(appConfig.notifications.types?.[notifType.key]?.enabled !== false) && (appConfig.notifications.types?.[notifType.key]?.targets || roleDef.types.map(t=>t.key).concat([roleDef.role])).includes(roleDef.role) ? 'text-primary' : 'text-slate-300'">
+                                                    {{ notifType.icon }}
+                                                </span>
+                                                <span class="text-xs font-semibold text-slate-600">{{ notifType.label }}</span>
+                                            </div>
+                                            <!-- Toggle: tambah/hapus role ini dari targets jenis notif -->
+                                            <button @click.stop="() => {
+                                                const defaultTargets = roleDef.types.map(t => t.key).length > 0
+                                                    ? (roleDef.role === 'wali' ? ['wali'] : ['admin', 'guru', 'admin'].filter((v,i,a)=>a.indexOf(v)===i))
+                                                    : [roleDef.role];
+                                                const allDefaultRolesForType = notifType.key === 'setoran' || notifType.key === 'ujian' ? ['wali'] : ['wali','guru','admin'];
+                                                const current = appConfig.notifications.types?.[notifType.key]?.targets || allDefaultRolesForType;
+                                                const isOn = current.includes(roleDef.role);
+                                                const newTargets = isOn ? current.filter(r => r !== roleDef.role) : [...current, roleDef.role];
+                                                saveAppConfig({ ['notifications.types.' + notifType.key + '.targets']: newTargets });
+                                            }"
+                                            :disabled="!(appConfig.notifications.targets || []).includes(roleDef.role)"
+                                            class="w-9 h-5 rounded-full transition-all duration-300 relative p-[3px] flex-shrink-0"
+                                            :class="[
+                                                (() => {
+                                                    const allDefaultRolesForType = notifType.key === 'setoran' || notifType.key === 'ujian' ? ['wali'] : ['wali','guru','admin'];
+                                                    const current = appConfig.notifications.types?.[notifType.key]?.targets || allDefaultRolesForType;
+                                                    return current.includes(roleDef.role) ? 'bg-primary' : 'bg-slate-200';
+                                                })(),
+                                                !(appConfig.notifications.targets || []).includes(roleDef.role) ? 'opacity-30 cursor-not-allowed' : ''
+                                            ]">
+                                            <div class="size-[13px] bg-white rounded-full shadow-sm transition-all duration-300 transform"
+                                                :class="(() => {
+                                                    const allDefaultRolesForType = notifType.key === 'setoran' || notifType.key === 'ujian' ? ['wali'] : ['wali','guru','admin'];
+                                                    const current = appConfig.notifications.types?.[notifType.key]?.targets || allDefaultRolesForType;
+                                                    return current.includes(roleDef.role) ? 'translate-x-[16px]' : 'translate-x-0';
+                                                })()"></div>
+                                        </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
                         </div>
                     </div>
                 </div>
             </div>
+
 
             <!-- VERSION INFO (Always at bottom inside card) -->
             <div class="p-6 border-t border-slate-50 bg-slate-50/20 text-center mt-auto">
