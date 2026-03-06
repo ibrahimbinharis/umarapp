@@ -70,38 +70,18 @@ function useMapel(uiData, DB) {
      * Save mapel (create or update)
      */
     const saveMapel = async () => {
-        // Validation
-        if (!mapelForm.name || !mapelForm.name.trim()) {
-            window.showAlert("Nama Mapel wajib diisi", "Peringatan", "warning");
-            return;
-        }
-
-        try {
-            if (mapelForm.id) {
-                // Update existing
-                await DB.update(mapelForm.id, {
-                    name: mapelForm.name.trim()
-                });
-            } else {
-                // Create new
-                await DB.create('mapel', {
-                    name: mapelForm.name.trim()
-                });
+        return window.withSaving(async () => {
+            if (!mapelForm.name || !mapelForm.name.trim()) { window.showAlert("Nama Mapel wajib diisi", "Peringatan", "warning"); return; }
+            try {
+                if (mapelForm.id) { await DB.update(mapelForm.id, { name: mapelForm.name.trim() }); }
+                else { await DB.create('mapel', { name: mapelForm.name.trim() }); }
+                if (window.refreshData) window.refreshData();
+                closeMapelModal();
+                window.showAlert(mapelForm.id ? "Mapel berhasil diupdate!" : "Mapel berhasil ditambahkan!", "Sukses", "info");
+            } catch (error) {
+                window.showAlert('Gagal menyimpan mapel: ' + error.message, "Error", "danger");
             }
-
-            // Refresh UI
-            if (window.refreshData) {
-                window.refreshData();
-            }
-
-            // Close modal and show success
-            closeMapelModal();
-            window.showAlert(mapelForm.id ? "Mapel berhasil diupdate!" : "Mapel berhasil ditambahkan!", "Sukses", "info");
-
-        } catch (error) {
-            console.error('Error saving mapel:', error);
-            window.showAlert('Gagal menyimpan mapel: ' + error.message, "Error", "danger");
-        }
+        });
     };
 
     /**

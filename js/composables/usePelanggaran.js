@@ -249,48 +249,24 @@ function usePelanggaran(uiData, DB, refreshData) {
      * Save master pelanggaran type (CRUD)
      */
     const saveMasterPelanggaran = async () => {
-        if (!masterPelanggaranForm.name) {
-            window.showAlert('Nama pelanggaran wajib diisi', 'Peringatan', 'warning');
-            return;
-        }
-
-        if (!masterPelanggaranForm.points || masterPelanggaranForm.points < 0) {
-            window.showAlert('Poin harus diisi dengan angka positif', 'Peringatan', 'warning');
-            return;
-        }
-
-        try {
-            const payload = {
-                name: masterPelanggaranForm.name,
-                points: parseInt(masterPelanggaranForm.points)
-            };
-
-            if (masterPelanggaranForm.id) {
-                // Update existing
-                await DB.update(masterPelanggaranForm.id, payload);
-            } else {
-                // Create new - set explicit type for master data
-                await DB.create('pelanggaran_type', payload);
+        return window.withSaving(async () => {
+            if (!masterPelanggaranForm.name) { window.showAlert('Nama pelanggaran wajib diisi', 'Peringatan', 'warning'); return; }
+            if (!masterPelanggaranForm.points || masterPelanggaranForm.points < 0) { window.showAlert('Poin harus diisi dengan angka positif', 'Peringatan', 'warning'); return; }
+            try {
+                const payload = { name: masterPelanggaranForm.name, points: parseInt(masterPelanggaranForm.points) };
+                if (masterPelanggaranForm.id) { await DB.update(masterPelanggaranForm.id, payload); }
+                else { await DB.create('pelanggaran_type', payload); }
+                masterPelanggaranForm.id = null;
+                masterPelanggaranForm.name = '';
+                masterPelanggaranForm.points = 10;
+                window.showAlert('Data berhasil disimpan', 'Sukses', 'info');
+                if (window.refreshData) window.refreshData();
+                return { success: true };
+            } catch (error) {
+                window.showAlert('Gagal menyimpan data: ' + error.message, 'Error', 'danger');
+                return { success: false, error };
             }
-
-            // Reset form
-            masterPelanggaranForm.id = null;
-            masterPelanggaranForm.name = '';
-            masterPelanggaranForm.points = 10;
-
-            window.showAlert('Data berhasil disimpan', 'Sukses', 'info');
-
-            // Trigger refresh if available
-            if (window.refreshData) {
-                window.refreshData();
-            }
-
-            return { success: true };
-        } catch (error) {
-            console.error('Error saving master pelanggaran:', error);
-            window.showAlert('Gagal menyimpan data: ' + error.message, 'Error', 'danger');
-            return { success: false, error };
-        }
+        });
     };
 
     /**

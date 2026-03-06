@@ -197,10 +197,12 @@ function useDashboard(uiData, userSession, activeChildId, appConfig) {
         const santris = uiData.santri || [];
         dashboardStats.totalSantri = santris.length;
 
-        // 1. Wali View
-        if (userSession.value && userSession.value.role === 'wali') {
-            // Priority: overrideChildId > activeChildId ref > userSession default
-            const targetId = overrideChildId || (activeChildId ? activeChildId.value : null) || userSession.value.child_id;
+        // 1. Wali & Santri View (Personalized Stats)
+        if (userSession.value && (userSession.value.role === 'wali' || userSession.value.role === 'santri')) {
+            // For Santri, targetId is their own NIS (username). For Wali, use switcher or links.
+            const targetId = userSession.value.role === 'santri'
+                ? userSession.value.username
+                : (overrideChildId || (activeChildId ? activeChildId.value : null) || userSession.value.child_id);
 
             // Try matching by _id (UUID) or santri_id (NIS)
             let santri = santris.find(s => s._id === targetId || s.santri_id === targetId || s.nis === targetId);

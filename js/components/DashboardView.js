@@ -23,12 +23,51 @@ const DashboardView = {
         'mark-all-read'
     ],
     setup(props, { emit }) {
-        const { ref, computed, onMounted, nextTick, watch } = Vue;
+        const { ref, computed, onMounted, onUnmounted, nextTick, watch } = Vue;
         const isMenuExpanded = ref(false);
         const showNotifications = ref(false);
+        const notifContainer = ref(null);
         const chartFilter = ref('all'); // all, sabaq, manzil
         let activityChart = null;
         let donutChart = null;
+
+        // --- UX: Close Notif on Click Outside / Scroll ---
+        const handleNotifClose = (e) => {
+            if (!showNotifications.value) return;
+
+            // 1. If scroll event
+            if (e.type === 'scroll') {
+                showNotifications.value = false;
+                return;
+            }
+
+            // 2. If click event - check if outside
+            if (notifContainer.value && !notifContainer.value.contains(e.target)) {
+                // Check if click was on the bell button itself (to allow toggle)
+                const bellBtn = e.target.closest('button');
+                if (bellBtn && bellBtn.innerHTML.includes('notifications')) return;
+
+                showNotifications.value = false;
+            }
+        };
+
+        watch(showNotifications, (newVal) => {
+            if (newVal) {
+                // Use setTimeout to avoid immediate closure if triggered by the same click
+                setTimeout(() => {
+                    window.addEventListener('mousedown', handleNotifClose);
+                    window.addEventListener('scroll', handleNotifClose, { passive: true });
+                }, 10);
+            } else {
+                window.removeEventListener('mousedown', handleNotifClose);
+                window.removeEventListener('scroll', handleNotifClose);
+            }
+        });
+
+        onUnmounted(() => {
+            window.removeEventListener('mousedown', handleNotifClose);
+            window.removeEventListener('scroll', handleNotifClose);
+        });
 
         // Helpers (injected or global)
         const getInitials = window.getInitials || ((name) => name ? name.substring(0, 2).toUpperCase() : '??');
@@ -383,6 +422,7 @@ const DashboardView = {
             displayedMenus,
             hasMoreMenus,
             showNotifications,
+            notifContainer,
             chartFilter,
             displayStats, // Export for template
             getSantriName: window.getSantriName,
@@ -462,7 +502,7 @@ const DashboardView = {
                         </button>
 
                         <!-- Dropdown -->
-                        <div v-if="showNotifications" class="absolute right-0 top-12 w-80 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden animate-fade-in-up origin-top-right z-[60]">
+                        <div v-if="showNotifications" ref="notifContainer" class="absolute right-0 top-12 w-80 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden animate-fade-in-up origin-top-right z-[60]">
                             <!-- Header with Tabs -->
                             <div class="p-2 border-b border-slate-100 bg-slate-50 flex flex-col gap-2">
                                 <div class="flex justify-between items-center px-1">

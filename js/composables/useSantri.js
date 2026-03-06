@@ -127,8 +127,22 @@ function useSantri(uiData, DB, userSession, modalState, refreshData, searchText)
             santriForm.nick_name = item.nick_name || '';
             santriForm.gender = item.gender;
             santriForm.class_id = item.class_id || item.kelas;
-            santriForm.parent_name = item.parent_name || '';
-            santriForm.parent_phone = item.parent_phone || item.no_hp || '';
+
+            // v36: Pull real-time data from linked Wali if exists
+            let pName = item.parent_name || '';
+            let pPhone = item.parent_phone || item.no_hp || '';
+
+            if (item.wali_id) {
+                const allData = DB.getAll();
+                const wali = allData.find(u => (u.__type === 'user' || u.__type === 'users') && u._id === item.wali_id);
+                if (wali) {
+                    pName = wali.full_name || pName;
+                    pPhone = wali.phone || pPhone;
+                }
+            }
+
+            santriForm.parent_name = pName;
+            santriForm.parent_phone = pPhone;
             santriForm.password = ''; // Don't show existing password
             santriForm.target_sabaq = item.target_sabaq || 20;
             santriForm.target_manzil_pct = item.target_manzil_pct || 20;
@@ -159,55 +173,57 @@ function useSantri(uiData, DB, userSession, modalState, refreshData, searchText)
     };
 
     const saveSantri = async () => {
-        if (!santriForm.full_name) return window.showAlert("Nama Lengkap wajib diisi", "Peringatan", "warning");
-        if (!santriForm.class_id) return window.showAlert("Kelas wajib dipilih", "Peringatan", "warning");
+        return window.withSaving(async () => {
+            if (!santriForm.full_name) return window.showAlert("Nama Lengkap wajib diisi", "Peringatan", "warning");
+            if (!santriForm.class_id) return window.showAlert("Kelas wajib dipilih", "Peringatan", "warning");
 
-        // Format Phone (62xxx)
-        let phone = String(santriForm.parent_phone || '').replace(/\D/g, '');
-        if (phone.startsWith('0')) phone = '62' + phone.slice(1);
+            // Format Phone (62xxx)
+            let phone = String(santriForm.parent_phone || '').replace(/\D/g, '');
+            if (phone.startsWith('0')) phone = '62' + phone.slice(1);
 
-        const payload = {
-            nis: santriForm.nis,
-            santri_id: santriForm.nis, // Sync both for compatibility
-            full_name: santriForm.full_name,
-            nick_name: santriForm.nick_name,
-            gender: santriForm.gender,
-            class_id: santriForm.class_id,
-            kelas: santriForm.class_id, // Sync both
-            parent_name: santriForm.parent_name,
-            parent_phone: phone,
-            no_hp: phone, // Sync both
-            target_sabaq: parseInt(santriForm.target_sabaq),
-            target_manzil_pct: parseInt(santriForm.target_manzil_pct)
-        };
+            const payload = {
+                nis: santriForm.nis,
+                santri_id: santriForm.nis, // Sync both for compatibility
+                full_name: santriForm.full_name,
+                nick_name: santriForm.nick_name,
+                gender: santriForm.gender,
+                class_id: santriForm.class_id,
+                kelas: santriForm.class_id, // Sync both
+                parent_name: santriForm.parent_name,
+                parent_phone: phone,
+                no_hp: phone, // Sync both
+                target_sabaq: parseInt(santriForm.target_sabaq),
+                target_manzil_pct: parseInt(santriForm.target_manzil_pct)
+            };
 
-        if (santriForm.username) payload.username = santriForm.username;
+            if (santriForm.username) payload.username = santriForm.username;
 
-        if (santriForm.password) {
-            payload.password = santriForm.password;
-        }
-
-        try {
-            if (santriForm.id) {
-                await DB.update(santriForm.id, payload);
-            } else {
-                // Check Duplicate NIS
-                const exist = uiData.santri.find(s => s.nis === santriForm.nis);
-                if (exist) return window.showAlert("NIS sudah digunakan!", "Duplikat", "warning");
-
-                // Add default password for new santri if empty
-                if (!payload.password) payload.password = '123';
-
-                await DB.create('santri', payload);
+            if (santriForm.password) {
+                payload.password = santriForm.password;
             }
 
-            modalState.isOpen = false;
-            refreshData(); // Call global refresh
-            window.showAlert("Data Santri Berhasil Disimpan", "Sukses", "info");
-        } catch (e) {
-            console.error(e);
-            window.showAlert("Gagal menyimpan: " + e.message, "Error", "danger");
-        }
+            try {
+                if (santriForm.id) {
+                    await DB.update(santriForm.id, payload);
+                } else {
+                    // Check Duplicate NIS
+                    const exist = uiData.santri.find(s => s.nis === santriForm.nis);
+                    if (exist) return window.showAlert("NIS sudah digunakan!", "Duplikat", "warning");
+
+                    // Add default password for new santri if empty
+                    if (!payload.password) payload.password = '123';
+
+                    await DB.create('santri', payload);
+                }
+
+                modalState.isOpen = false;
+                refreshData(); // Call global refresh
+                window.showAlert("Data Santri Berhasil Disimpan", "Sukses", "info");
+            } catch (e) {
+                console.error(e);
+                window.showAlert("Gagal menyimpan: " + e.message, "Error", "danger");
+            }
+        }); // end withSaving
     };
 
     const deleteSantri = async (item) => {

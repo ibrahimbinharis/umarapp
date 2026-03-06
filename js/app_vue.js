@@ -27,9 +27,15 @@ createApp({
     setup() {
         // --- STATE ---
         const loading = ref(true);
+        const isSaving = ref(false); // Global save guard - mirrors window.isSavingGlobal
         const appName = ref(APP_CONFIG.appName);
         const appVersion = ref(APP_CONFIG.version);
         const currentView = ref('login');
+
+        // Sync isSaving with window.isSavingGlobal events
+        window.addEventListener('saving-state-change', (e) => {
+            isSaving.value = e.detail;
+        });
 
         // --- AUTH (v34 Refactor) ---
         const { userSession, loginForm, handleLogin, handleRegister, logout, checkSession, isRegisterMode } = useAuth(currentView, loading);
@@ -583,6 +589,11 @@ createApp({
                 if (view === 'profile' && profile.activeSubMenu.value !== 'santri') {
                     profile.activeSubMenu.value = null;
                 }
+
+                // v36: Reset hafalan sub-view when navigating to hafalan from other views
+                if (view === 'hafalan') {
+                    ujian.ujianForm.santri_id = '';
+                }
             }
 
             window.scrollTo(0, 0); // Reset scroll
@@ -899,9 +910,27 @@ createApp({
         // --- LIFECYCLE ---
         const exitAttempt = ref(false); // Double back state
 
+        const selectSantriHafalan = (s) => {
+            ujian.ujianForm.santri_id = s.santri_id;
+            ujian.ujianForm.tab = 'semester';
+            ujian.selectUjianJuz(null);
+            window.history.pushState({ view: 'hafalan', detail: true }, '', '#hafalan');
+        };
+
+        const goBack = () => {
+            window.history.back();
+        };
+
         onMounted(async () => {
             // 1. PWA History Listener
             window.addEventListener('popstate', (event) => {
+                // v36: Hafalan sub-view back logic
+                // If we are in Hafalan and moving back from detail to list
+                if (currentView.value === 'hafalan' && ujian.ujianForm.santri_id && (!event.state || !event.state.detail)) {
+                    ujian.ujianForm.santri_id = '';
+                    return;
+                }
+
                 // Special handling for Double Back on Dashboard
                 if (currentView.value === 'dashboard') {
                     if (!exitAttempt.value) {
@@ -1037,8 +1066,11 @@ createApp({
             myMenus, bottomMenus, isSidebarVisible, isHeaderVisible,
             navigateTo, handleLogin, handleRegister, isRegisterMode, logout, getInitials, refreshData, forceSync,
             syncStatus, dataStats,
+            isSaving, // Global save guard for disabling buttons
             closeModal,
             openMonitoringModal,
+            selectSantriHafalan,
+            goBack,
             // Composables (expose all methods & state)
             ...ujian,
             ...pelanggaran,

@@ -85,51 +85,30 @@ function useGuru(uiData, DB, modalState) {
      * Save guru (create or update)
      */
     const saveGuru = async () => {
-        // Validation
-        if (!guruForm.full_name) {
-            window.showAlert('Nama wajib diisi', 'Peringatan', 'warning');
-            return;
-        }
+        return window.withSaving(async () => {
+            if (!guruForm.full_name) { window.showAlert('Nama wajib diisi', 'Peringatan', 'warning'); return; }
+            if (!guruForm.id && !guruForm.password) { window.showAlert('Password wajib diisi untuk guru baru', 'Peringatan', 'warning'); return; }
 
-        // For new guru, password is required
-        if (!guruForm.id && !guruForm.password) {
-            window.showAlert('Password wajib diisi untuk guru baru', 'Peringatan', 'warning');
-            return;
-        }
+            try {
+                const payload = {
+                    full_name: guruForm.full_name,
+                    username: guruForm.username,
+                    custom_username: guruForm.custom_username.trim(),
+                    role: 'guru'
+                };
+                if (guruForm.password) payload.password = guruForm.password;
 
-        try {
-            const payload = {
-                full_name: guruForm.full_name,
-                username: guruForm.username,         // NIG is the primary key (Auth Email)
-                custom_username: guruForm.custom_username.trim(), // Friendly Name is Alias
-                role: 'guru'
-            };
+                if (guruForm.id) { await DB.update(guruForm.id, payload); }
+                else { await DB.create('user', payload); }
 
-            // Only update password if provided
-            if (guruForm.password) {
-                payload.password = guruForm.password;
+                modalState.isOpen = false;
+                if (window.refreshData) window.refreshData();
+                window.showAlert('Data berhasil disimpan', 'Sukses', 'info');
+            } catch (error) {
+                console.error('Error saving guru:', error);
+                window.showAlert('Gagal menyimpan data: ' + error.message, 'Error', 'danger');
             }
-
-            if (guruForm.id) {
-                // Update existing
-                await DB.update(guruForm.id, payload);
-            } else {
-                // Create new
-                await DB.create('user', payload);
-            }
-
-            modalState.isOpen = false; // Close generic modal
-
-            // Refresh data FIRST
-            if (window.refreshData) {
-                window.refreshData();
-            }
-
-            window.showAlert('Data berhasil disimpan', 'Sukses', 'info');
-        } catch (error) {
-            console.error('Error saving guru:', error);
-            window.showAlert('Gagal menyimpan data: ' + error.message, 'Error', 'danger');
-        }
+        });
     };
 
     /**

@@ -157,55 +157,26 @@ function useJadwal(uiData, DB, modalState) {
      * Save jadwal (create or update)
      */
     const saveJadwal = async () => {
-        // Validation
-        if (!jadwalForm.mapel || !jadwalForm.mapel.trim()) {
-            return window.showAlert("Mata pelajaran wajib diisi", "Peringatan", "warning");
-        }
-        if (!jadwalForm.class_name || !jadwalForm.class_name.trim()) {
-            return window.showAlert("Kelas wajib diisi", "Peringatan", "warning");
-        }
-        if (!jadwalForm.teacher || !jadwalForm.teacher.trim()) {
-            return window.showAlert("Guru pengampu wajib diisi", "Peringatan", "warning");
-        }
-        if (!jadwalForm.time_start || !jadwalForm.time_end) {
-            return window.showAlert("Jam mulai dan selesai wajib diisi", "Peringatan", "warning");
-        }
-
-        try {
-            // Combine time_start and time_end into "HH:MM - HH:MM" format
-            const timeRange = `${jadwalForm.time_start} - ${jadwalForm.time_end}`;
-
-            const payload = {
-                day: jadwalForm.day,
-                gender: jadwalForm.gender,
-                mapel: jadwalForm.mapel.trim(),
-                time: timeRange,
-                class_name: jadwalForm.class_name.trim(),
-                teacher: jadwalForm.teacher.trim()
-            };
-
-            if (jadwalForm.id) {
-                // Update existing
-                await DB.update(jadwalForm.id, payload);
-                window.showAlert("Jadwal berhasil diupdate!", "Sukses", "info");
-            } else {
-                // Create new
-                await DB.create('jadwal', payload);
-                window.showAlert("Jadwal berhasil ditambahkan!", "Sukses", "info");
+        return window.withSaving(async () => {
+            if (!jadwalForm.mapel?.trim()) return window.showAlert("Mata pelajaran wajib diisi", "Peringatan", "warning");
+            if (!jadwalForm.class_name?.trim()) return window.showAlert("Kelas wajib diisi", "Peringatan", "warning");
+            if (!jadwalForm.teacher?.trim()) return window.showAlert("Guru pengampu wajib diisi", "Peringatan", "warning");
+            if (!jadwalForm.time_start || !jadwalForm.time_end) return window.showAlert("Jam mulai dan selesai wajib diisi", "Peringatan", "warning");
+            try {
+                const timeRange = `${jadwalForm.time_start} - ${jadwalForm.time_end}`;
+                const payload = {
+                    day: jadwalForm.day, gender: jadwalForm.gender,
+                    mapel: jadwalForm.mapel.trim(), time: timeRange,
+                    class_name: jadwalForm.class_name.trim(), teacher: jadwalForm.teacher.trim()
+                };
+                if (jadwalForm.id) { await DB.update(jadwalForm.id, payload); window.showAlert("Jadwal berhasil diupdate!", "Sukses", "info"); }
+                else { await DB.create('jadwal', payload); window.showAlert("Jadwal berhasil ditambahkan!", "Sukses", "info"); }
+                if (window.refreshData) window.refreshData();
+                closeJadwalModal();
+            } catch (error) {
+                window.showAlert('Gagal menyimpan jadwal: ' + error.message, 'Error', 'danger');
             }
-
-            // Refresh UI
-            if (window.refreshData) {
-                window.refreshData();
-            }
-
-            // Close modal
-            closeJadwalModal();
-
-        } catch (error) {
-            console.error('Error saving jadwal:', error);
-            window.showAlert('Gagal menyimpan jadwal: ' + error.message, 'Error', 'danger');
-        }
+        });
     };
 
     /**

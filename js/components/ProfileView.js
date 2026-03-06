@@ -264,8 +264,8 @@ const ProfileView = {
                             class="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:outline-none focus:border-primary focus:ring-4 focus:ring-blue-500/10 bg-slate-50/50 text-slate-700 transition-all">
                     </div>
 
-                    <div v-if="userSession.role !== 'wali'" class="mb-4">
-                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1 px-1">ID Resmi (NIG/NIP)</label>
+                    <div class="mb-4">
+                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1 px-1">ID Resmi</label>
                         <div class="px-4 py-3 bg-slate-100 rounded-2xl text-slate-400 font-mono text-sm border border-slate-200 select-none">
                             {{ userSession.username || '-' }}
                         </div>
@@ -279,8 +279,18 @@ const ProfileView = {
                     </div>
 
                     <div>
-                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">Nomor WhatsApp</label>
-                        <input v-model="profileForm.phone" type="tel" placeholder="08xxxx"
+                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">Nomor WhatsApp {{ userSession.role === 'santri' ? '(Monitoring Wali)' : '' }}</label>
+                        
+                        <!-- v36: Lock phone for Santri -->
+                        <template v-if="userSession.role === 'santri'">
+                            <div class="w-full px-4 py-3 rounded-2xl border border-slate-100 bg-slate-50 text-slate-500 font-bold text-sm flex items-center justify-between">
+                                <span>{{ profileForm.phone || 'Belum ada no tlp' }}</span>
+                                <span class="material-symbols-outlined text-slate-300 text-sm">lock</span>
+                            </div>
+                            <p class="text-[9px] text-slate-400 mt-1.5 px-1">*Otomatis tersinkron dengan nomor Wali</p>
+                        </template>
+                        
+                        <input v-else v-model="profileForm.phone" type="tel" placeholder="08xxxx"
                             class="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:outline-none focus:border-primary focus:ring-4 focus:ring-blue-500/10 bg-slate-50/50 text-slate-700 transition-all placeholder:font-normal placeholder:text-slate-400">
                     </div>
 

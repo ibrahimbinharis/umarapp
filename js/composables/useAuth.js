@@ -34,9 +34,9 @@ const useAuth = (currentView, loading) => {
                 // PWA: Fix URL state on login to prevent Back -> Login
                 window.history.replaceState({ view: 'dashboard' }, '', '#dashboard');
 
-                // Setup Initial for Wali (Optional logic if needed)
-                if (user.role === 'wali') {
-                    // Logic Wali specific 
+                // Setup Initial for Wali/Santri (v36)
+                if (user.role === 'santri') {
+                    user.child_id = user.username;
                 }
 
                 loginForm.username = '';
@@ -173,6 +173,8 @@ const useAuth = (currentView, loading) => {
                 const { data: dbUser } = await sb.from('users').select('*').eq('_id', user.id).maybeSingle();
                 if (dbUser) {
                     profile = dbUser;
+                    // v36: If santri, set child_id to username (NIS)
+                    if (profile.role === 'santri') profile.child_id = profile.username;
                     localStorage.setItem('tahfidz_session', JSON.stringify(profile));
 
                     // Standardize internal type and save to local DB

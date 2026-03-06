@@ -21,6 +21,13 @@ const useRekap = (uiData, userSession) => { // Accept uiData and userSession
     const rekapSantriId = ref('');
     const isRekapSantriDropdownOpen = ref(false);
 
+    // Sync with User Context (v36)
+    watch(userSession, (newVal) => {
+        if (newVal && (newVal.role === 'santri' || newVal.role === 'wali')) {
+            rekapSantriId.value = newVal.child_id || '';
+        }
+    }, { immediate: true });
+
     // Default Settings
     const defaultSettings = {
         _id: 'rekap_config',

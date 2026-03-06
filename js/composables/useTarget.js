@@ -237,37 +237,23 @@ function useTarget(uiData, DB) {
      * Save target for santri
      */
     const saveTarget = async () => {
-        if (!targetForm.id) {
-            window.showAlert('Santri ID tidak ditemukan', 'Error', 'danger');
-            return;
-        }
-
-        try {
-            const sabaq = parseInt(targetForm.sabaq) || 0;
-            const manzil = parseInt(targetForm.manzil) || 0;
-            const pct = parseFloat(targetForm.pct) || 20;
-
-            const payload = {
-                target_sabaq: sabaq,
-                target_manzil: manzil,
-                target_tilawah: parseInt(targetForm.tilawah) || 600,
-                target_manzil_pct: pct
-            };
-
-            await DB.update(targetForm.id, payload);
-
-            // Refresh data
-            if (window.refreshData) {
-                window.refreshData();
+        return window.withSaving(async () => {
+            if (!targetForm.id) { window.showAlert('Santri ID tidak ditemukan', 'Error', 'danger'); return; }
+            try {
+                const payload = {
+                    target_sabaq: parseInt(targetForm.sabaq) || 0,
+                    target_manzil: parseInt(targetForm.manzil) || 0,
+                    target_tilawah: parseInt(targetForm.tilawah) || 600,
+                    target_manzil_pct: parseFloat(targetForm.pct) || 20
+                };
+                await DB.update(targetForm.id, payload);
+                if (window.refreshData) window.refreshData();
+                window.showAlert('Target berhasil disimpan!', 'Sukses', 'info');
+                closeTargetModal();
+            } catch (error) {
+                window.showAlert('Gagal menyimpan target: ' + error.message, 'Error', 'danger');
             }
-
-            window.showAlert('Target berhasil disimpan!', 'Sukses', 'info');
-            closeTargetModal();
-
-        } catch (error) {
-            console.error('Error saving target:', error);
-            window.showAlert('Gagal menyimpan target: ' + error.message, 'Error', 'danger');
-        }
+        });
     };
 
     /**

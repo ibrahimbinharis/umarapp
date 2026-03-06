@@ -203,25 +203,54 @@ const DB = {
         if (!silent) showLoading(true, 'Sinkronisasi Cloud...');
 
         try {
-            const nonNotifTables = ['users', 'santri', 'kelas', 'mapel', 'jadwal', 'setoran', 'pelanggaran', 'pelanggaran_type', 'absensi', 'ujian', 'settings'];
+            // --- TIERED FETCH STRATEGY ---
+            // Static/small tables: fetch all (jumlah tidak tumbuh cepat)
+            const staticTables = ['users', 'santri', 'kelas', 'mapel', 'jadwal', 'pelanggaran_type', 'settings'];
+            // Growing tables: fetch only last 3 months to avoid memory bloat
+            const growingTables = ['setoran', 'absensi', 'pelanggaran', 'ujian'];
+
+            // 3 months ago cutoff
+            const threeMonthsAgo = new Date();
+            threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+            const cutoffDate = threeMonthsAgo.toISOString();
+
             let cloudData = [];
 
-            // Parallel Fetch (non-notifications tables)
-            const promises = nonNotifTables.map(table => sb.from(table).select('*').range(0, 9999).then(res => {
-                if (res.error) throw res.error;
-                // Standardize: 'users' table becomes 'user' type internally
-                const type = table === 'users' ? 'user' : table;
-                return res.data.map(d => {
-                    if (d._deleted === 'false') d._deleted = false;
-                    if (d._deleted === 'true') d._deleted = true;
-                    return { ...d, __type: type };
-                });
-            }));
+            const normalizeRecord = (d, type) => {
+                if (d._deleted === 'false') d._deleted = false;
+                if (d._deleted === 'true') d._deleted = true;
+                return { ...d, __type: type };
+            };
+
+            // Fetch static tables (all rows, no limit concern)
+            const staticPromises = staticTables.map(table =>
+                sb.from(table).select('*').then(res => {
+                    if (res.error) throw res.error;
+                    const type = table === 'users' ? 'user' : table;
+                    return res.data.map(d => normalizeRecord(d, type));
+                })
+            );
+
+            // Fetch growing tables (last 3 months only, max 2000 rows each)
+            const growingPromises = growingTables.map(table =>
+                sb.from(table)
+                    .select('*')
+                    .gte('created_at', cutoffDate)
+                    .order('created_at', { ascending: false })
+                    .limit(2000)
+                    .then(res => {
+                        if (res.error) throw res.error;
+                        console.log(`[Sync] ${table}: fetched ${res.data.length} rows (last 3 months)`);
+                        return res.data.map(d => normalizeRecord(d, table));
+                    })
+            );
 
             // --- NOTIFICATIONS: Hanya fetch milik user yang sedang login ---
             // Ini mencegah notifikasi user lain masuk ke localStorage
             // dan mencegah status is_read di-reset saat sync
             const currentUserId = currentUser ? currentUser._id : null;
+            const allPromises = [...staticPromises, ...growingPromises];
+
             if (currentUserId) {
                 const notifPromise = sb.from('notifications')
                     .select('*')
@@ -236,10 +265,10 @@ const DB = {
                         }
                         return res.data.map(d => ({ ...d, __type: 'notifications' }));
                     });
-                promises.push(notifPromise);
+                allPromises.push(notifPromise);
             }
 
-            const results = await Promise.all(promises);
+            const results = await Promise.all(allPromises);
             results.forEach(arr => cloudData = cloudData.concat(arr));
 
             // Merge Strategy: Server Wins but Local Queue Re-applied
@@ -345,6 +374,21 @@ const DB = {
 
             if (lookupErr) console.warn("Profile lookup warning:", lookupErr);
 
+            // --- SANTRI AUTO-ACTIVATION LOGIC ---
+            let santriProfile = null;
+            if (!profileLookup) {
+                // Jika tidak ketemu di users, cek di tabel santri (NIS)
+                const { data: sData, error: sErr } = await sb.from('santri')
+                    .select('*')
+                    .or(`santri_id.eq."${inputUsername}",nis.eq."${inputUsername}"`)
+                    .maybeSingle();
+
+                if (sData) {
+                    santriProfile = sData;
+                    console.log("Santri found in database. Checking for auto-activation...");
+                }
+            }
+
             // Tentukan Email Login: 
             // Jika ketemu di DB, gunakan 'username' (Primary ID) sebagai prefix email.
             // Jika tidak ketemu (user baru), gunakan input apa adanya.
@@ -358,8 +402,49 @@ const DB = {
                 password: authPassword
             });
 
-            // 2. Jika Gagal Login (Mungkin user lama yang belum migrasi)
-            if (error && profileLookup && profileLookup.password) {
+            // 2. Jika Gagal Login & Ada Santri Profile (Auto-Activation)
+            if (error && santriProfile && inputPassword === inputUsername) {
+                console.log("New Santri login detected. Auto-activating account...");
+
+                // Buat akun Auth
+                const { data: newData, error: regError } = await sb.auth.signUp({
+                    email: email,
+                    password: authPassword,
+                    options: {
+                        data: {
+                            username: inputUsername,
+                            role: 'santri',
+                            full_name: santriProfile.full_name
+                        }
+                    }
+                });
+
+                if (regError) {
+                    console.error("Auto-activation failed (signUp):", regError);
+                } else if (newData.user) {
+                    // Buat Profile di database
+                    const { error: profError } = await sb.from('users').upsert({
+                        _id: newData.user.id,
+                        username: inputUsername,
+                        full_name: santriProfile.full_name,
+                        role: 'santri',
+                        gender: santriProfile.gender || '', // Sync gender (v36)
+                        created_at: new Date().toISOString()
+                    });
+
+                    if (!profError) {
+                        // Coba login ulang
+                        const retry = await sb.auth.signInWithPassword({
+                            email: email,
+                            password: authPassword
+                        });
+                        data = retry.data;
+                        error = retry.error;
+                    }
+                }
+            }
+            // 3. Jika Gagal Login & Ada legacy password (Migration)
+            else if (error && profileLookup && profileLookup.password) {
                 console.log("Auth failed, checking legacy local hash...");
 
                 const hashedInput = await hashPassword(inputPassword);
@@ -380,7 +465,7 @@ const DB = {
                     });
 
                     if (!regError) {
-                        // Hubungkan ID Auth baru ke profil database (TIDAK BOLEH SWAP LAGI)
+                        // Hubungkan ID Auth baru ke profil database
                         await sb.from('users')
                             .update({ _id: newData.user.id })
                             .eq('username', profileLookup.username);
@@ -401,7 +486,7 @@ const DB = {
                 return { success: false, message: "Username atau Password salah" };
             }
 
-            // 3. Ambil Profil Final
+            // 4. Ambil Profil Final
             const { data: finalProfile } = await sb.from('users')
                 .select('*')
                 .eq('_id', data.user.id)
@@ -409,7 +494,7 @@ const DB = {
 
             const meta = data.user.user_metadata || {};
 
-            // 4. Ensure local record exists
+            // 5. Ensure local record exists
             if (finalProfile) {
                 const existingIdx = allData.findIndex(u => u._id === finalProfile._id);
                 if (existingIdx === -1) {
@@ -502,19 +587,64 @@ const DB = {
     }
 };
 
-// --- REALTIME SUBSCRIPTION ---
+// --- REALTIME SUBSCRIPTION (Surgical Sync v2) ---
+// Instead of re-fetching ALL data on every change, we patch ONLY the changed record.
+// This is O(1) per event instead of O(N*11 tables).
+const _realtimeThrottle = { lastFullSync: 0 };
+
 function initRealtime() {
     const channel = sb.channel('db-changes')
         .on(
             'postgres_changes',
             { event: '*', schema: 'public' },
             (payload) => {
-                // Trigger auto-pull logic or selectively update
-                // For safety V1, trigger full pull (debounce)
+                const { eventType, table, new: newRecord, old: oldRecord } = payload;
+
+                // Skip notifications table — handled by useNotifications.js per-user channel
+                if (table === 'notifications') return;
+
+                // --- SURGICAL PATCH: Update only the affected record in memory ---
+                const internalType = table === 'users' ? 'user' : table;
+
+                if (eventType === 'INSERT' && newRecord?._id) {
+                    const exists = allData.some(d => d._id === newRecord._id);
+                    if (!exists) {
+                        allData.unshift({ ...newRecord, __type: internalType });
+                        console.log(`[Realtime] INSERT ${table}: ${newRecord._id}`);
+                    }
+                } else if (eventType === 'UPDATE' && newRecord?._id) {
+                    const idx = allData.findIndex(d => d._id === newRecord._id);
+                    if (idx !== -1) {
+                        allData[idx] = { ...allData[idx], ...newRecord, __type: internalType };
+                        console.log(`[Realtime] UPDATE ${table}: ${newRecord._id}`);
+                    } else {
+                        // Record doesn't exist locally yet — add it
+                        allData.unshift({ ...newRecord, __type: internalType });
+                    }
+                } else if (eventType === 'DELETE' && oldRecord?._id) {
+                    const idx = allData.findIndex(d => d._id === oldRecord._id);
+                    if (idx !== -1) {
+                        allData[idx]._deleted = true;
+                        console.log(`[Realtime] DELETE ${table}: ${oldRecord._id}`);
+                    }
+                }
+
+                // Save patched data to localStorage
+                DB.saveAll(allData);
+
+                // Debounce: re-compute Vue reactive state (lightweight, no network)
                 if (DB._realtimeTimer) clearTimeout(DB._realtimeTimer);
                 DB._realtimeTimer = setTimeout(() => {
-                    DB.syncFromCloud(true); // Silent sync
-                }, 2000);
+                    if (window.loadData) window.loadData();
+                }, 300);
+
+                // Throttled full sync as safety net (max once per 60 seconds)
+                // Catches edge cases like schema changes or missed events
+                const now = Date.now();
+                if (now - _realtimeThrottle.lastFullSync > 60000) {
+                    _realtimeThrottle.lastFullSync = now;
+                    setTimeout(() => DB.syncFromCloud(true), 5000);
+                }
             }
         )
         .subscribe();
@@ -522,6 +652,30 @@ function initRealtime() {
 
 // Call Realtime Init
 initRealtime();
+
+// --- GLOBAL SAVE GUARD ---
+// Prevents duplicate form submissions when user clicks save multiple times.
+// Usage in composables: await window.withSaving(async () => { ... your save logic ... });
+// Usage in template for button state: :disabled="isSavingGlobal"
+window.isSavingGlobal = false;
+
+window.withSaving = async (fn) => {
+    if (window.isSavingGlobal) {
+        console.warn('[SaveGuard] Blocked duplicate save attempt.');
+        return;
+    }
+    window.isSavingGlobal = true;
+
+    // Dispatch event so Vue can react to this change reactively if needed
+    window.dispatchEvent(new CustomEvent('saving-state-change', { detail: true }));
+
+    try {
+        return await fn();
+    } finally {
+        window.isSavingGlobal = false;
+        window.dispatchEvent(new CustomEvent('saving-state-change', { detail: false }));
+    }
+};
 
 
 function buildIndexes() {
@@ -684,4 +838,3 @@ window.addEventListener('appinstalled', (evt) => {
     console.log('E-Umar was installed');
     window.deferredPrompt = null;
 });
-

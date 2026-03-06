@@ -9,11 +9,27 @@
 const NotificationService = {
 
     /**
-     * Metode umum untuk membuat/update notifikasi via DB Engine
-     * @param {Object} payload { id, userId, title, message, type, relatedId }
+     * Helper to get global app configuration from allData
      */
-    async create({ id, userId, title, message, type, relatedId = null }) {
+    getConfig() {
+        const raw = (window.allData || []).find(s => s._id === 'app_config') || {};
+        return {
+            enabled: raw.notifications?.enabled !== false,
+            targets: raw.notifications?.targets || ['admin', 'guru', 'wali']
+        };
+    },
+
+    /**
+     * Metode umum untuk membuat/update notifikasi via DB Engine
+     * @param {Object} payload { id, userId, title, message, type, relatedId, role }
+     */
+    async create({ id, userId, title, message, type, relatedId = null, role = null }) {
         if (!userId) return;
+
+        // Check Global Toggle & Target roles
+        const config = this.getConfig();
+        if (!config.enabled) return;
+        if (role && !config.targets.includes(role)) return;
 
         const notifId = `notif_${id}`; // Gunakan prefix agar tidak bentrok ID dengan source record
         const payload = {
@@ -110,7 +126,8 @@ const NotificationService = {
             title: `Setoran ${type} Diterima`,
             message: `Alhamdulillah, Ananda ${santri.full_name} telah menyelesaikan setoran ${type} sebanyak ${pages} halaman.`,
             type: 'success',
-            relatedId: santri._id
+            relatedId: santri._id,
+            role: 'wali'
         });
     },
 
@@ -136,7 +153,8 @@ const NotificationService = {
             title: `Hasil Ujian ${examType}`,
             message: `Ananda ${santri.full_name} telah menyelesaikan ujian dengan nilai: ${score}.`,
             type,
-            relatedId: santri._id
+            relatedId: santri._id,
+            role: 'wali'
         });
     },
 
@@ -160,7 +178,8 @@ const NotificationService = {
                     title: `Laporan Pelanggaran`,
                     message: `Mohon perhatian, tercatat pelanggaran: ${pelanggaranName} (${points} Poin) untuk Ananda ${santri.full_name}.`,
                     type: 'alert',
-                    relatedId: santri._id
+                    relatedId: santri._id,
+                    role: 'wali'
                 });
             }
         }
@@ -185,7 +204,8 @@ const NotificationService = {
                         title: `📌 Pelanggaran: ${santri.full_name}`,
                         message: `${santri.full_name} (${santri.santri_id || 'Santri'}) melanggar: ${pelanggaranName} (${points} Poin).`,
                         type: 'alert',
-                        relatedId: santri._id
+                        relatedId: santri._id,
+                        role: user.role
                     });
                 }
             }

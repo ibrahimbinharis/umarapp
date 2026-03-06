@@ -21,6 +21,13 @@ const useRiwayat = (uiData, DB, refreshData, modules = {}, currentView, userSess
         selectedLetter: '' // Alphabet filter
     });
 
+    // --- SYNC CONTEXT (v36) ---
+    Vue.watch(() => userSession?.value, (newVal) => {
+        if (newVal && (newVal.role === 'santri' || newVal.role === 'wali')) {
+            riwayatState.santriId = newVal.child_id || '';
+        }
+    }, { immediate: true });
+
     // --- COMPUTED ---
     const riwayatList = computed(() => {
         // Gabungkan Setoran, Ujian, dan Pelanggaran
@@ -44,13 +51,16 @@ const useRiwayat = (uiData, DB, refreshData, modules = {}, currentView, userSess
             return uiData.santri.some(s => s.santri_id === item.santri_id || s._id === item.santri_id);
         });
 
-        // 0.5. Filter for Wali - only show data for linked santri
+        // 0.5. Filter for Wali/Santri (v36) - only show data for linked/own santri
         if (userSession?.value?.role === 'wali') {
             const linkedSantriIds = (uiData.santri || [])
                 .filter(s => s.wali_id === userSession.value._id)
                 .map(s => s.santri_id || s._id);
 
             merged = merged.filter(item => linkedSantriIds.includes(item.santri_id));
+        } else if (userSession?.value?.role === 'santri') {
+            const myNis = userSession.value.username;
+            merged = merged.filter(item => item.santri_id === myNis);
         }
 
         if (riwayatState.startDate) {

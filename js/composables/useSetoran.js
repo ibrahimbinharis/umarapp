@@ -723,7 +723,12 @@ function useSetoran(uiData, DB, refreshData, userSession, appConfig) {
     const resetSetoranForm = (keepSantri = false) => {
         // Reset Common
         if (!keepSantri) {
-            setoranForm.santri_id = '';
+            // v36: Santri/Wali lock
+            if (userSession.value && (userSession.value.role === 'santri' || userSession.value.role === 'wali')) {
+                setoranForm.santri_id = userSession.value.child_id || '';
+            } else {
+                setoranForm.santri_id = '';
+            }
             setoranSantriSearch.value = '';
         }
 
@@ -769,94 +774,96 @@ function useSetoran(uiData, DB, refreshData, userSession, appConfig) {
             return;
         }
 
-        try {
-            // Build payload
-            const payload = {
-                santri_id: setoranForm.santri_id,
-                setoran_date: setoranForm.setoran_date,
-                setoran_time: setoranForm.setoran_time,
-                setoran_type: setoranForm.setoran_type,
-                pages: setoranForm.pages,
-                errors: setoranForm.errors,
-                score: setoranForm.score,
-                grade: setoranForm.grade,
-                counted: setoranForm.counted,
-                // Holiday Mode Flag & Category (v36)
-                is_holiday: appConfig?.value?.isHolidayMode || false,
-                category: (appConfig?.value?.isHolidayMode)
-                    ? `${setoranForm.setoran_type} (Mandiri)`
-                    : setoranForm.setoran_type
-            };
+        return window.withSaving(async () => {
+            try {
+                // Build payload
+                const payload = {
+                    santri_id: setoranForm.santri_id,
+                    setoran_date: setoranForm.setoran_date,
+                    setoran_time: setoranForm.setoran_time,
+                    setoran_type: setoranForm.setoran_type,
+                    pages: setoranForm.pages,
+                    errors: setoranForm.errors,
+                    score: setoranForm.score,
+                    grade: setoranForm.grade,
+                    counted: setoranForm.counted,
+                    // Holiday Mode Flag & Category (v36)
+                    is_holiday: appConfig?.value?.isHolidayMode || false,
+                    category: (appConfig?.value?.isHolidayMode)
+                        ? `${setoranForm.setoran_type} (Mandiri)`
+                        : setoranForm.setoran_type
+                };
 
-            // Add type-specific fields
-            if (setoranForm.setoran_type === 'Sabaq') {
-                // Get surah latin names
-                const surahFrom = surahList.value.find(s => s.no === parseInt(setoranForm.surah_from));
-                const surahTo = surahList.value.find(s => s.no === parseInt(setoranForm.surah_to));
+                // Add type-specific fields
+                if (setoranForm.setoran_type === 'Sabaq') {
+                    // Get surah latin names
+                    const surahFrom = surahList.value.find(s => s.no === parseInt(setoranForm.surah_from));
+                    const surahTo = surahList.value.find(s => s.no === parseInt(setoranForm.surah_to));
 
-                payload.surah_from = setoranForm.surah_from;
-                payload.surah_to = setoranForm.surah_to;
-                payload.ayat_from = setoranForm.ayat_from;
-                payload.ayat_to = setoranForm.ayat_to;
-                payload.surah_from_latin = surahFrom ? `${surahFrom.no}. ${surahFrom.latin}` : '';
-                payload.surah_to_latin = surahTo ? `${surahTo.no}. ${surahTo.latin}` : '';
-            } else if (setoranForm.setoran_type === 'Manzil') {
-                payload.manzil_mode = setoranForm.manzil_mode;
-                if (setoranForm.manzil_mode === 'juz') {
-                    payload.juz = setoranForm.juz;
+                    payload.surah_from = setoranForm.surah_from;
+                    payload.surah_to = setoranForm.surah_to;
+                    payload.ayat_from = setoranForm.ayat_from;
+                    payload.ayat_to = setoranForm.ayat_to;
+                    payload.surah_from_latin = surahFrom ? `${surahFrom.no}. ${surahFrom.latin}` : '';
+                    payload.surah_to_latin = surahTo ? `${surahTo.no}. ${surahTo.latin}` : '';
+                } else if (setoranForm.setoran_type === 'Manzil') {
+                    payload.manzil_mode = setoranForm.manzil_mode;
+                    if (setoranForm.manzil_mode === 'juz') {
+                        payload.juz = setoranForm.juz;
+                    } else {
+                        payload.page_from = setoranForm.page_from;
+                        payload.page_to = setoranForm.page_to;
+                    }
+                } else if (setoranForm.setoran_type === 'Tilawah') {
+                    payload.tilawah_mode = setoranForm.tilawah_mode;
+                    if (setoranForm.tilawah_mode === 'juz') {
+                        payload.juz_from = setoranForm.juz_from;
+                        payload.juz_to = setoranForm.juz_to;
+                    } else {
+                        payload.page_from = setoranForm.page_from;
+                        payload.page_to = setoranForm.page_to;
+                    }
+                }
+
+                // CREATE or UPDATE
+                if (editingId.value) {
+                    // UPDATE mode
+                    await DB.update(editingId.value, payload);
+
+                    // --- NOTIFICATION UPDATE (v36) ---
+                    const santri = uiData.santri.find(s => s.santri_id === setoranForm.santri_id || s._id === setoranForm.santri_id);
+                    if (santri && window.NotificationService) {
+                        window.NotificationService.notifySetoran(santri, setoranForm.setoran_type, setoranForm.pages, editingId.value);
+                    }
+
+                    window.showAlert('Setoran berhasil diupdate!', 'Sukses', 'info');
                 } else {
-                    payload.page_from = setoranForm.page_from;
-                    payload.page_to = setoranForm.page_to;
+                    // CREATE mode
+                    const res = await DB.create('setoran', payload);
+                    window.showAlert('Setoran berhasil disimpan!', 'Sukses', 'info');
+
+                    // --- NOTIFICATION TRIGGER (v36) ---
+                    const santri = uiData.santri.find(s => s.santri_id === setoranForm.santri_id || s._id === setoranForm.santri_id);
+                    if (santri && window.NotificationService) {
+                        window.NotificationService.notifySetoran(santri, setoranForm.setoran_type, setoranForm.pages, res._id);
+                    }
                 }
-            } else if (setoranForm.setoran_type === 'Tilawah') {
-                payload.tilawah_mode = setoranForm.tilawah_mode;
-                if (setoranForm.tilawah_mode === 'juz') {
-                    payload.juz_from = setoranForm.juz_from;
-                    payload.juz_to = setoranForm.juz_to;
-                } else {
-                    payload.page_from = setoranForm.page_from;
-                    payload.page_to = setoranForm.page_to;
+
+                // Refresh data
+                if (refreshData) {
+                    refreshData();
                 }
+
+                // FULL RESET (Keep Santri for batch input)
+                resetSetoranForm(true);
+
+                return true;
+            } catch (error) {
+                console.error('Error saving setoran:', error);
+                window.showAlert('Gagal menyimpan setoran: ' + error.message, 'Error', 'danger');
+                return false;
             }
-
-            // CREATE or UPDATE
-            if (editingId.value) {
-                // UPDATE mode
-                await DB.update(editingId.value, payload);
-
-                // --- NOTIFICATION UPDATE (v36) ---
-                const santri = uiData.santri.find(s => s.santri_id === setoranForm.santri_id || s._id === setoranForm.santri_id);
-                if (santri && window.NotificationService) {
-                    window.NotificationService.notifySetoran(santri, setoranForm.setoran_type, setoranForm.pages, editingId.value);
-                }
-
-                window.showAlert('Setoran berhasil diupdate!', 'Sukses', 'info');
-            } else {
-                // CREATE mode
-                const res = await DB.create('setoran', payload);
-                window.showAlert('Setoran berhasil disimpan!', 'Sukses', 'info');
-
-                // --- NOTIFICATION TRIGGER (v36) ---
-                const santri = uiData.santri.find(s => s.santri_id === setoranForm.santri_id || s._id === setoranForm.santri_id);
-                if (santri && window.NotificationService) {
-                    window.NotificationService.notifySetoran(santri, setoranForm.setoran_type, setoranForm.pages, res._id);
-                }
-            }
-
-            // Refresh data
-            if (refreshData) {
-                refreshData();
-            }
-
-            // FULL RESET (Keep Santri for batch input)
-            resetSetoranForm(true);
-
-            return true;
-        } catch (error) {
-            console.error('Error saving setoran:', error);
-            window.showAlert('Gagal menyimpan setoran: ' + error.message, 'Error', 'danger');
-            return false;
-        }
+        }); // end withSaving
     };
 
     /**

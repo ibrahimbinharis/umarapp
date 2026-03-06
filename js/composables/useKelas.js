@@ -70,38 +70,18 @@ function useKelas(uiData, DB) {
      * Save kelas (create or update)
      */
     const saveKelas = async () => {
-        // Validation
-        if (!kelasForm.name || !kelasForm.name.trim()) {
-            window.showAlert("Nama Kelas wajib diisi", "Peringatan", "warning");
-            return;
-        }
-
-        try {
-            if (kelasForm.id) {
-                // Update existing
-                await DB.update(kelasForm.id, {
-                    name: kelasForm.name.trim()
-                });
-            } else {
-                // Create new
-                await DB.create('kelas', {
-                    name: kelasForm.name.trim()
-                });
+        return window.withSaving(async () => {
+            if (!kelasForm.name || !kelasForm.name.trim()) { window.showAlert("Nama Kelas wajib diisi", "Peringatan", "warning"); return; }
+            try {
+                if (kelasForm.id) { await DB.update(kelasForm.id, { name: kelasForm.name.trim() }); }
+                else { await DB.create('kelas', { name: kelasForm.name.trim() }); }
+                if (window.refreshData) window.refreshData();
+                closeKelasModal();
+                window.showAlert(kelasForm.id ? "Kelas berhasil diupdate!" : "Kelas berhasil ditambahkan!", "Sukses", "info");
+            } catch (error) {
+                window.showAlert('Gagal menyimpan kelas: ' + error.message, "Error", "danger");
             }
-
-            // Refresh UI
-            if (window.refreshData) {
-                window.refreshData();
-            }
-
-            // Close modal and show success
-            closeKelasModal();
-            window.showAlert(kelasForm.id ? "Kelas berhasil diupdate!" : "Kelas berhasil ditambahkan!", "Sukses", "info");
-
-        } catch (error) {
-            console.error('Error saving kelas:', error);
-            window.showAlert('Gagal menyimpan kelas: ' + error.message, "Error", "danger");
-        }
+        });
     };
 
     /**
