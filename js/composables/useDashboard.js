@@ -49,12 +49,14 @@ function useDashboard(uiData, userSession, activeChildId, appConfig) {
     // --- METHODS ---
 
     const getStudentStats = (santriId) => {
-        // Find santri
-        const santri = uiData.santri.find(s => s.santri_id === santriId || s._id === santriId);
+        // Use global santri list for leaderboard scoring across all roles
+        const santris = uiData.all_santri || uiData.santri || [];
+        const santri = santris.find(s => s.santri_id === santriId || s._id === santriId);
         if (!santri) return null;
 
-        // MATCHING: Try both s._id (UUID) and s.santri_id (NIS)
-        const setorans = uiData.setoran.filter(s => s.santri_id === santri._id || s.santri_id === santri.santri_id);
+        // Use global setoran list
+        const allSetorans = uiData.all_setoran || uiData.setoran || [];
+        const setorans = allSetorans.filter(s => s.santri_id === santri._id || s.santri_id === santri.santri_id);
 
         // Cals Sabaq (Total Pages)
         const sabaqPages = setorans
@@ -73,7 +75,8 @@ function useDashboard(uiData, userSession, activeChildId, appConfig) {
     };
 
     const getSantriName = (id) => {
-        const s = uiData.santri.find(x => x._id === id || x.santri_id === id);
+        const santris = uiData.all_santri || uiData.santri || [];
+        const s = santris.find(x => x._id === id || x.santri_id === id);
         return s ? s.full_name : 'Santri';
     };
 
@@ -195,38 +198,149 @@ function useDashboard(uiData, userSession, activeChildId, appConfig) {
 
     const calculateStats = (overrideChildId = null) => {
         const santris = uiData.santri || [];
-        dashboardStats.totalSantri = santris.length;
+        const allSantris = uiData.all_santri || santris;
 
-        // 1. Wali & Santri View (Personalized Stats)
+        // --- 1. Common Aggregations (Needed for Leaderboard & General Stats) ---
+        let tSabaq = 0, tManzil = 0;
+        let tPutra = 0, tPutri = 0;
+        const leaderboard = []; // Temp array for global leaderboard
+
+        // Prepare Data for Current Month Scoring (Global)
+        const now = new Date();
+        const currentMonth = now.getMonth();
+        const currentYear = now.getFullYear();
+
+        const isMatch = (dateStr) => {
+            if (!dateStr) return false;
+            const d = new Date(dateStr);
+            return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+        };
+
+        const allSetoran = uiData.all_setoran || uiData.setoran || [];
+        const allUjian = uiData.all_ujian || uiData.ujian || [];
+        const allPelanggaran = uiData.all_pelanggaran || uiData.pelanggaran || [];
+
+        const filteredSetoran = allSetoran.filter(d => isMatch(d.setoran_date));
+        const filteredUjian = allUjian.filter(d => isMatch(d.date));
+        const filteredPelanggaran = allPelanggaran.filter(d => isMatch(d.created_at));
+
+        // Loop through ALL santri to build the leaderboard
+        allSantris.forEach(s => {
+            // Gender Count
+            if (s.gender === 'L') tPutra++;
+            else if (s.gender === 'P') tPutri++;
+
+            // Global All Time Pages
+            const st = getStudentStats(s._id);
+            if (st) {
+                tSabaq += st.sabaq;
+                tManzil += st.manzil;
+            }
+
+            // Calculate Monthly Score for Leaderboard
+            const defaultSettings = {
+                weights: { sabaq: 50, manzil: 30, ujian: 20, tilawah: 0 },
+                visibility: { sabaq: true, manzil: true, ujian: true, tilawah: false }
+            };
+            const storedSettings = (uiData.settings || []).find(x => x._id === 'rekap_config');
+            const settings = storedSettings ? {
+                weights: { ...defaultSettings.weights, ...(storedSettings.weights || {}) },
+                visibility: { ...defaultSettings.visibility, ...(storedSettings.visibility || {}) }
+            } : defaultSettings;
+
+            const targetSabaq = parseInt(s.target_sabaq) || 20;
+            let totalJuz = 0;
+            if (s.hafalan_manual) {
+                const match = s.hafalan_manual.match(/(\d+)/);
+                if (match) totalJuz = parseInt(match[1]);
+            }
+            const manzilPct = parseInt(s.target_manzil_pct) || 20;
+            let calcTargetManzil = (totalJuz * 20) * (manzilPct / 100);
+            const targetManzil = Math.max(20, Math.round(calcTargetManzil));
+
+            const mySetoran = filteredSetoran.filter(x => x.santri_id === s._id || x.santri_id === s.santri_id);
+            const actualSabaq = mySetoran.filter(x => x.setoran_type === 'Sabaq').reduce((acc, curr) => acc + (parseFloat(curr.pages) || 0), 0);
+            const actualManzil = mySetoran.filter(x => x.setoran_type === 'Manzil').reduce((acc, curr) => acc + (parseFloat(curr.pages) || 0), 0);
+
+            const myUjian = filteredUjian.filter(x =>
+                (x.santri_id === s._id || x.santri_id === s.santri_id) &&
+                (x.type === 'Ujian Al-Quran' || x.type === 'Ujian Pelajaran')
+            );
+
+            let avgUjian = 0;
+            if (myUjian.length > 0) {
+                const totalScore = myUjian.reduce((acc, curr) => acc + (parseFloat(curr.score) || 0), 0);
+                avgUjian = totalScore / myUjian.length;
+            }
+
+            const myTilawah = filteredSetoran.filter(x => x.santri_id === s._id || x.santri_id === s.santri_id);
+            const actualTilawah = myTilawah.filter(x => x.setoran_type === 'Tilawah').reduce((acc, curr) => acc + (parseFloat(curr.pages) || 0), 0);
+            const targetTilawah = s.target_tilawah || 600;
+
+            const myPelanggaran = filteredPelanggaran.filter(x => x.santri_id === s._id || x.santri_id === s.santri_id);
+            const totalPointsPelanggaran = myPelanggaran.reduce((acc, curr) => acc + (parseInt(curr.points) || 0), 0);
+
+            let scoreSabaqWeighted = 0;
+            if (settings.visibility.sabaq) {
+                const scoreSabaqRaw = targetSabaq > 0 ? (actualSabaq / targetSabaq) * 100 : 0;
+                scoreSabaqWeighted = scoreSabaqRaw * (settings.weights.sabaq / 100);
+            }
+
+            let scoreManzilWeighted = 0;
+            if (settings.visibility.manzil) {
+                const scoreManzilRaw = targetManzil > 0 ? (actualManzil / targetManzil) * 100 : 0;
+                scoreManzilWeighted = scoreManzilRaw * (settings.weights.manzil / 100);
+            }
+
+            let scoreUjianWeighted = 0;
+            if (settings.visibility.ujian) {
+                scoreUjianWeighted = avgUjian * (settings.weights.ujian / 100);
+            }
+
+            let scoreTilawahWeighted = 0;
+            if (settings.visibility.tilawah) {
+                const scoreTilawahRaw = (actualTilawah / targetTilawah) * 100;
+                scoreTilawahWeighted = scoreTilawahRaw * (settings.weights.tilawah / 100);
+            }
+
+            let finalScore = scoreSabaqWeighted + scoreManzilWeighted + scoreUjianWeighted + scoreTilawahWeighted;
+            finalScore -= totalPointsPelanggaran;
+            finalScore = Math.round(finalScore * 10) / 10;
+
+            leaderboard.push({
+                name: s.full_name,
+                class: s.kelas,
+                total: finalScore,
+                gender: s.gender,
+                sabaq: actualSabaq,
+                manzil: actualManzil
+            });
+        });
+
+        // Update global counts
+        dashboardStats.totalSantri = allSantris.length;
+        dashboardStats.totalPutra = tPutra;
+        dashboardStats.totalPutri = tPutri;
+        dashboardStats.leaderboard = leaderboard;
+
+        // --- 2. PERSONALIZED STATS (Wali & Santri) ---
         if (userSession.value && (userSession.value.role === 'wali' || userSession.value.role === 'santri')) {
-            // For Santri, targetId is their own NIS (username). For Wali, use switcher or links.
             const targetId = userSession.value.role === 'santri'
                 ? userSession.value.username
                 : (overrideChildId || (activeChildId ? activeChildId.value : null) || userSession.value.child_id);
 
-            // Try matching by _id (UUID) or santri_id (NIS)
             let santri = santris.find(s => s._id === targetId || s.santri_id === targetId || s.nis === targetId);
-
-            if (!santri && santris.length > 0) {
-                santri = santris[0]; // Final fallback
-            }
+            if (!santri && santris.length > 0) santri = santris[0];
 
             let completed = 0;
             if (santri && santri.hafalan_progress) {
                 try {
                     const prog = typeof santri.hafalan_progress === 'string' ? JSON.parse(santri.hafalan_progress) : santri.hafalan_progress;
                     completed = Object.keys(prog).filter(k => prog[k]).length;
-                } catch (e) {
-                    console.error("Error parsing progress", e);
-                }
+                } catch (e) { }
             }
 
             const st = santri ? getStudentStats(santri._id || santri.santri_id) : null;
-
-            // Monthly Target Logic
-            const now = new Date();
-            const currentMonth = now.getMonth();
-            const currentYear = now.getFullYear();
 
             const mySetoran = uiData.setoran.filter(s => {
                 const d = new Date(s.setoran_date || s.created_at);
@@ -262,137 +376,13 @@ function useDashboard(uiData, userSession, activeChildId, appConfig) {
 
             loadWeeklyActivity(santri ? [santri._id, santri.santri_id].filter(Boolean) : []);
         }
-        // 2. Admin/Guru View
+        // --- 3. ADMIN/GURU VIEW (Global Averages) ---
         else {
-            let tSabaq = 0, tManzil = 0;
-            let tPutra = 0, tPutri = 0;
-            const leaderboard = []; // Temp array
-
-            // Prepare Data for Current Month Scoring
-            const now = new Date();
-            const currentMonth = now.getMonth();
-            const currentYear = now.getFullYear();
-
-            // Helper to check Date Match
-            const isMatch = (dateStr) => {
-                if (!dateStr) return false;
-                const d = new Date(dateStr);
-                return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
-            };
-
-            const allSetoran = uiData.setoran || [];
-            const allUjian = uiData.ujian || [];
-            const allPelanggaran = uiData.pelanggaran || [];
-
-            const filteredSetoran = allSetoran.filter(d => isMatch(d.setoran_date));
-            const filteredUjian = allUjian.filter(d => isMatch(d.date));
-            const filteredPelanggaran = allPelanggaran.filter(d => isMatch(d.created_at));
-
-            santris.forEach(s => {
-                // Gender Count
-                if (s.gender === 'L') tPutra++;
-                else if (s.gender === 'P') tPutri++;
-
-                // Global All Time Pages
-                const st = getStudentStats(s._id);
-                if (st) {
-                    tSabaq += st.sabaq;
-                    tManzil += st.manzil;
-                }
-
-                // --- Calculate Monthly Score for Leaderboard ---
-                // --- Dynamic Settings from Rekap Config ---
-                const defaultSettings = {
-                    weights: { sabaq: 50, manzil: 30, ujian: 20, tilawah: 0 },
-                    visibility: { sabaq: true, manzil: true, ujian: true, tilawah: false }
-                };
-                const storedSettings = (uiData.settings || []).find(s => s._id === 'rekap_config');
-                const settings = storedSettings ? {
-                    weights: { ...defaultSettings.weights, ...(storedSettings.weights || {}) },
-                    visibility: { ...defaultSettings.visibility, ...(storedSettings.visibility || {}) }
-                } : defaultSettings;
-
-                const targetSabaq = parseInt(s.target_sabaq) || 20;
-                let totalJuz = 0;
-                if (s.hafalan_manual) {
-                    const match = s.hafalan_manual.match(/(\d+)/);
-                    if (match) totalJuz = parseInt(match[1]);
-                }
-                const manzilPct = parseInt(s.target_manzil_pct) || 20;
-                let calcTargetManzil = (totalJuz * 20) * (manzilPct / 100);
-                const targetManzil = Math.max(20, Math.round(calcTargetManzil));
-
-                // Actuals
-                const mySetoran = filteredSetoran.filter(x => x.santri_id === s._id || x.santri_id === s.santri_id);
-                const actualSabaq = mySetoran.filter(x => x.setoran_type === 'Sabaq').reduce((acc, curr) => acc + (parseFloat(curr.pages) || 0), 0);
-                const actualManzil = mySetoran.filter(x => x.setoran_type === 'Manzil').reduce((acc, curr) => acc + (parseFloat(curr.pages) || 0), 0);
-
-                const myUjian = filteredUjian.filter(x =>
-                    (x.santri_id === s._id || x.santri_id === s.santri_id) &&
-                    (x.type === 'Ujian Al-Quran' || x.type === 'Ujian Pelajaran')
-                );
-
-                let avgUjian = 0;
-                if (myUjian.length > 0) {
-                    const totalScore = myUjian.reduce((acc, curr) => acc + (parseFloat(curr.score) || 0), 0);
-                    avgUjian = totalScore / myUjian.length;
-                }
-
-                // Tilawah Actual
-                const myTilawah = filteredSetoran.filter(x => x.santri_id === s._id || x.santri_id === s.santri_id);
-                const actualTilawah = myTilawah.filter(x => x.setoran_type === 'Tilawah').reduce((acc, curr) => acc + (parseFloat(curr.pages) || 0), 0);
-                const targetTilawah = s.target_tilawah || 600;
-
-                const myPelanggaran = filteredPelanggaran.filter(x => x.santri_id === s._id || x.santri_id === s.santri_id);
-                const totalPointsPelanggaran = myPelanggaran.reduce((acc, curr) => acc + (parseInt(curr.points) || 0), 0);
-
-                // Formula Dynamically linked to Rekap Settings
-                let scoreSabaqWeighted = 0;
-                if (settings.visibility.sabaq) {
-                    const scoreSabaqRaw = targetSabaq > 0 ? (actualSabaq / targetSabaq) * 100 : 0;
-                    scoreSabaqWeighted = scoreSabaqRaw * (settings.weights.sabaq / 100);
-                }
-
-                let scoreManzilWeighted = 0;
-                if (settings.visibility.manzil) {
-                    const scoreManzilRaw = targetManzil > 0 ? (actualManzil / targetManzil) * 100 : 0;
-                    scoreManzilWeighted = scoreManzilRaw * (settings.weights.manzil / 100);
-                }
-
-                let scoreUjianWeighted = 0;
-                if (settings.visibility.ujian) {
-                    scoreUjianWeighted = avgUjian * (settings.weights.ujian / 100);
-                }
-
-                let scoreTilawahWeighted = 0;
-                if (settings.visibility.tilawah) {
-                    const scoreTilawahRaw = (actualTilawah / targetTilawah) * 100;
-                    scoreTilawahWeighted = scoreTilawahRaw * (settings.weights.tilawah / 100);
-                }
-
-                let finalScore = scoreSabaqWeighted + scoreManzilWeighted + scoreUjianWeighted + scoreTilawahWeighted;
-                finalScore -= totalPointsPelanggaran;
-                finalScore = Math.round(finalScore * 10) / 10;
-
-                leaderboard.push({
-                    name: s.full_name,
-                    class: s.kelas,
-                    total: finalScore,
-                    gender: s.gender,
-                    sabaq: actualSabaq,
-                    manzil: actualManzil
-                });
-            });
-
             dashboardStats.totalSabaq = parseFloat(tSabaq.toFixed(1));
             dashboardStats.totalManzil = parseFloat(tManzil.toFixed(1));
 
-            dashboardStats.totalPutra = tPutra;
-            dashboardStats.totalPutri = tPutri;
-
-            // Calculate Admin Average Progress
-            if (santris.length > 0) {
-                const totalCompleted = santris.reduce((sum, s) => {
+            if (allSantris.length > 0) {
+                const totalCompleted = allSantris.reduce((sum, s) => {
                     let c = 0;
                     if (s.hafalan_progress) {
                         try {
@@ -402,27 +392,20 @@ function useDashboard(uiData, userSession, activeChildId, appConfig) {
                     }
                     return sum + c;
                 }, 0);
-                const avg = totalCompleted / santris.length;
+                const avg = totalCompleted / allSantris.length;
                 dashboardStats.juzCompleted = Math.round(avg * 10) / 10;
                 dashboardStats.juzRemaining = Math.max(0, 30 - dashboardStats.juzCompleted);
-            } else {
-                dashboardStats.juzCompleted = 0;
-                dashboardStats.juzRemaining = 30;
-            }
 
-            // Calculate Admin Monthly Target Averages
-            if (santris.length > 0) {
+                // Admin Monthly Target Averages
                 let totalActualSabaq = 0, totalTargetSabaq = 0;
                 let totalActualManzil = 0, totalTargetManzil = 0;
 
-                santris.forEach(s => {
+                allSantris.forEach(s => {
                     const mySetoran = filteredSetoran.filter(x => x.santri_id === s._id || x.santri_id === s.santri_id);
                     const actS = mySetoran.filter(x => x.setoran_type === 'Sabaq').reduce((acc, curr) => acc + (parseFloat(curr.pages) || 0), 0);
                     const actM = mySetoran.filter(x => x.setoran_type === 'Manzil').reduce((acc, curr) => acc + (parseFloat(curr.pages) || 0), 0);
-
                     const tS = parseInt(s.target_sabaq) || 20;
 
-                    // Count completed juz for this santri to calc manzil target
                     let c = 0;
                     if (s.hafalan_progress) {
                         try {
@@ -433,16 +416,14 @@ function useDashboard(uiData, userSession, activeChildId, appConfig) {
                     const mPct = parseInt(s.target_manzil_pct) || 20;
                     const tM = Math.max(1, Math.round((c * 20) * (mPct / 100)));
 
-                    totalActualSabaq += actS;
-                    totalTargetSabaq += tS;
-                    totalActualManzil += actM;
-                    totalTargetManzil += tM;
+                    totalActualSabaq += actS; totalTargetSabaq += tS;
+                    totalActualManzil += actM; totalTargetManzil += tM;
                 });
 
-                const avgActS = totalActualSabaq / santris.length;
-                const avgTarS = totalTargetSabaq / santris.length;
-                const avgActM = totalActualManzil / santris.length;
-                const avgTarM = totalTargetManzil / santris.length;
+                const avgActS = totalActualSabaq / allSantris.length;
+                const avgTarS = totalTargetSabaq / allSantris.length;
+                const avgActM = totalActualManzil / allSantris.length;
+                const avgTarM = totalTargetManzil / allSantris.length;
 
                 dashboardStats.monthlyTarget = {
                     sabaqCurrent: Math.round(avgActS * 10) / 10,
@@ -451,12 +432,12 @@ function useDashboard(uiData, userSession, activeChildId, appConfig) {
                     manzilTarget: Math.round(avgTarM),
                     diffLabel: `Avg: ${Math.round(avgActS)} Hal`
                 };
+            } else {
+                dashboardStats.juzCompleted = 0;
+                dashboardStats.juzRemaining = 30;
             }
 
             loadWeeklyActivity(); // Admin/Guru: Total all students
-
-            // Store FULL Leaderboard (unsorted/unfiltered) to allow dynamic filtering
-            dashboardStats.leaderboard = leaderboard;
         }
 
         // Calculate Recent Activities
@@ -469,9 +450,17 @@ function useDashboard(uiData, userSession, activeChildId, appConfig) {
 
         let items = dashboardStats.leaderboard;
 
+        // --- GENDER FILTER LOGIC ---
+        let currentFilter = topSantriFilter.value;
+
+        // Special requirement: Santri role filter is forced to match their own gender
+        if (userSession.value && userSession.value.role === 'santri') {
+            currentFilter = userSession.value.gender || 'L';
+        }
+
         // Filter Gender
-        if (topSantriFilter.value !== 'Semua') {
-            items = items.filter(s => s.gender === topSantriFilter.value);
+        if (currentFilter !== 'Semua') {
+            items = items.filter(s => s.gender === currentFilter);
         }
 
         // Sort Descending & Take Top 10 (Fix Array Mutation Bug)

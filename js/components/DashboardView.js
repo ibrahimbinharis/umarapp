@@ -379,10 +379,13 @@ const DashboardView = {
         const holidayCountdown = computed(() => {
             if (!props.appConfig?.holiday_start || !props.appConfig?.holiday_end) return null;
 
-            const start = new Date(props.appConfig.holiday_start);
-            const end = new Date(props.appConfig.holiday_end);
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
+            // Timezone Fix: Today at Local Midnight
+            const now = new Date();
+            const todayStr = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+            const today = new Date(todayStr + 'T00:00:00');
+
+            const start = new Date(props.appConfig.holiday_start + 'T00:00:00');
+            const end = new Date(props.appConfig.holiday_end + 'T00:00:00');
 
             if (today < start) {
                 const diffDays = Math.ceil(Math.abs(start - today) / (1000 * 60 * 60 * 24));
@@ -479,7 +482,7 @@ const DashboardView = {
                         <div class="min-w-0">
                             <h2 class="text-lg font-bold text-white drop-shadow-sm leading-tight truncate">Ahlan,
                                 {{ userSession.full_name ? userSession.full_name.split(' ')[0] : 'User' }}!</h2>
-                            <p class="text-[10px] text-blue-100 font-medium opacity-90 mt-0.5 whitespace-nowrap">Selamat datang kembali</p>
+                            <p class="text-[10px] text-blue-100 font-medium opacity-90 mt-0.5 whitespace-nowrap">Assalamualaikum!</p>
                             
                             <!-- Connection Status Badge (Wali Only) -->
                             <div v-if="userSession.role === 'wali' && uiData.santri && uiData.santri.length > 0" 
@@ -601,6 +604,61 @@ const DashboardView = {
                 <!-- Expand/Collapse Handle -->
                 <div v-if="hasMoreMenus" class="absolute bottom-2 left-1/2 transform -translate-x-1/2 w-full flex justify-center pb-2 cursor-pointer" @click="isMenuExpanded = !isMenuExpanded">
                     <div class="w-10 h-1 bg-slate-200 rounded-full hover:bg-slate-300 transition-colors"></div>
+                </div>
+            </div>
+
+            <!-- Top Santri Leaderboard (Visible to All Roles) -->
+            <div class="bg-white p-5 rounded-3xl border card-shadow mb-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-bold text-slate-900 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-yellow-500">trophy</span>
+                        Top 10 Santri
+                    </h3>
+                </div>
+
+                <!-- Gender Filter (Hidden for Santri Role as it is auto-filtered) -->
+                <div v-if="userSession.role !== 'santri'" class="flex gap-2 mb-4">
+                    <button @click="$emit('update:topSantriFilter', 'Semua')"
+                        :class="topSantriFilter === 'Semua' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600'"
+                        class="px-3 py-1.5 rounded-xl text-xs font-bold transition">
+                        Semua
+                    </button>
+                    <button @click="$emit('update:topSantriFilter', 'L')"
+                        :class="topSantriFilter === 'L' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600'"
+                        class="px-3 py-1.5 rounded-xl text-xs font-bold transition">
+                        Putra
+                    </button>
+                    <button @click="$emit('update:topSantriFilter', 'P')"
+                        :class="topSantriFilter === 'P' ? 'bg-pink-500 text-white' : 'bg-slate-100 text-slate-600'"
+                        class="px-3 py-1.5 rounded-xl text-xs font-bold transition">
+                        Putri
+                    </button>
+                </div>
+                
+                <!-- Scrollable List Container -->
+                <div class="space-y-2 max-h-64 overflow-y-auto pr-1">
+                    <div v-for="(s, idx) in filteredTopSantri" :key="idx"
+                        class="flex items-center gap-3 p-2 rounded-xl border border-slate-50 bg-slate-50/50">
+                        <div class="size-8 rounded-full flex items-center justify-center font-bold text-sm"
+                            :class="{
+                                'bg-yellow-100 text-yellow-700': idx === 0,
+                                'bg-slate-200 text-slate-600': idx > 0
+                            }">
+                            {{ idx + 1 }}
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="font-bold text-slate-800 text-sm truncate">{{ s.name }}</p>
+                            <p class="text-xs text-slate-500">{{ s.class }}</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="font-black text-primary text-sm">{{ s.total.toFixed(1) }}</p>
+                            <p class="text-[10px] text-slate-400">Total Nilai</p>
+                        </div>
+                    </div>
+                    <div v-if="!filteredTopSantri || filteredTopSantri.length === 0"
+                        class="text-center text-slate-400 text-xs py-2">
+                        Belum ada data
+                    </div>
                 </div>
             </div>
 
@@ -756,16 +814,13 @@ const DashboardView = {
                 </div>
             </div>
 
-            <!-- Admin/Guru View -->
+            <!-- Admin/Guru Global Stats (Visible to Admin/Guru/Santri) -->
             <div v-if="userSession.role !== 'wali'">
-                <!-- Stats Cards -->
                 <div class="mb-6">
-                    <!-- Total Santri (Consolidated) -->
                     <div @click="$emit('navigate', 'santri')"
                         class="bg-white p-6 rounded-3xl border border-slate-100 card-shadow cursor-pointer hover:shadow-md transition-all group relative overflow-hidden">
                         
                         <div class="flex justify-between items-center relative z-10">
-                            <!-- Left: Main Count -->
                             <div class="flex-1">
                                 <div class="flex items-center gap-2 mb-1">
                                     <span class="material-symbols-outlined text-primary text-xs">analytics</span>
@@ -773,7 +828,6 @@ const DashboardView = {
                                 </div>
                                 <p class="text-4xl font-black text-slate-900 leading-none mb-4">{{ displayStats.totalSantri }}</p>
                                 
-                                <!-- Mini Legend below count -->
                                 <div class="space-y-1.5">
                                     <div class="flex items-center gap-2">
                                         <div class="size-2 rounded-full bg-blue-600"></div>
@@ -786,10 +840,8 @@ const DashboardView = {
                                 </div>
                             </div>
                             
-                            <!-- Right: The Donut Chart (smaller with numbers inside) -->
                             <div class="relative size-20 flex items-center justify-center">
                                 <canvas id="genderDonutChart"></canvas>
-                                <!-- Numbers inside donut -->
                                 <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none leading-none">
                                     <div class="flex flex-col items-center">
                                         <span class="text-[10px] font-black text-blue-600">{{ displayStats.totalPutra }}</span>
@@ -801,65 +853,9 @@ const DashboardView = {
                         </div>
                     </div>
                 </div>
-
-                <!-- Charts Grid -->
-                <!-- Top Santri Leaderboard -->
-                <div class="bg-white p-5 rounded-3xl border card-shadow mb-6">
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 class="font-bold text-slate-900 flex items-center gap-2">
-                            <span class="material-symbols-outlined text-yellow-500">trophy</span>
-                            Top 10 Santri
-                        </h3>
-                    </div>
-
-                    <!-- Gender Filter -->
-                    <div class="flex gap-2 mb-4">
-                        <button @click="$emit('update:topSantriFilter', 'Semua')"
-                            :class="topSantriFilter === 'Semua' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600'"
-                            class="px-3 py-1.5 rounded-xl text-xs font-bold transition">
-                            Semua
-                        </button>
-                        <button @click="$emit('update:topSantriFilter', 'L')"
-                            :class="topSantriFilter === 'L' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600'"
-                            class="px-3 py-1.5 rounded-xl text-xs font-bold transition">
-                            Putra
-                        </button>
-                        <button @click="$emit('update:topSantriFilter', 'P')"
-                            :class="topSantriFilter === 'P' ? 'bg-pink-500 text-white' : 'bg-slate-100 text-slate-600'"
-                            class="px-3 py-1.5 rounded-xl text-xs font-bold transition">
-                            Putri
-                        </button>
-                    </div>
-                    
-                    <!-- Scrollable List Container -->
-                    <div class="space-y-2 max-h-64 overflow-y-auto pr-1">
-                        <div v-for="(s, idx) in filteredTopSantri" :key="idx"
-                            class="flex items-center gap-3 p-2 rounded-xl border border-slate-50 bg-slate-50/50">
-                            <div class="size-8 rounded-full flex items-center justify-center font-bold text-sm"
-                                :class="{
-                                    'bg-yellow-100 text-yellow-700': idx === 0,
-                                    'bg-slate-200 text-slate-600': idx > 0
-                                }">
-                                {{ idx + 1 }}
-                            </div>
-                            <div class="flex-1 min-w-0">
-                                <p class="font-bold text-slate-800 text-sm truncate">{{ s.name }}</p>
-                                <p class="text-xs text-slate-500">{{ s.class }}</p>
-                            </div>
-                            <div class="text-right">
-                                <p class="font-black text-primary text-sm">{{ s.total.toFixed(1) }}</p>
-                                <p class="text-[10px] text-slate-400">Total Nilai</p>
-                            </div>
-                        </div>
-                        <div v-if="!filteredTopSantri || filteredTopSantri.length === 0"
-                            class="text-center text-slate-400 text-xs py-2">
-                            Belum ada data
-                        </div>
-                    </div>
-                </div>
+            </div> <!-- End v-if="userSession.role !== 'wali'" -->
 
 
-            </div>
         </div>
     </div>
     `

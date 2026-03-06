@@ -16,7 +16,7 @@ const MENU_CONFIG = [
     { id: 'kelas', label: "Kelas", icon: "meeting_room", roles: ['admin'], inBottom: false },
     { id: 'jadwal', label: "Jadwal", icon: "calendar_month", roles: ['admin', 'guru', 'wali', 'santri'], inBottom: false },
     { id: 'pelanggaran', label: "Pelanggaran", icon: "warning", roles: ['admin', 'guru'], inBottom: false },
-    { id: 'profile', label: "Profile", icon: "account_circle", roles: ['admin', 'guru', 'wali', 'santri'], inBottom: false },
+    { id: 'profile', label: "Pengaturan", icon: "settings", roles: ['admin', 'guru', 'wali', 'santri'], inBottom: false },
     { id: 'rekap', label: "Rekap", icon: "analytics", roles: ['admin', 'guru', 'wali', 'santri'], inBottom: false },
     { id: 'connect_santri', label: "Sambungkan Santri", icon: "family_restroom", roles: ['wali'], inBottom: false },
 ];
@@ -45,16 +45,36 @@ createApp({
         const appConfig = computed(() => {
             const stored = (uiData.settings || []).find(s => s._id === 'app_config') || {};
 
-            // Auto Holiday Logic
-            const today = new Date().toISOString().split('T')[0];
-            const isAutoHoliday = stored.holiday_start && stored.holiday_end &&
-                today >= stored.holiday_start && today <= stored.holiday_end;
+            // Local Timezone Fix: YYYY-MM-DD
+            const now = new Date();
+            const today = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+
+            const start = stored.holiday_start;
+            const end = stored.holiday_end;
+
+            // 1. Check if past (Auto-OFF)
+            if (end && today > end) {
+                return {
+                    isHolidayMode: false,
+                    holiday_start: '',
+                    holiday_end: '',
+                    notifications: stored.notifications || { enabled: true, targets: ['admin', 'guru', 'wali'] }
+                };
+            }
+
+            // 2. Logic Hybrid: Manual + Automatic
+            // "jika waktu libur di set sebelum maka matikan saklar dan aktifkan otomatis"
+            const isAutoActive = start && end && today >= start && today <= end;
+            const isPlanned = start && end && today < start;
+
+            let finalStatus = stored.isHolidayMode || false;
+            if (isAutoActive) finalStatus = true;
+            if (isPlanned) finalStatus = false; // Planned for future: Saklar off visual
 
             return {
-                // If dates are set, they dictate the mode. Otherwise, use manual switch.
-                isHolidayMode: (stored.holiday_start && stored.holiday_end) ? isAutoHoliday : (stored.isHolidayMode || false),
-                holiday_start: stored.holiday_start || '',
-                holiday_end: stored.holiday_end || '',
+                isHolidayMode: finalStatus,
+                holiday_start: start || '',
+                holiday_end: end || '',
                 notifications: stored.notifications || {
                     enabled: true,
                     targets: ['admin', 'guru', 'wali']
@@ -134,7 +154,13 @@ createApp({
             pelanggaran: [], // added
             master_pelanggaran: [], // added
             settings: [], // added
-            surahList: [] // For dropdowns
+            surahList: [], // For dropdowns
+
+            // Global (unfiltered) for leaderboard/stats across all roles
+            all_santri: [],
+            all_setoran: [],
+            all_ujian: [],
+            all_pelanggaran: []
         });
 
         // Initialize Pelanggaran Composable
@@ -672,6 +698,11 @@ createApp({
             }
 
             // 3. Assign to Reactive State
+            uiData.all_santri = activeData.filter(d => d.__type === 'santri');
+            uiData.all_setoran = activeData.filter(d => d.__type === 'setoran');
+            uiData.all_ujian = activeData.filter(d => d.__type === 'ujian');
+            uiData.all_pelanggaran = activeData.filter(d => d.__type === 'pelanggaran');
+
             uiData.santri = santriList;
             uiData.setoran = setoranList;
             uiData.ujian = ujianList;
@@ -709,32 +740,59 @@ createApp({
         };
 
         const saveAppConfig = async (updates) => {
+            const current = JSON.parse(JSON.stringify((uiData.settings || []).find(s => s._id === 'app_config') || {}));
+
+            // --- Logic: Manual Forced OFF Peringatan ---
+            if (updates.isHolidayMode === false && (current.holiday_start || current.holiday_end)) {
+                window.showConfirm({
+                    title: 'Matikan Paksa Mode Liburan?',
+                    message: 'Mematikan mode liburan secara manual akan menghapus rentang tanggal yang sudah diatur. Lanjutkan?',
+                    confirmText: 'Ya, Matikan',
+                    type: 'warning',
+                    onConfirm: async () => {
+                        const payload = {
+                            _id: 'app_config',
+                            __type: 'settings',
+                            ...current,
+                            isHolidayMode: false,
+                            holiday_start: null,
+                            holiday_end: null,
+                            updated_at: new Date().toISOString()
+                        };
+                        await DB.updateOrInsert(payload, 'settings');
+                        refreshData();
+                    }
+                });
+                return;
+            }
+
+            // --- Normal Save Procedure ---
             window.showConfirm({
                 title: 'Konfirmasi',
-                message: 'Apakah Anda yakin ingin memperbarui konfigurasi?',
-                confirmText: 'Ya, Simpan',
-                cancelText: 'Batal',
-                type: 'info',
+                message: 'Simpan perubahan konfigurasi?',
                 onConfirm: async () => {
-                    // v36 Fix: Use raw stored data as base, NOT the computed appConfig which has logic status
-                    const current = JSON.parse(JSON.stringify((uiData.settings || []).find(s => s._id === 'app_config') || {}));
+                    const merged = { ...current };
                     for (const key in updates) {
                         if (key.includes('.')) {
-                            const [parent, child] = key.split('.');
-                            if (!current[parent]) current[parent] = {};
-                            current[parent][child] = updates[key];
+                            const [p, c] = key.split('.');
+                            if (!merged[p]) merged[p] = {};
+                            merged[p][c] = updates[key];
                         } else {
-                            current[key] = updates[key];
+                            merged[key] = updates[key];
                         }
+                    }
+
+                    // Auto-sync switch state when dates are added ("otomatis saklar menyala")
+                    if (updates.holiday_start || updates.holiday_end) {
+                        if (merged.holiday_start) merged.isHolidayMode = true;
                     }
 
                     const payload = {
                         _id: 'app_config',
                         __type: 'settings',
-                        ...current,
-                        // Fix for Supabase DATE type (empty string not allowed)
-                        holiday_start: current.holiday_start || null,
-                        holiday_end: current.holiday_end || null,
+                        ...merged,
+                        holiday_start: merged.holiday_start || null,
+                        holiday_end: merged.holiday_end || null,
                         updated_at: new Date().toISOString()
                     };
 
