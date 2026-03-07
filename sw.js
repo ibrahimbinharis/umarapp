@@ -1,4 +1,4 @@
-const CACHE_NAME = "v1.0";
+const CACHE_NAME = "v1.1";
 const ASSETS_TO_CACHE = [
     "./",
     "./index.html",
@@ -186,3 +186,4 @@ self.addEventListener('notificationclick', (event) => {
         })
     );
 });
+
