@@ -67,10 +67,11 @@ const ProfileView = {
             await loadSantriList();
         };
 
-        // Handle unlink with refresh
-        const handleUnlink = async (santriId) => {
-            await props.unlinkSantri(santriId);
-            loadSantriList();
+        const handleUnlink = (santriId) => {
+            props.unlinkSantri(santriId, (id) => {
+                // Langsung hapus dari tampilan saat berhasil (tanpa tunggu re-fetch)
+                santriList.value = santriList.value.filter(s => s._id !== id);
+            });
         };
 
         const navigateToSub = (menu) => {

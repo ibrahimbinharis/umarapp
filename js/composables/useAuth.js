@@ -6,7 +6,8 @@ const useAuth = (currentView, loading) => {
     const loginForm = reactive({
         username: '',
         password: '',
-        fullName: '' // For registration
+        fullName: '', // For registration
+        phone: ''     // For registration (Wali)
     });
 
     // --- Actions ---
@@ -90,13 +91,14 @@ const useAuth = (currentView, loading) => {
                     .maybeSingle();
 
                 if (!existingUser) {
-                    // Create new user profile (Standardized to 'user' singular)
+                    // Create new user profile
                     await DB.create('user', {
-                        _id: data.user.id, // Important: Link ID
+                        _id: data.user.id,
                         username: username,
                         full_name: fullName,
+                        phone: loginForm.phone ? loginForm.phone.trim() : '',
                         role: 'wali',
-                        password: '', // No need to store hash anymore
+                        password: '',
                         created_at: new Date().toISOString()
                     });
                 } else {
@@ -107,7 +109,7 @@ const useAuth = (currentView, loading) => {
                     console.log("Migrating existing user:", existingUser.username);
 
                     const { error: updateError } = await sb.from('users')
-                        .update({ _id: data.user.id })
+                        .update({ _id: data.user.id, phone: loginForm.phone ? loginForm.phone.trim() : undefined })
                         .eq('username', username);
 
                     if (updateError) {
@@ -119,6 +121,10 @@ const useAuth = (currentView, loading) => {
 
                 window.showAlert("Registrasi berhasil! Silakan login.", "Sukses", "info");
                 isRegisterMode.value = false;
+                loginForm.phone = '';
+                loginForm.fullName = '';
+                loginForm.username = '';
+                loginForm.password = '';
             }
 
         } catch (e) {

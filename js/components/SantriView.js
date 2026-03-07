@@ -95,11 +95,11 @@ const SantriView = {
                     halign: 'center'
                 },
                 columnStyles: {
-                    0: { halign: 'center', cellWidth: 10 },
-                    1: { cellWidth: 70 },
-                    2: { halign: 'center', cellWidth: 25 },
-                    3: { halign: 'center', cellWidth: 25 },
-                    4: { halign: 'center', cellWidth: 20 }
+                    0: { halign: 'center', cellWidth: 12 },
+                    1: { cellWidth: 82 },
+                    2: { halign: 'center', cellWidth: 32 },
+                    3: { halign: 'center', cellWidth: 30 },
+                    4: { halign: 'center', cellWidth: 26 }
                 },
                 alternateRowStyles: { fillColor: [245, 247, 255] },
                 margin: { left: 14, right: 14 }

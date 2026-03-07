@@ -47,12 +47,12 @@ const LoginView = {
                     <!-- Login Card -->
                     <div class="bg-white md:bg-transparent rounded-[1rem] md:rounded-none shadow-2xl md:shadow-none p-6 md:p-0 border border-slate-100 md:border-none">
                         <div class="mb-8 hidden md:block">
-                            <h2 class="text-3xl font-bold text-slate-800 tracking-tight">{{ isRegisterMode ? 'Buat Akun Baru' : "Assalamu'alaikum!" }}</h2>
+                            <h2 class="text-3xl font-bold text-slate-800 tracking-tight">{{ isRegisterMode ? 'Buat Akun Walisantri' : "Assalamu'alaikum!" }}</h2>
                         </div>
 
                         <!-- Mobile Title inside Card -->
                         <div class="mb-6 md:hidden text-center">
-                            <h2 class="text-xl font-bold text-slate-800">{{ isRegisterMode ? 'Buat Akun' : "Assalamu'alaikum!" }}</h2>
+                            <h2 class="text-xl font-bold text-slate-800">{{ isRegisterMode ? 'Buat Akun Walisantri' : "Assalamu'alaikum!" }}</h2>
                         </div>
 
                         <form @submit.prevent="isRegisterMode ? $emit('register') : $emit('login')" class="space-y-4">
@@ -61,15 +61,35 @@ const LoginView = {
                                     <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors text-[20px]">badge</span>
                                     <input type="text" v-model="loginForm.fullName"
                                         class="w-full pl-11 pr-4 py-3 rounded-2xl border border-slate-200 focus:outline-none focus:border-primary focus:ring-4 focus:ring-blue-500/10 bg-slate-50/50 text-slate-700 transition-all placeholder:font-normal placeholder:text-slate-400"
-                                        placeholder="Nama Lengkap">
+                                        placeholder="Nama Lengkap Walisantri">
+                                </div>
+                            </div>
+                            <!-- Phone number (register only) -->
+                            <div v-if="isRegisterMode">
+                                <div class="relative group">
+                                    <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors text-[20px]">phone</span>
+                                    <input type="tel" v-model="loginForm.phone"
+                                        @input="loginForm.phone = $event.target.value.replace(/[^0-9+]/g, '')"
+                                        class="w-full pl-11 pr-4 py-3 rounded-2xl border border-slate-200 focus:outline-none focus:border-primary focus:ring-4 focus:ring-blue-500/10 bg-slate-50/50 text-slate-700 transition-all placeholder:font-normal placeholder:text-slate-400"
+                                        placeholder="No. Telepon (cth: 08123456789)">
                                 </div>
                             </div>
                             <div>
                                 <div class="relative group">
                                     <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors text-[20px]">person</span>
                                     <input type="text" v-model="loginForm.username"
+                                        @input="isRegisterMode ? sanitizeUsername($event) : null"
                                         class="w-full pl-11 pr-4 py-3 rounded-2xl border border-slate-200 focus:outline-none focus:border-primary focus:ring-4 focus:ring-blue-500/10 bg-slate-50/50 text-slate-700 transition-all placeholder:font-normal placeholder:text-slate-400"
-                                        placeholder="Username / NIG / NIS">
+                                        :placeholder="isRegisterMode ? 'Username' : 'Username / NIG / NIS'">
+                                </div>
+                                <!-- Hint untuk register: lowercase, no spasi -->
+                                <div v-if="isRegisterMode" class="mt-1.5 flex items-start gap-1.5 px-1">
+                                    <span class="material-symbols-outlined text-[13px] mt-0.5"
+                                        :class="usernameWarning ? 'text-amber-500' : 'text-slate-300'">info</span>
+                                    <p class="text-[11px] leading-snug"
+                                        :class="usernameWarning ? 'text-amber-600 font-semibold' : 'text-slate-400'">
+                                        {{ usernameWarning || 'Gunakan huruf kecil, angka, dan tanpa spasi. Contoh: ayahfulan123' }}
+                                    </p>
                                 </div>
                             </div>
                             <div>
@@ -115,6 +135,28 @@ const LoginView = {
     setup() {
         const canInstall = Vue.ref(false);
         const showPassword = Vue.ref(false);
+        const usernameWarning = Vue.ref('');
+
+        const sanitizeUsername = (e) => {
+            const raw = e.target.value;
+            const hasUpper = /[A-Z]/.test(raw);
+            const hasSpace = /\s/.test(raw);
+            const cleaned = raw.toLowerCase().replace(/\s/g, '');
+
+            // Auto-fix value
+            e.target.value = cleaned;
+
+            // Warning
+            if (hasUpper && hasSpace) {
+                usernameWarning.value = '⚠ Huruf kapital dan spasi otomatis dihapus!';
+            } else if (hasUpper) {
+                usernameWarning.value = '⚠ Huruf kapital otomatis diubah ke kecil.';
+            } else if (hasSpace) {
+                usernameWarning.value = '⚠ Spasi tidak diperbolehkan, otomatis dihapus.';
+            } else {
+                usernameWarning.value = '';
+            }
+        };
 
         const checkInstall = () => {
             if (window.deferredPrompt) {
@@ -134,6 +176,6 @@ const LoginView = {
             window.addEventListener('pwa-install-available', checkInstall);
         });
 
-        return { canInstall, installApp, showPassword };
+        return { canInstall, installApp, showPassword, usernameWarning, sanitizeUsername };
     }
 };

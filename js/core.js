@@ -838,4 +838,3 @@ window.addEventListener('appinstalled', (evt) => {
     console.log('E-Umar was installed');
     window.deferredPrompt = null;
 });
-

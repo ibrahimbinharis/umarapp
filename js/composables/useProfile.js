@@ -378,7 +378,7 @@ function useProfile(uiData, DB, userSession, refreshData) {
      * Unlink a Santri from current Wali
      * @param {string} santriId - ID Santri
      */
-    const unlinkSantri = async (santriId) => {
+    const unlinkSantri = async (santriId, onSuccess) => {
         window.showConfirm({
             title: 'Putus Hubungan',
             message: 'Putuskan hubungan dengan santri ini?',
@@ -386,27 +386,26 @@ function useProfile(uiData, DB, userSession, refreshData) {
             type: 'danger',
             onConfirm: async () => {
                 try {
-                    // v36: Also clear phone numbers when unlinking
+                    // Hapus dari local ref
+                    linkedSantri.value = linkedSantri.value.filter(s => s._id !== santriId);
+
                     const { error } = await sb.from('santri')
-                        .update({
-                            wali_id: null,
-                            parent_phone: null,
-                            no_hp: null
-                        })
+                        .update({ wali_id: null, parent_phone: null, no_hp: null })
                         .eq('_id', santriId);
                     if (error) throw error;
 
-                    await DB.update(santriId, {
-                        wali_id: null,
-                        parent_phone: null,
-                        no_hp: null
-                    });
-                    await getLinkedSantri();
+                    await DB.update(santriId, { wali_id: null, parent_phone: null, no_hp: null });
 
                     window.showAlert('Hubungan berhasil diputuskan', 'Sukses', 'info');
+
+                    // Panggil callback agar komponen bisa update UI lokal
+                    if (onSuccess) onSuccess(santriId);
+
+                    getLinkedSantri(); // background refresh
                     if (refreshData) refreshData();
                 } catch (e) {
                     console.error('Error unlinking santri:', e);
+                    await getLinkedSantri(); // pulihkan jika gagal
                     window.showAlert('Gagal memutuskan hubungan: ' + e.message, 'Error', 'danger');
                 }
             }
