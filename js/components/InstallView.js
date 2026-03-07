@@ -23,7 +23,7 @@ const InstallView = {
                         <!-- Install Button -->
                         <button v-if="canInstall" @click="handleInstall"
                             class="w-full bg-primary text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-3 shadow-lg shadow-blue-900/20 active:scale-95 transition-all">
-                            <span class="material-symbols-outlined font-bold">download_for_offline</span>
+                            
                             <span>UNDUH SEKARANG</span>
                         </button>
 
@@ -72,3 +72,4 @@ const InstallView = {
         return { canInstall, handleInstall };
     }
 };
+
