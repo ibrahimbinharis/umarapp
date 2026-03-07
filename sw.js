@@ -1,4 +1,4 @@
-const CACHE_NAME = "v1.2";
+const CACHE_NAME = "v1.4";
 const ASSETS_TO_CACHE = [
     "./",
     "./index.html",
@@ -31,7 +31,32 @@ const ASSETS_TO_CACHE = [
     "./js/composables/usePelanggaran.js",
     "./js/composables/useProfile.js",
     "./js/composables/useRekap.js",
-    "./js/composables/usePengumuman.js"
+    "./js/composables/usePengumuman.js",
+    "./js/composables/useNotifications.js",
+
+    // Components
+    "./js/components/LoginView.js",
+    "./js/components/DashboardView.js",
+    "./js/components/SantriView.js",
+    "./js/components/RiwayatView.js",
+    "./js/components/RekapView.js",
+    "./js/components/ProfileView.js",
+    "./js/components/PengumumanView.js",
+    "./js/components/NotificationView.js",
+    "./js/components/SetoranView.js",
+    "./js/components/UjianView.js",
+    "./js/components/QuranView.js",
+    "./js/components/InstallView.js",
+    "./js/components/AbsensiView.js",
+    "./js/components/ExamCounter.js",
+    "./js/components/GuruView.js",
+    "./js/components/JadwalView.js",
+    "./js/components/PelanggaranView.js",
+    "./js/components/TargetView.js",
+
+    // Services
+    "./js/services/NotificationService.js",
+    "./js/services/PushService.js"
 ];
 
 // Install Event: Cache all static assets
@@ -186,5 +211,3 @@ self.addEventListener('notificationclick', (event) => {
         })
     );
 });
-
-

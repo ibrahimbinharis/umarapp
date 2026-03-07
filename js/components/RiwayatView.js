@@ -304,7 +304,11 @@ const RiwayatView = {
                                     'text-blue-600'
                                 ]">
                                     <div class="flex flex-col items-center">
-                                        <span>{{ item.category || item.setoran_type || (item.type === 'hafalan_exam' ? 'Ujian H.' : 'Ujian') }}</span>
+                                        <span>{{
+                                            item.__cat === 'pelanggaran' ? 'Pelanggaran' :
+                                            item.__cat === 'ujian' ? (item.type === 'hafalan_exam' ? 'Ujian H.' : 'Ujian') :
+                                            (item.category || item.setoran_type || 'Setoran')
+                                        }}</span>
                                         <span v-if="item.is_holiday && !(item.category && item.category.includes('(Mandiri)'))" 
                                             class="text-[7px] opacity-70 mt-0.5">(Liburan)</span>
                                     </div>
