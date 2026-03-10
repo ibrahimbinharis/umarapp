@@ -1,7 +1,7 @@
 // --- 1. CONFIG & DATABASE (SUPABASE v37) ---
 const APP_CONFIG = {
     appName: "E-Umar",
-    version: "v4.5",
+    version: "v1.5",
     supabaseUrl: "https://fxtmilqvxomuvkxxzjli.supabase.co",
     supabaseKey: "sb_publishable_aXcK3znrtRo0d3gH-Wg1Ew_-0Z3262O"
 };
@@ -766,10 +766,8 @@ async function deleteData(id, pageToReload) {
             }
         });
     } else {
-        if (!confirm("Yakin hapus data ini?")) return;
-        await DB.delete(id);
-        if (window.refreshData) window.refreshData();
-        else window.location.reload();
+        // Fallback removed to enforce premium UI
+        console.warn("window.showConfirm not ready.");
     }
 }
 

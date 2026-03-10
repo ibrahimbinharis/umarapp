@@ -218,7 +218,7 @@ function useSantri(uiData, DB, userSession, modalState, refreshData, searchText)
 
                 modalState.isOpen = false;
                 refreshData(); // Call global refresh
-                window.showAlert("Data Santri Berhasil Disimpan", "Sukses", "info");
+                window.showAlert("Data Santri Berhasil Disimpan", "Sukses", "success");
             } catch (e) {
                 console.error(e);
                 window.showAlert("Gagal menyimpan: " + e.message, "Error", "danger");

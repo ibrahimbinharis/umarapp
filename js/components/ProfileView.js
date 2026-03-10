@@ -273,7 +273,7 @@ const ProfileView = {
                             class="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:outline-none focus:border-primary focus:ring-4 focus:ring-blue-500/10 bg-slate-50/50 text-slate-700 transition-all">
                     </div>
 
-                    <div class="mb-4">
+                    <div v-if="userSession.role !== 'wali'" class="mb-4">
                         <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1 px-1">ID Resmi</label>
                         <div class="px-4 py-3 bg-slate-100 rounded-2xl text-slate-400 font-mono text-sm border border-slate-200 select-none">
                             {{ userSession.username || '-' }}

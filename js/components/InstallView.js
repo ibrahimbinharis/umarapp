@@ -72,4 +72,3 @@ const InstallView = {
         return { canInstall, handleInstall };
     }
 };
-

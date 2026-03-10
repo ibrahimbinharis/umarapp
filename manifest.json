@@ -1,6 +1,6 @@
 {
-  "name": "E-Umar",
-  "short_name": "E-Umar",
+  "name": "e-emar",
+  "short_name": "e-umar",
   "description": "Sistem Manajemen Akademik Ma'had Umar Bin Khattab",
   "start_url": "./index.html",
   "display": "standalone",

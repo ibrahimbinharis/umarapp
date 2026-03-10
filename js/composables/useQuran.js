@@ -125,6 +125,19 @@ function useQuran(uiData) {
         }
     };
 
+    // --- WATCHERS (Optimization) ---
+    Vue.watch(() => quranState.page, (newPage) => {
+        // Preload next and prev pages for smooth navigation
+        const neighbors = [newPage + 1, newPage - 1];
+        neighbors.forEach(p => {
+            if (p >= 1 && p <= 604) {
+                const img = new Image();
+                const pStr = p.toString().padStart(3, '0');
+                img.src = `https://android.quran.com/data/width_1024/page${pStr}.png`;
+            }
+        });
+    }, { immediate: true });
+
     return {
         quranState,
         quranImageSrc,
@@ -137,7 +150,6 @@ function useQuran(uiData) {
         jumpToPage,
         goToJuz,
         jumpToAyat,
-
         // Swipe Handlers
         handleTouchStart: (e) => {
             quranState.touchStartX = e.changedTouches[0].screenX;

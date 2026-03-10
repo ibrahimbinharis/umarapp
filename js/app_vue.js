@@ -111,6 +111,26 @@ createApp({
             type: 'danger' // danger, warning, info
         });
 
+        // --- TOAST SYSTEM (E-Umar Premium) ---
+        const toastState = reactive({
+            isOpen: false,
+            message: '',
+            type: 'info', // info, success, warning, danger
+            timeout: null
+        });
+
+        const showToast = (message, type = 'info', duration = 3000) => {
+            if (toastState.timeout) clearTimeout(toastState.timeout);
+
+            toastState.message = message;
+            toastState.type = type;
+            toastState.isOpen = true;
+
+            toastState.timeout = setTimeout(() => {
+                toastState.isOpen = false;
+            }, duration);
+        };
+
         const showConfirm = (options) => {
             confirmState.title = options.title || 'Konfirmasi';
             confirmState.message = options.message || 'Apakah Anda yakin?';
@@ -123,18 +143,25 @@ createApp({
         };
 
         const closeConfirm = (confirmed) => {
-            if (confirmed && confirmState.onConfirm) confirmState.onConfirm();
-            if (!confirmed && confirmState.onCancel) confirmState.onCancel();
+            const cb = confirmed ? confirmState.onConfirm : confirmState.onCancel;
             confirmState.isOpen = false;
+            if (cb) cb();
         };
 
         const showAlert = (message, title = 'Informasi', type = 'info') => {
+            // For simple success/info messages, use Toast instead of Modal for better UX
+            if (type === 'success' || (type === 'info' && message.length < 50)) {
+                showToast(message, type);
+                return;
+            }
+
+            // Otherwise use the Premium Modal
             showConfirm({
                 title,
                 message,
                 confirmText: 'OK',
-                cancelText: '', // Empty cancel text hides the button in most designs or we can use it for 'Tutup'
-                type,
+                cancelText: '',
+                type: type === 'info' ? 'info' : (type === 'warning' ? 'warning' : 'danger'),
                 onConfirm: null
             });
         };
@@ -142,6 +169,8 @@ createApp({
         // Expose to window for all components/composables
         window.showConfirm = showConfirm;
         window.showAlert = showAlert;
+        window.showToast = showToast;
+        window.closeConfirm = closeConfirm; // Expose to window for HTML access
 
         // santriForm moved to useSantri
 
@@ -1162,7 +1191,7 @@ createApp({
         return {
             formatWANumber,
             loading, appName, appVersion, currentView, userSession, loginForm,
-            confirmState, showConfirm, closeConfirm, showAlert,
+            confirmState, showConfirm, closeConfirm, showAlert, toastState, showToast,
             dashboardStats, searchText, modalState, uiData,
             showExamControls,
             updateSalah, finishExam,

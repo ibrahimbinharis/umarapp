@@ -41,6 +41,22 @@
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#1E40AF">
     <link rel="apple-touch-icon" href="image/logo_new.png">
+    <style>
+        .toast-slide-enter-active,
+        .toast-slide-leave-active {
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .toast-slide-enter-from {
+            opacity: 0;
+            transform: translate(-50%, 20px);
+        }
+
+        .toast-slide-leave-to {
+            opacity: 0;
+            transform: translate(-50%, 20px) scale(0.9);
+        }
+    </style>
 </head>
 
 <body class="bg-slate-50 text-slate-800 h-screen w-full overflow-hidden">
@@ -1462,6 +1478,34 @@
             </div>
         </transition>
 
+        <!-- GLOBAL TOAST NOTIFICATION (Premium) -->
+        <transition name="toast-slide">
+            <div v-if="toastState.isOpen"
+                class="fixed bottom-24 left-1/2 -translate-x-1/2 z-[200] flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-2xl backdrop-blur-md border animate-in slide-in-from-bottom-4 duration-300 min-w-[280px] max-w-[90vw]"
+                :class="{
+                    'bg-slate-900/90 text-white border-slate-700': toastState.type === 'info',
+                    'bg-green-600/90 text-white border-green-500': toastState.type === 'success',
+                    'bg-amber-500/90 text-white border-amber-400': toastState.type === 'warning',
+                    'bg-red-600/90 text-white border-red-500': toastState.type === 'danger'
+                }">
+                <!-- Icon -->
+                <div class="flex-shrink-0">
+                    <span class="material-symbols-outlined text-2xl">
+                        {{ toastState.type === 'success' ? 'check_circle' :
+                        (toastState.type === 'warning' ? 'warning' :
+                        (toastState.type === 'danger' ? 'error' : 'info')) }}
+                    </span>
+                </div>
+                <!-- Message -->
+                <p class="text-sm font-bold tracking-tight leading-tight">{{ toastState.message }}</p>
+                <!-- Close Button -->
+                <button @click="toastState.isOpen = false"
+                    class="ml-auto flex-shrink-0 opacity-60 hover:opacity-100 transition">
+                    <span class="material-symbols-outlined text-lg font-black">close</span>
+                </button>
+            </div>
+        </transition>
+
     </div>
 
     <!-- Core Logic -->
@@ -1614,6 +1658,4 @@
     </script>
 </body>
 
-
 </html>
-

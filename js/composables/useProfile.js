@@ -47,7 +47,33 @@ function useProfile(uiData, DB, userSession, refreshData) {
             if (!profileForm.full_name) return window.showAlert("Nama wajib diisi", "Peringatan", "warning");
             if (!profileForm.username) return window.showAlert("Username wajib diisi", "Peringatan", "warning");
 
-            // We can't access 'loading' ref from here directly unless passed or we use a local one?
+            // v36: Username Validation (No space, no quotes, alphanumeric only)
+            const usernameRegex = /^[a-zA-Z0-9._]+$/;
+            if (!usernameRegex.test(profileForm.username)) {
+                return window.showAlert("Username hanya boleh berisi huruf, angka, titik (.) atau underscore (_)", "Peringatan", "warning");
+            }
+
+            // v36: NIS Protection (Prevent changing into a Santri NIS)
+            const targetUsername = profileForm.username.trim();
+            const { data: isNIS } = await sb.from('santri')
+                .select('santri_id')
+                .or(`nis.eq."${targetUsername}",santri_id.eq."${targetUsername}"`)
+                .maybeSingle();
+
+            if (isNIS) {
+                return window.showAlert("Username ini adalah NIS milik Santri. Silakan gunakan username lain.", "Dilarang", "danger");
+            }
+
+            // v36: Unique Check (Global: username or custom_username, excluding self)
+            const { data: taken } = await sb.from('users')
+                .select('username')
+                .or(`username.eq."${targetUsername}",custom_username.eq."${targetUsername}"`)
+                .neq('_id', userSession.value._id) // Exclude current user
+                .maybeSingle();
+
+            if (taken) {
+                return window.showAlert("Username ini sudah digunakan oleh pengguna lain.", "Gagal", "warning");
+            }
             // Usually composables return 'loading' or we rely on parent's loading if passed.
             // Let's assume we use window.loading or just define a local ref if we want to be pure.
             // But app_vue uses its own global loading. 

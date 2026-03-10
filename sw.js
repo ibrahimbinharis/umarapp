@@ -211,4 +211,3 @@ self.addEventListener('notificationclick', (event) => {
         })
     );
 });
-

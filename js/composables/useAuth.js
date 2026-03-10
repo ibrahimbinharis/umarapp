@@ -64,6 +64,39 @@ const useAuth = (currentView, loading) => {
         try {
             // Register to Supabase Auth
             const username = loginForm.username.trim();
+
+            // v36: Username Validation (No space, no quotes, alphanumeric only)
+            const usernameRegex = /^[a-zA-Z0-9._]+$/;
+            if (!usernameRegex.test(username)) {
+                window.showAlert("Username hanya boleh berisi huruf, angka, titik (.) atau underscore (_)", "Peringatan", "warning");
+                loading.value = false;
+                return;
+            }
+
+            // v36: NIS Protection (Prevent Wali from using a Santri NIS)
+            const { data: isNIS } = await sb.from('santri')
+                .select('santri_id')
+                .or(`nis.eq."${username}",santri_id.eq."${username}"`)
+                .maybeSingle();
+
+            if (isNIS) {
+                window.showAlert("Username ini adalah NIS milik Santri. Silakan gunakan username lain.", "Dilarang", "danger");
+                loading.value = false;
+                return;
+            }
+
+            // v36: Unique Check (Global: username or custom_username)
+            const { data: taken } = await sb.from('users')
+                .select('username')
+                .or(`username.eq."${username}",custom_username.eq."${username}"`)
+                .maybeSingle();
+
+            if (taken) {
+                window.showAlert("Username ini sudah digunakan oleh pengguna lain.", "Gagal", "warning");
+                loading.value = false;
+                return;
+            }
+
             const password = loginForm.password.trim();
             const fullName = loginForm.fullName ? loginForm.fullName.trim() : username;
 

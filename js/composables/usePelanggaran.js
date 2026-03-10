@@ -147,7 +147,7 @@ function usePelanggaran(uiData, DB, refreshData) {
                 editingId.value = null; // Reset
             } else {
                 const res = await DB.create('pelanggaran', payload);
-                window.showAlert('Pelanggaran berhasil disimpan', 'Sukses', 'info');
+                window.showAlert('Pelanggaran berhasil disimpan', 'Sukses', 'success');
 
                 // --- NOTIFICATION TRIGGER (v36) ---
                 const santri = uiData.santri.find(s => s._id === payload.santri_id || s.santri_id === payload.santri_id);
