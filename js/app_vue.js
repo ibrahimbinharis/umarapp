@@ -296,6 +296,9 @@ createApp({
             message: ''
         });
 
+        const monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+        window.monthNames = monthNames;
+
         // Expose updateSyncUI to global window for core.js to call
         window.updateSyncUI = (status, message) => {
             syncState.status = status;
@@ -627,7 +630,8 @@ createApp({
             }
 
             // Hijack Input button during Exam (Quran View + Santri Selected)
-            if (view === 'input' && currentView.value === 'quran' && ujian.ujianForm.santri_id) {
+            const canExam = !['wali', 'santri'].includes(userSession.value?.role);
+            if (view === 'input' && currentView.value === 'quran' && ujian.ujianForm.santri_id && canExam) {
                 showExamControls.value = !showExamControls.value;
                 return;
             }
@@ -814,7 +818,6 @@ createApp({
                             if (!merged[parts[0]]) merged[parts[0]] = {};
                             merged[parts[0]][parts[1]] = updates[key];
                         } else if (parts.length === 3) {
-                            // Support: 'notifications.types.setoran'
                             if (!merged[parts[0]]) merged[parts[0]] = {};
                             if (!merged[parts[0]][parts[1]]) merged[parts[0]][parts[1]] = {};
                             merged[parts[0]][parts[1]][parts[2]] = updates[key];
@@ -1230,7 +1233,8 @@ createApp({
             // Dashboard
             initCharts, activityFilter, filteredActivities, topSantriFilter, filteredTopSantri,
             activeChildId, selectChild,
-            appConfig, saveAppConfig
+            appConfig, saveAppConfig,
+            monthNames
         };
     },
     components: {

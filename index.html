@@ -427,15 +427,20 @@
                     <!-- REKAP VIEW (New v34) -->
                     <!-- REKAP VIEW (Component) -->
                     <div v-if="currentView === 'rekap'">
-                        <rekap-view v-model:rekap-month="rekapMonth" v-model:rekap-year="rekapYear"
+                        <rekap-view v-model:rekap-start-date="rekapStartDate" v-model:rekap-end-date="rekapEndDate"
                             v-model:rekap-kelas="rekapKelas" v-model:rekap-gender="rekapGender"
                             v-model:rekap-search="rekapSearch" v-model:rekap-santri-id="rekapSantriId"
                             v-model:is-rekap-santri-dropdown-open="isRekapSantriDropdownOpen"
                             :rekap-filtered-santri-options="rekapFilteredSantriOptions"
                             :select-rekap-santri="selectRekapSantri" :month-names="monthNames"
                             :kelas-options="uiData.kelas" :rekap-hafalan-data="rekapHafalanData"
-                            :rekap-settings="rekapSettings" :user-session="userSession" @export-to-excel="exportToExcel"
-                            @export-to-pdf="exportToPDF" @save-settings="saveSettings"></rekap-view>
+                            :rekap-global-stats="rekapGlobalStats" :rekap-settings="rekapSettings"
+                            :rekap-trend-data="rekapTrendData" :user-session="userSession" :ui-data="uiData"
+                            @export-to-excel="exportToExcel" @export-to-pdf="exportToPDF"
+                            @export-to-pdf-raport="exportToPDFRaport" @save-settings="saveSettings"
+                            @set-range-realtime="setRangeRealtime" @set-range-kemarin="setRangeKemarin"
+                            @set-range-7hari="setRange7Hari" @set-range-30hari="setRange30Hari"
+                            @set-range-bulan-ini="setRangeBulanIni"></rekap-view>
                     </div>
 
                     <!-- PENGUMUMAN VIEW (Component) -->
@@ -673,13 +678,14 @@
                             <div class="bg-white p-6 rounded-3xl border shadow-sm transition-all duration-300">
                                 <div class="grid grid-cols-5 gap-3 sm:gap-4 justify-items-center">
                                     <button v-for="j in 30" :key="j"
-                                        @click="userSession?.role !== 'wali' && (selectUjianJuz(j), modalState.view='grading', modalState.isOpen=true)"
+                                        @click="!['wali', 'santri'].includes(userSession?.role) && (selectUjianJuz(j), modalState.view='grading', modalState.isOpen=true)"
                                         class="size-12 sm:size-14 rounded-full border-2 flex flex-col items-center justify-center transition-all bg-slate-50 text-slate-400 border-slate-200"
                                         :class="{
-                                            'hover:scale-110 active:scale-95 hover:border-emerald-300 cursor-pointer': userSession?.role !== 'wali',
-                                            'cursor-default pointer-events-none': userSession?.role === 'wali',
+                                            'hover:scale-110 active:scale-95 hover:border-emerald-300 cursor-pointer': !['wali', 'santri'].includes(userSession?.role),
+                                            'cursor-default pointer-events-none': ['wali', 'santri'].includes(userSession?.role),
                                             'bg-blue-500 text-white shadow-lg shadow-blue-200 border-transparent': selectedSantriProgress[j] && ['A+', 'A'].includes(selectedSantriProgress[j]),
-                                            'bg-emerald-500 text-white shadow-lg shadow-emerald-200 border-transparent': selectedSantriProgress[j] && ['B+', 'B', 'B-', 'B'].includes(selectedSantriProgress[j]),
+                                            'bg-emerald-500 text-white shadow-lg shadow-emerald-200 border-transparent': selectedSantriProgress[j] && ['B+', 'B'].includes(selectedSantriProgress[j]),
+                                            'bg-amber-400 text-white shadow-lg shadow-amber-200 border-transparent': selectedSantriProgress[j] === 'B-',
                                             'bg-red-500 text-white shadow-lg shadow-red-200 border-transparent': selectedSantriProgress[j] === 'C',
                                             'bg-orange-400 text-white shadow-lg shadow-orange-200 border-transparent': selectedSantriProgress[j] === 'Centang'
                                         }">
@@ -1532,6 +1538,7 @@
     <script src="js/composables/useRiwayat.js"></script>
     <script src="js/composables/useSetoran.js"></script>
     <script src="js/composables/useQuran.js"></script>
+    <script src="js/composables/useAnalytics.js"></script>
     <script src="js/composables/useDashboard.js"></script>
     <script src="js/composables/useProfile.js"></script>
     <script src="js/composables/usePengumuman.js"></script>
@@ -1625,7 +1632,7 @@
 
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js?v=1.5').then(reg => {
+                navigator.serviceWorker.register('sw.js?v=1.6').then(reg => {
                     console.log('SW Registered!', reg);
 
                     // 1. Check if update is already waiting (e.g. from previous visit)

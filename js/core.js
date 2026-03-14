@@ -1,7 +1,7 @@
 // --- 1. CONFIG & DATABASE (SUPABASE v37) ---
 const APP_CONFIG = {
     appName: "E-Umar",
-    version: "v1.5",
+    version: "v1.6",
     supabaseUrl: "https://fxtmilqvxomuvkxxzjli.supabase.co",
     supabaseKey: "sb_publishable_aXcK3znrtRo0d3gH-Wg1Ew_-0Z3262O"
 };
@@ -390,11 +390,10 @@ const DB = {
             }
 
             // Tentukan Email Login: 
-            // Jika ketemu di DB, gunakan 'username' (Primary ID) sebagai prefix email.
-            // Jika tidak ketemu (user baru), gunakan input apa adanya.
             const authUsername = profileLookup ? profileLookup.username : inputUsername;
             const email = authUsername.includes('@') ? authUsername : `${authUsername}@tahfidz.app`;
-            console.log("Attempting login with email:", email);
+
+            console.log(`[Login] Menghubungi server untuk: ${email}`);
 
             // 1. Coba Login via Supabase Auth
             let { data, error } = await sb.auth.signInWithPassword({
@@ -404,7 +403,16 @@ const DB = {
 
             // 2. Jika Gagal Login & Ada Santri Profile (Auto-Activation)
             if (error && santriProfile && inputPassword === inputUsername) {
-                console.log("New Santri login detected. Auto-activating account...");
+                console.log("[Login] Akun belum aktif. Memulai aktivasi otomatis untuk Santri...");
+
+                // Cek apakah email/username sudah terpakai di Auth/Users (Tabrakan Wali-Santri)
+                const { data: userExist } = await sb.from('users').select('full_name, role').eq('username', inputUsername).maybeSingle();
+                if (userExist) {
+                    return {
+                        success: false,
+                        message: `NIS ini sudah terdaftar sebagai akun ${userExist.role} (${userExist.full_name}). Silakan hubungi admin untuk memperbaiki data.`
+                    };
+                }
 
                 // Buat akun Auth
                 const { data: newData, error: regError } = await sb.auth.signUp({
@@ -420,36 +428,41 @@ const DB = {
                 });
 
                 if (regError) {
-                    console.error("Auto-activation failed (signUp):", regError);
+                    console.error("[Login] Gagal SignUp:", regError.message);
+                    return { success: false, message: "Gagal aktivasi: " + regError.message };
                 } else if (newData.user) {
+                    console.log("[Login] Akun Auth berhasil dibuat. Membuat profil database...");
                     // Buat Profile di database
                     const { error: profError } = await sb.from('users').upsert({
                         _id: newData.user.id,
                         username: inputUsername,
                         full_name: santriProfile.full_name,
                         role: 'santri',
-                        gender: santriProfile.gender || '', // Sync gender (v36)
+                        gender: santriProfile.gender || '',
                         created_at: new Date().toISOString()
                     });
 
-                    if (!profError) {
-                        // Coba login ulang
-                        const retry = await sb.auth.signInWithPassword({
-                            email: email,
-                            password: authPassword
-                        });
-                        data = retry.data;
-                        error = retry.error;
+                    if (profError) {
+                        console.error("[Login] Gagal Upsert Profile:", profError.message);
+                        return { success: false, message: "Gagal membuat profil: " + profError.message };
                     }
+
+                    // Coba login ulang
+                    const retry = await sb.auth.signInWithPassword({
+                        email: email,
+                        password: authPassword
+                    });
+                    data = retry.data;
+                    error = retry.error;
                 }
             }
             // 3. Jika Gagal Login & Ada legacy password (Migration)
             else if (error && profileLookup && profileLookup.password) {
-                console.log("Auth failed, checking legacy local hash...");
+                console.log("[Login] Auth gagal, mencoba verifikasi password lama (Legacy)...");
 
                 const hashedInput = await hashPassword(inputPassword);
                 if (hashedInput === profileLookup.password) {
-                    console.log("Legacy password matched! Auto-migrating user...");
+                    console.log("[Login] Password lama cocok! Melakukan migrasi akun...");
 
                     // Buat akun Auth (Selalu gunakan 'username' dari DB agar konsisten)
                     const { data: newData, error: regError } = await sb.auth.signUp({

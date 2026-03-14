@@ -323,6 +323,12 @@ function useUjian(uiData, DB, userSession, refreshData, quranControls = null, cu
             return;
         }
 
+        // --- Role Protection (v36) ---
+        if (['wali', 'santri'].includes(userSession.value?.role)) {
+            window.showAlert("Anda tidak memiliki akses untuk menyimpan data ini.", "Dilarang", "danger");
+            return;
+        }
+
         try {
             // DETECT CONTEXT: Hafalan vs Ujian
             const isHafalanView = (currentViewRef && (currentViewRef.value === 'hafalan' || currentViewRef.value === 'quran')) && ujianForm.tab === 'semester';

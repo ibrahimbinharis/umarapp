@@ -651,7 +651,14 @@ const DashboardView = {
                             <p class="text-xs text-slate-500">{{ s.class }}</p>
                         </div>
                         <div class="text-right">
-                            <p class="font-black text-primary text-sm">{{ s.total.toFixed(1) }}</p>
+                            <p class="font-black text-sm"
+                                :class="{
+                                    'text-blue-600': (s.predikat || '').startsWith('A'),
+                                    'text-emerald-600': (s.predikat || '') === 'B' || (s.predikat || '') === 'B+',
+                                    'text-amber-500': (s.predikat || '') === 'B-',
+                                    'text-red-500': (s.predikat || '') === 'C',
+                                    'text-primary': !(s.predikat)
+                                }">{{ s.total.toFixed(1) }}</p>
                             <p class="text-[10px] text-slate-400">Total Nilai</p>
                         </div>
                     </div>

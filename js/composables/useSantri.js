@@ -102,6 +102,13 @@ function useSantri(uiData, DB, userSession, modalState, refreshData, searchText)
             items = items.filter(s => s.wali_id === userSession.value._id);
         }
 
+        // Filter for Santri - only show themselves
+        if (userSession.value?.role === 'santri') {
+            const userId = userSession.value._id;
+            const userName = userSession.value.username;
+            items = items.filter(s => s._id === userId || s.santri_id === userName || s.nis === userName);
+        }
+
         // Gender segregation for guru users
         if (userSession.value?.role === 'guru' && userSession.value?.gender) {
             items = items.filter(s => s.gender === userSession.value.gender);

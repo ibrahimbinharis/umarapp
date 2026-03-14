@@ -224,9 +224,21 @@ const UjianView = {
                             <span class="text-xs font-bold text-slate-500">NILAI AKHIR</span>
                             <input v-if="ujianForm.b_type === 'quran'" :value="ujianForm.b_score"
                                 readonly
-                                class="w-32 px-4 py-2 rounded-xl border border-slate-200 font-black text-2xl text-right text-emerald-600 bg-slate-50">
+                                class="w-32 px-4 py-2 rounded-xl border border-slate-200 font-black text-2xl text-right bg-slate-50"
+                                :class="{
+                                    'text-blue-600': ujianForm.b_score >= 80,
+                                    'text-emerald-600': ujianForm.b_score >= 75 && ujianForm.b_score < 80,
+                                    'text-amber-500': ujianForm.b_score >= 70 && ujianForm.b_score < 75,
+                                    'text-red-500': ujianForm.b_score < 70
+                                }">
                             <input v-else v-model="ujianForm.b_score" type="number"
-                                class="w-32 px-4 py-2 rounded-xl border border-slate-200 font-black text-2xl text-right text-emerald-600">
+                                class="w-32 px-4 py-2 rounded-xl border border-slate-200 font-black text-2xl text-right"
+                                :class="{
+                                    'text-blue-600': ujianForm.b_score >= 80,
+                                    'text-emerald-600': ujianForm.b_score >= 75 && ujianForm.b_score < 80,
+                                    'text-amber-500': ujianForm.b_score >= 70 && ujianForm.b_score < 75,
+                                    'text-red-500': ujianForm.b_score < 70
+                                }">
                         </div>
                     </div>
 
@@ -261,7 +273,9 @@ const UjianView = {
                                               selectedSantriProgress[j] ? 
                                                  (selectedSantriProgress[j] === 'Centang' ? 'bg-orange-500 text-white border-orange-500' :
                                                   ['A+','A'].includes(selectedSantriProgress[j]) ? 'bg-blue-500 text-white border-blue-600' : 
-                                                  selectedSantriProgress[j] === 'C' ? 'bg-red-500 text-white border-red-600' : 'bg-emerald-500 text-white border-emerald-600') 
+                                                  selectedSantriProgress[j] === 'C' ? 'bg-red-500 text-white border-red-600' : 
+                                                  selectedSantriProgress[j] === 'B-' ? 'bg-amber-400 text-white border-amber-500' :
+                                                  'bg-emerald-500 text-white border-emerald-600') 
                                                  : 'bg-white text-slate-300 border-slate-200 hover:bg-slate-100'
                                           ]">
                                         <span v-if="selectedSantriProgress[j] === 'Centang'"
@@ -295,7 +309,13 @@ const UjianView = {
                                             class="block text-[10px] font-bold text-slate-400 mb-1">NILAI
                                             AKHIR</label>
                                         <input :value="ujianForm.s_score" readonly
-                                            class="w-full px-4 py-2 rounded-xl border border-slate-200 font-black text-xl text-center text-emerald-600 bg-slate-50">
+                                            class="w-full px-4 py-2 rounded-xl border border-slate-200 font-black text-xl text-center bg-slate-50"
+                                            :class="{
+                                                'text-blue-600': ujianForm.s_score >= 80,
+                                                'text-emerald-600': ujianForm.s_score >= 75 && ujianForm.s_score < 80,
+                                                'text-amber-500': ujianForm.s_score >= 70 && ujianForm.s_score < 75,
+                                                'text-red-500': ujianForm.s_score < 70
+                                            }">
                                     </div>
                                 </div>
                             </div>
@@ -315,7 +335,13 @@ const UjianView = {
                                 <label class="block text-xs font-bold text-slate-400 mb-1">NILAI
                                     AKHIR</label>
                                 <input v-model="ujianForm.s_score" type="number"
-                                    class="w-full px-4 py-3 rounded-xl border border-slate-200 font-black text-3xl text-right text-emerald-600">
+                                    class="w-full px-4 py-3 rounded-xl border border-slate-200 font-black text-3xl text-right"
+                                    :class="{
+                                        'text-blue-600': ujianForm.s_score >= 80,
+                                        'text-emerald-600': ujianForm.s_score >= 75 && ujianForm.s_score < 80,
+                                        'text-amber-500': ujianForm.s_score >= 70 && ujianForm.s_score < 75,
+                                        'text-red-500': ujianForm.s_score < 70
+                                    }">
                             </div>
                         </div>
                     </div>
@@ -351,7 +377,12 @@ const UjianView = {
                         </div>
                         <div class="text-right">
                             <div class="font-bold"
-                                :class="u.score >= 60 ? 'text-emerald-600' : 'text-red-500'">
+                                :class="{
+                                    'text-blue-600': u.score >= 80,
+                                    'text-emerald-600': u.score >= 75 && u.score < 80,
+                                    'text-amber-500': u.score >= 70 && u.score < 75,
+                                    'text-red-500': u.score < 70
+                                }">
                                 {{ u.score }}</div>
                             <div v-if="u.grade"
                                 class="text-[10px] font-bold bg-slate-100 px-1 rounded text-slate-600 inline-block">

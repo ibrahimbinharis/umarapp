@@ -373,8 +373,9 @@ const SetoranView = {
                     <span class="text-xs font-bold text-slate-400">Nilai & Grade</span>
                     <div class="text-right">
                         <span :class="{
-                                'text-emerald-600': setoranForm.grade.startsWith('A'),
-                                'text-blue-600': setoranForm.grade === 'B',
+                                'text-blue-600': setoranForm.grade.startsWith('A'),
+                                'text-emerald-600': setoranForm.grade === 'B' || setoranForm.grade === 'B+',
+                                'text-amber-500': setoranForm.grade === 'B-',
                                 'text-red-600': setoranForm.grade === 'C'
                             }" class="text-3xl font-black">
                             {{ setoranForm.grade }}
@@ -438,8 +439,9 @@ const SetoranView = {
                     </div>
                     <div class="flex items-center gap-2 flex-shrink-0">
                         <div :class="{
-                                'text-emerald-600': r.grade === 'A+' || r.grade === 'A',
-                                'text-blue-600': r.grade === 'B' || r.grade === 'B+',
+                                'text-blue-600': r.grade === 'A+' || r.grade === 'A',
+                                'text-emerald-600': r.grade === 'B' || r.grade === 'B+',
+                                'text-amber-500': r.grade === 'B-',
                                 'text-red-500': r.grade === 'C'
                             }" class="font-black text-sm">
                             {{ r.grade }}
