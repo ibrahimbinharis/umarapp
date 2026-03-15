@@ -1,4 +1,4 @@
-const CACHE_NAME = "v1.8";
+const CACHE_NAME = "v1.9";
 const ASSETS_TO_CACHE = [
     "./",
     "./index.html",
@@ -68,9 +68,22 @@ self.addEventListener("install", (event) => {
     self.skipWaiting();
 
     event.waitUntil(
-        caches.open(CACHE_NAME).then((cache) => {
+        caches.open(CACHE_NAME).then(async (cache) => {
             console.log("[Service Worker] Caching all: app shell and content");
-            return cache.addAll(ASSETS_TO_CACHE);
+            // Bust browser HTTP cache so we don't accidentally re-cache the broken core.js
+            for (const url of ASSETS_TO_CACHE) {
+                try {
+                    const req = new Request(url, { cache: 'no-cache' });
+                    const res = await fetch(req);
+                    if (res.ok) {
+                        await cache.put(url, res);
+                    } else {
+                        console.warn('[Service Worker] Failed to cache', url, res.status);
+                    }
+                } catch (err) {
+                    console.warn('[Service Worker] Network error while caching', url, err);
+                }
+            }
         })
     );
 });
