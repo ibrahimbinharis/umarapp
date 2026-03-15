@@ -36,6 +36,12 @@ const useRekap = (uiData, userSession) => {
         return `${year}-${month}-${day}`;
     };
 
+    const formatDateShort = (ymd) => {
+        if (!ymd) return '';
+        const [y, m, d] = ymd.split('-');
+        return `${d}/${m}/${y}`;
+    };
+
     const rekapStartDate = ref(toYMD(defaultStart));
     const rekapEndDate = ref(toYMD(now));
 
@@ -412,58 +418,105 @@ const useRekap = (uiData, userSession) => {
         XLSX.writeFile(wb, `Rekap_Prestasi_${rekapStartDate.value}_sd_${rekapEndDate.value}.xlsx`);
     };
 
-    const exportToPDFRaport = (santriData) => {
+    const exportToPDFRaport = async (santriData, customSettings = null) => {
         if (!window.jspdf) return window.showAlert("Library PDF belum dimuat.", "Peringatan", "warning");
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
         const pageWidth = doc.internal.pageSize.getWidth();
         const centerX = pageWidth / 2;
+        const settingsToUse = customSettings || rekapSettings;
+        const meta = settingsToUse.raportMetadata || {};
 
-        // --- HEADER / KOP SURAT ---
-        doc.setFontSize(14);
+        // --- HEADER / KOP SURAT (Dinamis) ---
+        let startY = 15;
+        let textStartX = centerX;
+        let textAlign = "center";
+
+        if (meta.logo_url) {
+            try {
+                const lSize = meta.logo_size || 18;
+                const lY = meta.logo_y || 10;
+                doc.addImage(meta.logo_url, 'PNG', 20, lY, lSize, lSize);
+            } catch (e) {
+                console.warn("Logo failed to load:", e);
+            }
+        }
+
+        // Always use center alignment for header text
+        textStartX = centerX;
+        textAlign = "center";
+
+        doc.setFontSize(16);
         doc.setFont("helvetica", "bold");
-        doc.text("MEMO PEMANTAUAN PERKEMBANGAN SANTRI", centerX, 15, { align: "center" });
-        doc.setFontSize(10);
+        doc.text(meta.institution || "MADRASAH TAHFIDZ AL-QURAN", textStartX, 17, { align: textAlign });
+        
+        doc.setFontSize(8);
         doc.setFont("helvetica", "normal");
-        doc.text("LAPORAN BULANAN TAHFIDZ & AKADEMIK", centerX, 20, { align: "center" });
-        doc.line(20, 23, pageWidth - 20, 23); // Horizontal Line
+        const splitAddress = doc.splitTextToSize(meta.address || "Jl. Pendidikan No. 123", pageWidth - 80); // More narrow to avoid logo overlap
+        doc.text(splitAddress, textStartX, 23, { align: textAlign });
+        
+        doc.setLineWidth(0.5);
+        doc.line(20, 32, pageWidth - 20, 32);
+        doc.setLineWidth(0.1);
+        doc.line(20, 33, pageWidth - 20, 33);
 
+        // --- JUDUL LAPORAN ---
+        doc.setFontSize(11);
+        doc.setFont("helvetica", "bold");
+        doc.text(meta.report_title || "LAPORAN HASIL BELAJAR (RAPORT) SANTRI", centerX, 42, { align: "center" });
+        
         // --- DATA IDENTITAS ---
         doc.setFontSize(9);
-        doc.text("Nama Peserta Didik", 20, 32);
-        doc.text(`:  ${santriData.nama}`, 55, 32);
-        doc.text("Kelas", 140, 32);
-        doc.text(`:  ${santriData.kelas || '-'}`, 165, 32);
+        doc.setFont("helvetica", "normal");
+        
+        let idY = 52;
+        // Kiri
+        doc.text("Nama Santri", 20, idY);
+        doc.text(`:  ${santriData.nama}`, 50, idY);
+        doc.text("NIS / ID", 20, idY + 5);
+        doc.text(`:  ${santriData.nis || '-'}`, 50, idY + 5);
+        doc.text("Kelas", 20, idY + 10);
+        doc.text(`:  ${santriData.kelas || '-'}`, 50, idY + 10);
 
-        doc.text(`:  ${santriData.nis || '-'}`, 55, 37);
-        doc.text("Periode", 140, 37);
-        doc.text(`:  ${rekapStartDate.value} - ${rekapEndDate.value}`, 165, 37);
+        // Kanan
+        doc.text("Semester", 130, idY);
+        doc.text(`:  ${meta.semester || '-'}`, 160, idY);
+        doc.text("Tahun Ajaran", 130, idY + 5);
+        doc.text(`:  ${meta.tahun_ajaran || '-'}`, 160, idY + 5);
+        doc.text("Periode Data", 130, idY + 10);
+        doc.text(`:  ${formatDateShort(rekapStartDate.value)} - ${formatDateShort(rekapEndDate.value)}`, 160, idY + 10);
 
         // --- TABEL 1: CAPAIAN HAFALAN ---
         doc.setFont("helvetica", "bold");
-        doc.text("I. CAPAIAN HAFALAN AL-QURAN", 20, 47);
+        doc.text("A. CAPAIAN HAFALAN AL-QURAN", 20, idY + 20);
 
-        const hafalanRows = [
-            ["1", "Sabaq (Hafalan Baru)", `${santriData.sabaq_tgt} Hal`, `${santriData.sabaq_act} Hal`, `${Math.round((santriData.sabaq_act / santriData.sabaq_tgt) * 100)}%`],
-            ["2", "Manzil (Murojaah Lama)", `${santriData.manzil_tgt} Hal`, `${santriData.manzil_act} Hal`, `${Math.round((santriData.manzil_act / santriData.manzil_tgt) * 100)}%`],
-            ["3", "Tilawah (Bacaan Mandiri)", `${santriData.tilawah_tgt} Juz`, `${santriData.tilawah_act} Juz`, `${Math.round((santriData.tilawah_act / santriData.tilawah_tgt) * 100)}%`]
-        ];
+        const hafalanRows = [];
+        if (settingsToUse.visibility.sabaq) {
+            hafalanRows.push(["1", "Sabaq (Hafalan Baru)", `${santriData.sabaq_tgt} Hal`, `${santriData.sabaq_act} Hal`, `${Math.round((santriData.sabaq_act / (santriData.sabaq_tgt || 1)) * 100)}%`]);
+        }
+        if (settingsToUse.visibility.manzil) {
+            hafalanRows.push(["2", "Manzil (Murojaah Lama)", `${santriData.manzil_tgt} Hal`, `${santriData.manzil_act} Hal`, `${Math.round((santriData.manzil_act / (santriData.manzil_tgt || 1)) * 100)}%`]);
+        }
+        if (settingsToUse.visibility.tilawah) {
+            hafalanRows.push(["3", "Tilawah (Bacaan Mandiri)", `${santriData.tilawah_tgt} Juz`, `${santriData.tilawah_act} Juz`, `${Math.round((santriData.tilawah_act / (santriData.tilawah_tgt || 1)) * 100)}%`]);
+        }
 
         doc.autoTable({
-            startY: 50,
+            startY: idY + 23,
             head: [['No', 'Bidang Penilaian', 'Target', 'Capaian', 'Persentase']],
             body: hafalanRows,
             theme: 'grid',
-            headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold', lineWidth: 0.1 },
-            styles: { fontSize: 8, cellPadding: 2 },
+            headStyles: { fillColor: [245, 245, 245], textColor: [0, 0, 0], fontStyle: 'bold', lineWidth: 0.1 },
+            styles: { fontSize: 8, cellPadding: 2.5 },
             columnStyles: { 0: { cellWidth: 10 }, 4: { halign: 'center' } }
         });
 
         // --- TABEL 2: NILAI UJIAN & MAPEL ---
+        let finalY = doc.lastAutoTable.finalY + 10;
         doc.setFont("helvetica", "bold");
-        doc.text("II. NILAI UJIAN & MATA PELAJARAN", 20, doc.lastAutoTable.finalY + 10);
+        doc.text("B. NILAI UJIAN & MATA PELAJARAN", 20, finalY);
 
-        const examRows = santriData.exam_details.map((u, i) => [
+        const examRows = (santriData.exam_details || []).map((u, i) => [
             i + 1,
             u.detail || u.type,
             u.score || '0',
@@ -471,30 +524,31 @@ const useRekap = (uiData, userSession) => {
             u.grade || '-'
         ]);
 
-        if (examRows.length === 0) examRows.push(["-", "Belum ada data ujian bulan ini", "-", "-", "-"]);
+        if (examRows.length === 0) examRows.push(["-", "Belum ada data ujian untuk periode ini", "-", "-", "-"]);
 
         doc.autoTable({
-            startY: doc.lastAutoTable.finalY + 13,
+            startY: finalY + 3,
             head: [['No', 'Mata Pelajaran / Jenis Ujian', 'Nilai Angka', 'Terbilang', 'Predikat']],
             body: examRows,
             theme: 'grid',
-            headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold', lineWidth: 0.1 },
-            styles: { fontSize: 8, cellPadding: 2 },
+            headStyles: { fillColor: [245, 245, 245], textColor: [0, 0, 0], fontStyle: 'bold', lineWidth: 0.1 },
+            styles: { fontSize: 8, cellPadding: 2.5 },
             columnStyles: { 0: { cellWidth: 10 }, 2: { halign: 'center' }, 4: { halign: 'center' } }
         });
 
         // --- TABEL 3: KEDISIPLINAN & KESIMPULAN ---
+        finalY = doc.lastAutoTable.finalY + 10;
         doc.setFont("helvetica", "bold");
-        doc.text("III. KEDISIPLINAN & KESIMPULAN AKHIR", 20, doc.lastAutoTable.finalY + 10);
+        doc.text("C. KEDISIPLINAN & KESIMPULAN AKHIR", 20, finalY);
 
         const summaryRows = [
-            ["Poin Pelanggaran Kedisiplinan", `${santriData.pelanggaran_poin} Poin`],
-            ["Catatan Perkembangan", santriData.nilai_akhir >= 85 ? "Sangat Baik, Pertahankan!" : (santriData.nilai_akhir >= 70 ? "Baik, Tingkatkan lagi setoran hafalan." : "Perlu bimbingan intensif.")],
-            ["SKOR GABUNGAN AKHIR / PREDIKAT", `${santriData.nilai_akhir} / ${santriData.predikat}`]
+            ["Poin Pelanggaran Kedisiplinan", `${santriData.pelanggaran_poin || 0} Poin`],
+            ["Catatan / Saran Perkembangan", santriData.nilai_akhir >= 85 ? "Sangat Baik, Pertahankan dan teruslah beristiqomah." : (santriData.nilai_akhir >= 70 ? "Baik, Teruslah berlatih agar hafalan semakin lancar." : "Perlu bimbingan dan murojaah lebih intensif.")],
+            ["SKOR GABUNGAN AKHIR / PREDIKAT", `${santriData.nilai_akhir || 0} / ${santriData.predikat || 'C'}`]
         ];
 
         doc.autoTable({
-            startY: doc.lastAutoTable.finalY + 13,
+            startY: finalY + 3,
             body: summaryRows,
             theme: 'grid',
             styles: { fontSize: 8, cellPadding: 3 },
@@ -502,20 +556,48 @@ const useRekap = (uiData, userSession) => {
         });
 
         // --- FOOTER / TANDA TANGAN ---
-        const footerY = doc.lastAutoTable.finalY + 25;
+        finalY = doc.lastAutoTable.finalY + 15;
+        if (finalY > 250) { doc.addPage(); finalY = 20; }
+
         doc.setFontSize(9);
         doc.setFont("helvetica", "normal");
-        doc.text("Mengetahui,", 30, footerY);
-        doc.text("Orang Tua / Wali Santri", 30, footerY + 5);
+        
+        const signDate = `${meta.signature_place || 'Jakarta'}, ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`;
+        doc.text(signDate, pageWidth - 70, finalY);
+        
+        doc.text(meta.signature_label_left || "Kepala Madrasah", 30, finalY + 7);
+        doc.text(meta.signature_label_right || "Wali Kelas / Musyrif", pageWidth - 70, finalY + 7);
 
-        doc.text(`Dicetak pada: ${new Date().toLocaleDateString('id-ID')}`, centerX, footerY + 25, { align: "center" });
-
-        doc.text("Musyrif / Wali Kelas", 150, footerY + 5);
+        // Name Space
+        finalY += 30;
         doc.setFont("helvetica", "bold");
-        doc.text(`( ................................ )`, 30, footerY + 25);
-        doc.text(`( ................................ )`, 150, footerY + 25);
+        doc.text(`( ${meta.signature_name_left || '................................'} )`, 25, finalY);
+        doc.text(`( ................................ )`, pageWidth - 75, finalY);
+        
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(7);
+        doc.text("* Raport ini digenerate secara otomatis oleh sistem aplikasi.", centerX, finalY + 10, { align: "center" });
 
-        doc.save(`Raport_${santriData.nama}_${rekapStartDate.value}_${rekapEndDate.value}.pdf`);
+        doc.save(`Raport_${santriData.nama}_${meta.semester || ''}_${meta.tahun_ajaran ? meta.tahun_ajaran.replace('/', '-') : ''}${customSettings ? '_MOCKUP' : ''}.pdf`);
+    };
+
+    const exportToPDFMockup = async (customSettings) => {
+        const dummySantri = {
+            nama: "CONTOH NAMA SANTRI (MOCKUP)",
+            nis: "2024001",
+            kelas: "Kelas Contoh",
+            sabaq_act: 15, sabaq_tgt: 20,
+            manzil_act: 20, manzil_tgt: 20,
+            tilawah_act: 1.5, tilawah_tgt: 2,
+            pelanggaran_poin: 0,
+            nilai_akhir: 95,
+            predikat: "A+",
+            exam_details: [
+                { detail: "Ujian Hifdzul Quran", score: 98, terbilang: "Sembilan Puluh Delapan", grade: "A+" },
+                { detail: "Materi Tajwid", score: 85, terbilang: "Delapan Puluh Lima", grade: "A" }
+            ]
+        };
+        return exportToPDFRaport(dummySantri, customSettings);
     };
 
     return {
@@ -524,7 +606,7 @@ const useRekap = (uiData, userSession) => {
         rekapFilteredSantriOptions, selectRekapSantri,
         setRangeRealtime, setRangeKemarin, setRange7Hari, setRange30Hari, setRangeBulanIni,
         monthNames, rekapHafalanData, rekapGlobalStats, rekapSettings,
-        saveSettings, exportToPDF, exportToExcel, exportToPDFRaport,
+        saveSettings, exportToPDF, exportToExcel, exportToPDFRaport, exportToPDFMockup,
         rekapTrendData
     };
 };

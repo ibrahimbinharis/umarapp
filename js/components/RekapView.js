@@ -9,7 +9,7 @@ const RekapView = {
     emits: [
         'update:rekapStartDate', 'update:rekapEndDate', 'update:rekapKelas', 'update:rekapGender',
         'update:rekapSearch', 'update:rekapSantriId', 'update:isRekapSantriDropdownOpen',
-        'export-to-excel', 'export-to-pdf', 'export-to-pdf-raport', 'save-settings',
+        'export-to-excel', 'export-to-pdf', 'export-to-pdf-raport', 'export-to-pdf-mockup', 'save-settings',
         'set-range-realtime', 'set-range-kemarin', 'set-range-7hari', 'set-range-30hari', 'set-range-bulan-ini'
     ],
     setup(props, { emit }) {
@@ -18,6 +18,8 @@ const RekapView = {
         const tempSettings = reactive(JSON.parse(JSON.stringify(props.rekapSettings)));
         const activeMetric = ref('all'); // 'all' | 'sabaq' | 'manzil' | 'tilawah' | 'ujian'
         const activeTab = ref('data'); // 'data' | 'raport'
+        const configTab = ref('weight'); // 'weight' | 'metadata'
+        const isUploadingLogo = ref(false);
         const isJuzGridOpen = ref(false);
         const isCalendarOpen = ref(false);
         const calendarViewDate = ref(new Date()); // Current month shown in left calendar
@@ -62,6 +64,25 @@ const RekapView = {
                 date.setDate(date.getDate() + 1);
             }
             return days;
+        };
+
+        const handleLogoUpload = async (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+            if (file.size > 500 * 1024) return window.showAlert("Ukuran file terlalu besar (Max 500KB)", "Warning", "warning");
+
+            isUploadingLogo.value = true;
+            try {
+                const ext = file.name.split('.').pop();
+                const fileName = `logo_${Date.now()}.${ext}`;
+                const url = await DB.uploadFile(file, `logos/${fileName}`);
+                tempSettings.raportMetadata.logo_url = url;
+                window.showAlert("Logo berhasil diunggah!", "Berhasil", "success");
+            } catch (e) {
+                window.showAlert("Gagal mengunggah logo: " + e.message, "Error", "danger");
+            } finally {
+                isUploadingLogo.value = false;
+            }
         };
 
         const calendars = computed(() => {
@@ -334,7 +355,8 @@ const RekapView = {
         });
 
         return {
-            isJuzGridOpen, activeTab, activeMetric, totalWeight, tempSettings, isConfigOpen,
+            isJuzGridOpen, activeTab, activeMetric, totalWeight, tempSettings, isConfigOpen, configTab,
+            isUploadingLogo, handleLogoUpload,
             isCalendarOpen, calendarViewDate, tempRange, calendars, formatDateShort, toYMD,
             rekapSelectedSantriName,
             handleDateClick, isDateInRange, isDateSelected, applyRange, moveMonth, activeShortcut,
@@ -344,6 +366,13 @@ const RekapView = {
                 Object.assign(props.rekapSettings, tempSettings);
                 emit('save-settings');
                 isConfigOpen.value = false;
+            },
+            deleteLogo: () => {
+                tempSettings.raportMetadata.logo_url = "";
+                window.showToast("Logo dihapus", "info");
+            },
+            handleMockupDownload: () => {
+                emit('export-to-pdf-mockup', tempSettings);
             },
             openConfig: () => {
                 Object.assign(tempSettings, JSON.parse(JSON.stringify(props.rekapSettings)));
@@ -368,10 +397,43 @@ const RekapView = {
             </button>
         </div>
 
-        <!-- Santri Search Dropdown (Like Setoran/Input) -->
+        <!-- Date Block Filter (Top) -->
+        <div class="px-2 pt-2">
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                <div class="flex flex-col gap-4">
+                    <!-- Custom Range Picker Trigger -->
+                    <div @click="isCalendarOpen = true; tempRange.start = rekapStartDate; tempRange.end = rekapEndDate" 
+                        class="flex items-center justify-center bg-white border border-slate-200 py-2 px-3 rounded-lg cursor-pointer hover:border-slate-300 transition-colors">
+                        <div class="text-center">
+                            <p class="text-sm font-bold text-slate-700">{{ formatDateShort(rekapStartDate) }} - {{ formatDateShort(rekapEndDate) }}</p>
+                        </div>
+                    </div>
+
+                    <!-- Filters for Class & Gender -->
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="relative">
+                            <select :value="rekapKelas" @change="$emit('update:rekapKelas', $event.target.value)" 
+                                class="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl text-xs font-bold appearance-none outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors">
+                                <option value="">Semua Kelas</option>
+                                <option v-for="k in kelasOptions" :value="k.name">{{ k.name }}</option>
+                            </select>
+                        </div>
+                        <div class="relative">
+                            <select :value="rekapGender" @change="$emit('update:rekapGender', $event.target.value)" 
+                                class="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl text-xs font-bold appearance-none outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors">
+                                <option value="">Semua</option>
+                                <option value="L">Putra</option>
+                                <option value="P">Putri</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Santri Search Dropdown (Middle) -->
         <div class="px-2">
             <div class="relative">
-                <label class="text-[10px] font-bold text-slate-400 mb-1 block px-1 uppercase tracking-widest">Santri</label>
                 
                 <!-- Trigger Button -->
                 <button @click="$emit('update:isRekapSantriDropdownOpen', !isRekapSantriDropdownOpen)"
@@ -437,25 +499,8 @@ const RekapView = {
             </div>
         </div>
 
-        <!-- Tabs Navigation -->
+        <!-- Shortcuts (Bottom of Filter Group) -->
         <div class="px-2 -mt-2">
-            <div class="flex gap-2 p-1 bg-slate-100/80 backdrop-blur-sm rounded-xl border border-slate-200 shadow-sm">
-                <button @click="activeTab = 'data'" 
-                    class="flex-1 py-2 px-4 rounded-lg font-bold text-xs transition-colors text-center tracking-wide"
-                    :class="activeTab === 'data' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'">
-                    Data Keseluruhan
-                </button>
-                <button @click="activeTab = 'raport'" 
-                    class="flex-1 py-2 px-4 rounded-lg font-bold text-xs transition-colors text-center tracking-wide"
-                    :class="activeTab === 'raport' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'">
-                    Raport & Analitik
-                </button>
-            </div>
-        </div>
-
-        <!-- Period Filter Bar (New & Improved) -->
-        <div class="px-2 space-y-4">
-            <!-- Shortcuts -->
             <div class="flex gap-2 pb-1 overflow-x-auto scrollbar-hide">
                 <button v-for="tag in [
                     { id: 'bulan-ini', label: 'Bulan Ini' },
@@ -470,37 +515,21 @@ const RekapView = {
                     {{ tag.label }}
                 </button>
             </div>
+        </div>
 
-            <!-- Date Block Filter -->
-            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-                <div class="flex flex-col gap-4">
-                    <!-- Custom Range Picker Trigger -->
-                    <div @click="isCalendarOpen = true; tempRange.start = rekapStartDate; tempRange.end = rekapEndDate" 
-                        class="flex items-center justify-center bg-white border border-slate-200 py-2 px-3 rounded-lg cursor-pointer hover:border-slate-300 transition-colors">
-                        <div class="text-center">
-                            <p class="text-sm font-bold text-slate-700">{{ formatDateShort(rekapStartDate) }} - {{ formatDateShort(rekapEndDate) }}</p>
-                        </div>
-                    </div>
-
-                    <!-- Filters for Class & Gender -->
-                    <div class="grid grid-cols-2 gap-3">
-                        <div class="relative">
-                            <select :value="rekapKelas" @change="$emit('update:rekapKelas', $event.target.value)" 
-                                class="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl text-xs font-bold appearance-none outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors">
-                                <option value="">Semua Kelas</option>
-                                <option v-for="k in kelasOptions" :value="k.name">{{ k.name }}</option>
-                            </select>
-                        </div>
-                        <div class="relative">
-                            <select :value="rekapGender" @change="$emit('update:rekapGender', $event.target.value)" 
-                                class="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl text-xs font-bold appearance-none outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors">
-                                <option value="">Semua</option>
-                                <option value="L">Putra</option>
-                                <option value="P">Putri</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
+        <!-- Tabs Navigation (Above Content) -->
+        <div class="px-2">
+            <div class="flex gap-2 p-1 bg-slate-100/80 backdrop-blur-sm rounded-xl border border-slate-200 shadow-sm">
+                <button @click="activeTab = 'data'" 
+                    class="flex-1 py-2 px-4 rounded-lg font-bold text-xs transition-colors text-center tracking-wide"
+                    :class="activeTab === 'data' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'">
+                    Data Keseluruhan
+                </button>
+                <button @click="activeTab = 'raport'" 
+                    class="flex-1 py-2 px-4 rounded-lg font-bold text-xs transition-colors text-center tracking-wide"
+                    :class="activeTab === 'raport' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'">
+                    Raport & Analitik
+                </button>
             </div>
         </div>
 
@@ -786,48 +815,159 @@ const RekapView = {
 
         <!-- MODAL CONFIG -->
         <teleport to="body">
-            <div v-if="isConfigOpen" @click.self="isConfigOpen = false" class="fixed inset-0 z-[999] bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 transition-all duration-300">
-                <div @click.stop class="bg-white rounded-2xl w-full max-w-sm shadow-xl overflow-hidden animate-in zoom-in-95 duration-200">
-                    <div class="p-4 border-b flex justify-between items-center bg-slate-50/50">
-                        <h3 class="font-bold text-slate-800">Pengaturan Bobot Nilai</h3>
-                        <button @click="isConfigOpen = false" class="size-8 rounded-full hover:bg-slate-200 flex items-center justify-center text-slate-400 transition-colors">
-                            <span class="material-symbols-outlined text-xl">close</span>
+            <div v-if="isConfigOpen" @click.self="isConfigOpen = false" class="fixed inset-0 z-[999] bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+                <div @click.stop class="bg-white rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col">
+                    <div class="p-6 pb-2 flex justify-between items-center">
+                        <h3 class="font-black text-slate-900 text-xl tracking-tight">Pengaturan</h3>
+                        <button @click="isConfigOpen = false" class="text-slate-400 hover:text-slate-600 transition-colors">
+                            <span class="material-symbols-outlined text-2xl">close</span>
                         </button>
                     </div>
-                    <div class="p-6 space-y-4">
-                        <p class="text-[10px] text-slate-500 uppercase font-black tracking-widest mb-2">Pilih data & Atur Bobot (%)</p>
-                        
-                        <div class="space-y-3">
-                            <div v-for="(val, key) in tempSettings.visibility" :key="key" 
-                                class="flex items-center justify-between p-3 rounded-xl border transition-all"
-                                :class="val ? 'bg-blue-50/50 border-blue-100' : 'bg-slate-50 border-slate-100 opacity-60'">
-                                <div class="flex items-center gap-3">
-                                    <input type="checkbox" v-model="tempSettings.visibility[key]" 
-                                        @change="!tempSettings.visibility[key] ? tempSettings.weights[key] = 0 : null"
-                                        class="size-5 rounded-lg accent-blue-600 cursor-pointer">
-                                    <span class="font-bold text-sm text-slate-700 capitalize">{{ key }}</span>
-                                </div>
-                                <div class="flex items-center gap-2">
-                                    <input type="number" v-model.number="tempSettings.weights[key]" :disabled="!val"
-                                        class="w-16 p-2 text-center rounded-lg border font-bold text-sm focus:ring-2 focus:ring-primary focus:outline-none transition-all"
-                                        :class="!val ? 'bg-slate-100 text-slate-400 border-slate-200' : 'bg-white text-primary border-blue-200'">
-                                    <span class="text-xs font-bold text-slate-400">%</span>
-                                </div>
-                            </div>
-                        </div>
 
-                        <div class="pt-4 border-t">
-                            <div class="flex justify-between items-center mb-4">
-                                <span class="text-xs font-bold text-slate-500">Total Bobot</span>
-                                <span class="text-lg font-black" :class="totalWeight === 100 ? 'text-emerald-500' : 'text-red-500'">{{ totalWeight }}%</span>
+                    <!-- Config Tabs -->
+                    <div class="flex border-b border-slate-100 text-[13px] font-bold px-6 mt-2">
+                        <button @click="configTab = 'weight'" 
+                            class="mr-6 py-3 border-b-2 transition-all"
+                            :class="configTab === 'weight' ? 'border-primary text-primary' : 'border-transparent text-slate-400 hover:text-slate-600'">
+                            Bobot Nilai
+                        </button>
+                        <button @click="configTab = 'metadata'" 
+                            class="py-3 border-b-2 transition-all"
+                            :class="configTab === 'metadata' ? 'border-primary text-primary' : 'border-transparent text-slate-400 hover:text-slate-600'">
+                            Kop & Data
+                        </button>
+                    </div>
+
+                    <div class="flex-1 p-6 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar bg-white">
+                        <!-- TAB 1: Weight Config -->
+                        <div v-if="configTab === 'weight'" class="space-y-2">
+                            <div class="space-y-0 divide-y divide-slate-100">
+                                <div v-for="(val, key) in tempSettings.visibility" :key="key" 
+                                    class="flex items-center justify-between py-4 transition-all"
+                                    :class="!val ? 'opacity-50 grayscale' : ''">
+                                    <div class="flex items-center gap-4">
+                                        <!-- Tailwind Toggle Switch -->
+                                        <label class="relative inline-flex items-center cursor-pointer">
+                                            <input type="checkbox" v-model="tempSettings.visibility[key]" 
+                                                @change="!tempSettings.visibility[key] ? tempSettings.weights[key] = 0 : null"
+                                                class="sr-only peer">
+                                            <div class="w-10 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+                                        </label>
+                                        <span class="font-bold text-[13px] text-slate-800 capitalize">{{ key }}</span>
+                                    </div>
+                                    <div class="flex items-center gap-1">
+                                        <input type="number" v-model.number="tempSettings.weights[key]" :disabled="!val"
+                                            class="w-12 text-right py-1 bg-transparent font-black text-sm focus:outline-none transition-all placeholder:text-slate-300"
+                                            :class="!val ? 'text-slate-400' : 'text-slate-900'">
+                                        <span class="font-bold text-slate-400 text-sm">%</span>
+                                    </div>
+                                </div>
                             </div>
-                            <button @click="handleSave" :disabled="totalWeight !== 100"
-                                class="w-full py-3 rounded-xl font-bold transition-all shadow-sm active:scale-95 flex items-center justify-center gap-2"
-                                :class="totalWeight === 100 ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-slate-200 text-slate-400 cursor-not-allowed'">
-                                <span class="material-symbols-outlined text-lg">check_circle</span>
-                                Simpan Pengaturan
-                            </button>
+                            <div class="pt-6 flex justify-between items-center">
+                                <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Bobot</span>
+                                <span class="text-xl font-black" :class="totalWeight === 100 ? 'text-slate-900' : 'text-red-500'">{{ totalWeight }}%</span>
+                            </div>
                         </div>
+                        <!-- TAB 2: Metadata Config -->
+                        <div v-else class="space-y-6 animate-in fade-in slide-in-from-right-2 duration-300 pb-4">
+                            <div class="space-y-5">
+                                <div>
+                                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Logo Lembaga (Opsional)</label>
+                                    <div class="flex flex-col gap-3">
+                                        <div class="flex items-center gap-4">
+                                            <div class="size-16 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-center bg-slate-50 flex-shrink-0 overflow-hidden relative">
+                                                <img v-if="tempSettings.raportMetadata.logo_url" :src="tempSettings.raportMetadata.logo_url" class="w-full h-full object-contain p-2" />
+                                                <span v-else class="text-[10px] font-bold text-slate-300">LOGO</span>
+                                                <div v-if="isUploadingLogo" class="absolute inset-0 bg-white/80 flex items-center justify-center">
+                                                    <div class="size-5 border-2 border-primary border-t-transparent animate-spin rounded-full"></div>
+                                                </div>
+                                            </div>
+                                            <div class="flex-1 flex gap-2">
+                                                <input type="file" @change="handleLogoUpload" accept="image/*" class="hidden" id="logo-modal-upload">
+                                                <label for="logo-modal-upload" class="flex-1 flex items-center justify-center py-2.5 bg-primary text-white rounded-xl text-xs font-bold cursor-pointer transition-all active:scale-95">
+                                                    {{ tempSettings.raportMetadata.logo_url ? 'Ganti Logo' : 'Upload Logo' }}
+                                                </label>
+                                                <button v-if="tempSettings.raportMetadata.logo_url" @click="deleteLogo" class="px-4 py-2.5 bg-red-50 text-red-500 rounded-xl font-bold transition-all hover:bg-red-100">
+                                                    Hapus
+                                                </button>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Adjustment Sliders (Sesuaikan Logo) -->
+                                        <div v-if="tempSettings.raportMetadata.logo_url" class="p-4 bg-slate-50 rounded-xl space-y-4">
+                                            <div class="flex flex-col gap-1">
+                                                <div class="flex justify-between items-center text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                                                    <span>Ukuran</span>
+                                                    <span>{{ tempSettings.raportMetadata.logo_size || 18 }}mm</span>
+                                                </div>
+                                                <input type="range" v-model.number="tempSettings.raportMetadata.logo_size" min="10" max="30" step="1" class="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-primary">
+                                            </div>
+                                            <div class="flex flex-col gap-1">
+                                                <div class="flex justify-between items-center text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                                                    <span>Posisi Vertikal (Y)</span>
+                                                    <span>{{ tempSettings.raportMetadata.logo_y || 10 }}mm</span>
+                                                </div>
+                                                <input type="range" v-model.number="tempSettings.raportMetadata.logo_y" min="5" max="25" step="1" class="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-primary">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="space-y-4">
+                                    <div class="space-y-3">
+                                        <input v-model="tempSettings.raportMetadata.institution" type="text" placeholder="Nama Lembaga"
+                                            class="w-full py-2.5 px-0 border-b-2 border-slate-200 text-sm font-medium focus:border-primary outline-none transition-colors bg-transparent placeholder:text-slate-300">
+                                            
+                                        <input v-model="tempSettings.raportMetadata.address" type="text" placeholder="Alamat / Kop Surat"
+                                            class="w-full py-2.5 px-0 border-b-2 border-slate-200 text-[13px] font-medium focus:border-primary outline-none transition-colors bg-transparent placeholder:text-slate-300">
+                                            
+                                        <input v-model="tempSettings.raportMetadata.report_title" type="text" placeholder="Judul Raport (Opsional)"
+                                            class="w-full py-2.5 px-0 border-b-2 border-slate-200 text-sm font-medium focus:border-primary outline-none transition-colors bg-transparent placeholder:text-slate-300">
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Semester</label>
+                                            <select v-model="tempSettings.raportMetadata.semester"
+                                                class="w-full py-2 px-0 border-b-2 border-slate-200 text-sm font-medium bg-transparent outline-none focus:border-primary">
+                                                <option value="Ganjil">Ganjil</option>
+                                                <option value="Genap">Genap</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Tahun Ajaran</label>
+                                            <input v-model="tempSettings.raportMetadata.tahun_ajaran" type="text"
+                                                class="w-full py-2 px-0 border-b-2 border-slate-200 text-sm font-medium bg-transparent outline-none focus:border-primary">
+                                        </div>
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Kota / Ttd</label>
+                                            <input v-model="tempSettings.raportMetadata.signature_place" type="text"
+                                                class="w-full py-2 px-0 border-b-2 border-slate-200 text-sm font-medium bg-transparent outline-none focus:border-primary">
+                                        </div>
+                                        <div>
+                                            <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Jabatan Ttd</label>
+                                            <input v-model="tempSettings.raportMetadata.signature_label_right" type="text" placeholder="Musyrif / Wali Kelas"
+                                                class="w-full py-2 px-0 border-b-2 border-slate-200 text-sm font-medium bg-transparent outline-none focus:border-primary">
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Mockup Download Button -->
+                                    <button @click="handleMockupDownload"
+                                        class="w-full mt-4 flex items-center justify-center gap-2 px-4 py-3.5 bg-blue-50 text-blue-700 rounded-xl font-bold text-xs hover:bg-blue-100 transition active:scale-95 border border-blue-200">
+                                        Download Contoh Raport (PDF)
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action Bar -->
+                    <div class="p-6 bg-white pt-2 border-t border-slate-100">
+                        <button @click="handleSave" :disabled="totalWeight !== 100"
+                            class="w-full py-3.5 rounded-xl font-bold text-sm transition-all active:scale-95"
+                            :class="totalWeight === 100 ? 'bg-primary text-white shadow-lg shadow-blue-200 hover:bg-blue-700' : 'bg-slate-100 text-slate-400 cursor-not-allowed'">
+                            Simpan Pengaturan
+                        </button>
                     </div>
                 </div>
             </div>

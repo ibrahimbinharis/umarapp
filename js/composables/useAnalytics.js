@@ -11,7 +11,21 @@ function useAnalytics(uiData, userSession) {
     // --- SHARED SETTINGS ---
     const defaultScoringSettings = {
         weights: { sabaq: 50, manzil: 30, ujian: 20, tilawah: 0 },
-        visibility: { sabaq: true, manzil: true, ujian: true, tilawah: false }
+        visibility: { sabaq: true, manzil: true, ujian: true, tilawah: false },
+        raportMetadata: {
+            institution: "Madrasah Tahfidz Al-Quran",
+            address: "Jl. Pendidikan No. 123, Kota Muslim",
+            report_title: "LAPORAN HASIL BELAJAR (RAPORT) SANTRI",
+            logo_url: "", // New field for institution logo
+            logo_size: 18, // Default 18mm
+            logo_y: 10, // Default 10mm from top
+            semester: "Ganjil",
+            tahun_ajaran: "2023/2024",
+            signature_place: "Jakarta",
+            signature_name_left: "Dr. H. Ahmad Furqon, M.Pd",
+            signature_label_left: "Kepala Madrasah",
+            signature_label_right: "Musyrif / Wali Kelas"
+        }
     };
 
     const getScoringSettings = () => {
@@ -19,7 +33,8 @@ function useAnalytics(uiData, userSession) {
         if (stored) {
             return {
                 weights: { ...defaultScoringSettings.weights, ...(stored.weights || {}) },
-                visibility: { ...defaultScoringSettings.visibility, ...(stored.visibility || {}) }
+                visibility: { ...defaultScoringSettings.visibility, ...(stored.visibility || {}) },
+                raportMetadata: { ...defaultScoringSettings.raportMetadata, ...(stored.raportMetadata || {}) }
             };
         }
         return JSON.parse(JSON.stringify(defaultScoringSettings));

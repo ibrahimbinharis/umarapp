@@ -1,7 +1,7 @@
 // --- 1. CONFIG & DATABASE (SUPABASE v37) ---
 const APP_CONFIG = {
     appName: "E-Umar",
-    version: "v1.6",
+    version: "v1."7,
     supabaseUrl: "https://fxtmilqvxomuvkxxzjli.supabase.co",
     supabaseKey: "sb_publishable_aXcK3znrtRo0d3gH-Wg1Ew_-0Z3262O"
 };
@@ -597,6 +597,33 @@ const DB = {
         }
 
         if (window.updateSyncUI) window.updateSyncUI('saved', 'Tersimpan');
+    },
+
+    // --- STORAGE (Supabase Storage) ---
+    uploadFile: async (file, path) => {
+        if (!navigator.onLine) throw new Error("Offline. Gagal mengunggah.");
+
+        try {
+            // 1. Upload file
+            const { data, error } = await sb.storage
+                .from('assets')
+                .upload(path, file, {
+                    cacheControl: '3600',
+                    upsert: true
+                });
+
+            if (error) throw error;
+
+            // 2. Get Public URL
+            const { data: { publicUrl } } = sb.storage
+                .from('assets')
+                .getPublicUrl(path);
+
+            return publicUrl;
+        } catch (e) {
+            console.error("Upload Error:", e);
+            throw e;
+        }
     }
 };
 
