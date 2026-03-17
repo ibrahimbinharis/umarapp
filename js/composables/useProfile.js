@@ -27,14 +27,15 @@ function useProfile(uiData, DB, userSession, refreshData) {
     // --- METHODS ---
     const initProfileForm = () => {
         if (!userSession.value) return;
-        profileForm.full_name = userSession.value.full_name || '';
         profileForm.username = userSession.value.custom_username || userSession.value.username || '';
 
-        // v36: If role is Santri, get phone from master data (it's synced with Wali)
+        // v36: If role is Santri, get master data (synced with Wali/Guru)
         if (userSession.value.role === 'santri') {
             const s = (uiData.santri || []).find(x => x.santri_id === userSession.value.username || x.nis === userSession.value.username);
+            profileForm.full_name = s ? s.full_name : (userSession.value.full_name || '');
             profileForm.phone = s ? (s.parent_phone || s.no_hp || '') : '';
         } else {
+            profileForm.full_name = userSession.value.full_name || '';
             profileForm.phone = userSession.value.phone || '';
         }
 
@@ -54,14 +55,20 @@ function useProfile(uiData, DB, userSession, refreshData) {
             }
 
             // v36: NIS Protection (Prevent changing into a Santri NIS)
+            // Only check if user is trying to set a DIFFERENT username than their current one
             const targetUsername = profileForm.username.trim();
-            const { data: isNIS } = await sb.from('santri')
-                .select('santri_id')
-                .or(`nis.eq."${targetUsername}",santri_id.eq."${targetUsername}"`)
-                .maybeSingle();
+            const currentUsername = userSession.value.username;
+            const currentCustom = userSession.value.custom_username;
 
-            if (isNIS) {
-                return window.showAlert("Username ini adalah NIS milik Santri. Silakan gunakan username lain.", "Dilarang", "danger");
+            if (targetUsername !== currentUsername && targetUsername !== currentCustom) {
+                const { data: isNIS } = await sb.from('santri')
+                    .select('santri_id')
+                    .or(`nis.eq."${targetUsername}",santri_id.eq."${targetUsername}"`)
+                    .maybeSingle();
+
+                if (isNIS) {
+                    return window.showAlert("Username ini adalah NIS milik Santri. Silakan gunakan username lain.", "Dilarang", "danger");
+                }
             }
 
             // v36: Unique Check (Global: username or custom_username, excluding self)
@@ -84,11 +91,15 @@ function useProfile(uiData, DB, userSession, refreshData) {
 
             try {
                 const updates = {
-                    full_name: profileForm.full_name,
                     phone: profileForm.phone,
                     gender: profileForm.gender,
                     custom_username: profileForm.username
                 };
+
+                // v36: Santri Name is strictly from master data (Santri table) - v36.2
+                if (userSession.value.role !== 'santri') {
+                    updates.full_name = profileForm.full_name;
+                }
 
                 // --- AUTH PASSWORD UPDATE ---
                 if (profileForm.password) {
@@ -156,7 +167,9 @@ function useProfile(uiData, DB, userSession, refreshData) {
                 }
 
                 // --- UPDATE LOCAL SESSION ---
-                userSession.value.full_name = updates.full_name;
+                if (userSession.value.role !== 'santri') {
+                    userSession.value.full_name = profileForm.full_name;
+                }
                 userSession.value.phone = updates.phone;
                 userSession.value.gender = updates.gender;
                 userSession.value.custom_username = updates.custom_username;

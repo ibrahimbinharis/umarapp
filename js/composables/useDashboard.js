@@ -156,11 +156,16 @@ function useDashboard(uiData, userSession, activeChildId, appConfig) {
                     sabaqTarget: perf.sabaq.target,
                     manzilCurrent: perf.manzil.actual,
                     manzilTarget: perf.manzil.target,
+                    tilawahCurrent: parseFloat((perf.tilawah.actual / 20).toFixed(1)),
+                    tilawahTarget: parseFloat((perf.tilawah.target / 20).toFixed(1)),
+                    ujianCurrent: parseFloat(perf.ujian.avg.toFixed(1)),
                     diffLabel: perf.sabaq.actual >= perf.sabaq.target ? 'Selesai' : `-${perf.sabaq.target - perf.sabaq.actual} Hal`
                 };
 
                 const trend = analytics.getTrendData(uiData.setoran || [], 7, [santri._id, santri.santri_id]);
                 dashboardStats.weeklyActivity = trend;
+                dashboardStats.totalSabaq = trend.totalSabaq; // Update total for summary card
+                dashboardStats.totalManzil = trend.totalManzil; // Update total for summary card
             }
         } else {
             // Admin/Guru: Average
@@ -176,18 +181,28 @@ function useDashboard(uiData, userSession, activeChildId, appConfig) {
                 const avgTarS = leaderboard.reduce((sum, p) => sum + p.sabaq.target, 0) / allSantris.length;
                 const avgActM = leaderboard.reduce((sum, p) => sum + p.manzil.actual, 0) / allSantris.length;
                 const avgTarM = leaderboard.reduce((sum, p) => sum + p.manzil.target, 0) / allSantris.length;
+                const avgActT = leaderboard.reduce((sum, p) => sum + p.tilawah.actual, 0) / allSantris.length;
+                const avgTarT = leaderboard.reduce((sum, p) => sum + p.tilawah.target, 0) / allSantris.length;
+                const avgActU = leaderboard.reduce((sum, p) => sum + (p.ujian.avg || 0), 0) / allSantris.length;
 
                 dashboardStats.monthlyTarget = {
                     sabaqCurrent: Math.round(avgActS * 10) / 10,
                     sabaqTarget: Math.round(avgTarS),
                     manzilCurrent: Math.round(avgActM * 10) / 10,
                     manzilTarget: Math.round(avgTarM),
+                    tilawahCurrent: Math.round((avgActT / 20) * 10) / 10,
+                    tilawahTarget: Math.round(avgTarT / 20),
+                    ujianCurrent: Math.round(avgActU * 10) / 10,
                     diffLabel: `Avg: ${Math.round(avgActS)} Hal`
                 };
             }
 
             const trend = analytics.getTrendData(uiData.setoran || [], 7);
             dashboardStats.weeklyActivity = trend;
+            // Admin/Guru can see both: All Time pages in some cards and Weekly Total in summary cards
+            // Here we prioritize weekly totals for the summary cards near chart
+            dashboardStats.totalSabaq = trend.totalSabaq;
+            dashboardStats.totalManzil = trend.totalManzil;
         }
 
         loadRecentActivities();
@@ -226,6 +241,7 @@ function useDashboard(uiData, userSession, activeChildId, appConfig) {
         activityFilter,
         filteredActivities,
         topSantriFilter,
-        filteredTopSantri
+        filteredTopSantri,
+        rekapSettings: computed(() => analytics.getScoringSettings())
     };
 }

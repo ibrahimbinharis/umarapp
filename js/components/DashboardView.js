@@ -13,7 +13,8 @@ const DashboardView = {
         'uiData',
         'activeChildId',
         'selectChild',
-        'appConfig'
+        'appConfig',
+        'rekapSettings'
     ],
     emits: [
         'update:activityFilter',
@@ -27,7 +28,21 @@ const DashboardView = {
         const isMenuExpanded = ref(false);
         const showNotifications = ref(false);
         const notifContainer = ref(null);
-        const chartFilter = ref('all'); // all, sabaq, manzil
+        
+        // Initialize chartFilter based on visibility
+        const initialFilter = computed(() => {
+            if (props.rekapSettings?.visibility?.sabaq && props.rekapSettings?.visibility?.manzil) return 'all';
+            if (props.rekapSettings?.visibility?.sabaq) return 'sabaq';
+            if (props.rekapSettings?.visibility?.manzil) return 'manzil';
+            return 'all';
+        });
+        const chartFilter = ref(initialFilter.value); 
+        
+        // Update filter if settings change and current filter is now hidden
+        watch(initialFilter, (newVal) => {
+            chartFilter.value = newVal;
+        });
+
         let activityChart = null;
         let donutChart = null;
 
@@ -193,23 +208,16 @@ const DashboardView = {
                 datasets.push({
                     label: 'Sabaq (Halaman)',
                     data: sabaqData,
-                    borderColor: 'rgba(30, 64, 175, 0.2)', // Blue-800 with 0.2 alpha
-                    backgroundColor: (context) => {
-                        const chart = context.chart;
-                        const { ctx, chartArea } = chart;
-                        if (!chartArea) return null;
-                        const gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top);
-                        gradient.addColorStop(0, 'rgba(30, 64, 175, 0)');
-                        gradient.addColorStop(1, 'rgba(30, 64, 175, 0.4)'); // Increased from 0.05 to 0.4
-                        return gradient;
-                    },
-                    fill: true,
+                    borderColor: 'rgba(30, 64, 175, 1)',
+                    backgroundColor: 'rgba(30, 64, 175, 1)',
+                    fill: false,
                     tension: 0.4,
-                    pointRadius: 3,
-                    pointBackgroundColor: 'rgba(30, 64, 175, 0.2)',
+                    pointRadius: 0,
+                    pointHoverRadius: 4,
+                    pointBackgroundColor: 'rgba(30, 64, 175, 1)',
                     pointBorderColor: '#fff',
-                    pointBorderWidth: 1.5,
-                    borderWidth: 1.5
+                    pointBorderWidth: 2,
+                    borderWidth: 2
                 });
             }
 
@@ -217,23 +225,52 @@ const DashboardView = {
                 datasets.push({
                     label: 'Manzil (Halaman)',
                     data: manzilData,
-                    borderColor: 'rgba(16, 185, 129, 0.2)', // Emerald-500 with 0.2 alpha
-                    backgroundColor: (context) => {
-                        const chart = context.chart;
-                        const { ctx, chartArea } = chart;
-                        if (!chartArea) return null;
-                        const gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top);
-                        gradient.addColorStop(0, 'rgba(16, 185, 129, 0)');
-                        gradient.addColorStop(1, 'rgba(16, 185, 129, 0.4)'); // Increased from 0.05 to 0.4
-                        return gradient;
-                    },
-                    fill: true,
+                    borderColor: 'rgba(16, 185, 129, 1)',
+                    backgroundColor: 'rgba(16, 185, 129, 1)',
+                    fill: false,
                     tension: 0.4,
-                    pointRadius: 3,
-                    pointBackgroundColor: 'rgba(16, 185, 129, 0.2)',
+                    pointRadius: 0,
+                    pointHoverRadius: 4,
+                    pointBackgroundColor: 'rgba(16, 185, 129, 1)',
                     pointBorderColor: '#fff',
-                    pointBorderWidth: 1.5,
-                    borderWidth: 1.5
+                    pointBorderWidth: 2,
+                    borderWidth: 2
+                });
+            }
+
+            if ((chartFilter.value === 'all' || chartFilter.value === 'tilawah') && props.rekapSettings?.visibility?.tilawah) {
+                const tilawahData = props.dashboardStats.weeklyActivity.tilawah.length > 0 ? props.dashboardStats.weeklyActivity.tilawah : [0, 0, 0, 0, 0, 0, 0];
+                datasets.push({
+                    label: 'Tilawah (Juz)',
+                    data: tilawahData,
+                    borderColor: 'rgba(168, 85, 247, 1)',
+                    backgroundColor: 'rgba(168, 85, 247, 1)',
+                    fill: false,
+                    tension: 0.4,
+                    pointRadius: 0,
+                    pointHoverRadius: 4,
+                    pointBackgroundColor: 'rgba(168, 85, 247, 1)',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    borderWidth: 2
+                });
+            }
+
+            if ((chartFilter.value === 'all' || chartFilter.value === 'ujian') && props.rekapSettings?.visibility?.ujian) {
+                const ujianData = props.dashboardStats.weeklyActivity.ujian.length > 0 ? props.dashboardStats.weeklyActivity.ujian : [0, 0, 0, 0, 0, 0, 0];
+                datasets.push({
+                    label: 'Ujian (Nilai)',
+                    data: ujianData,
+                    borderColor: 'rgba(245, 158, 11, 1)',
+                    backgroundColor: 'rgba(245, 158, 11, 1)',
+                    fill: false,
+                    tension: 0.4,
+                    pointRadius: 0,
+                    pointHoverRadius: 4,
+                    pointBackgroundColor: 'rgba(245, 158, 11, 1)',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    borderWidth: 2
                 });
             }
 
@@ -258,7 +295,8 @@ const DashboardView = {
                             displayColors: true,
                             callbacks: {
                                 label: function (context) {
-                                    return context.dataset.label + ': ' + context.parsed.y + ' Hal';
+                                    const unit = context.dataset.label.includes('Juz') ? ' Juz' : (context.dataset.label.includes('Nilai') ? '' : ' Hal');
+                                    return context.dataset.label + ': ' + context.parsed.y + unit;
                                 }
                             }
                         }
@@ -303,8 +341,12 @@ const DashboardView = {
             juzCompleted: 0,
             totalSabaq: 0,
             totalManzil: 0,
+            totalTilawah: 0,
+            avgUjian: 0,
             monthlySabaq: 0,
-            monthlyManzil: 0
+            monthlyManzil: 0,
+            monthlyTilawah: 0,
+            monthlyUjian: 0
         });
 
         const animateNumber = (key, targetValue) => {
@@ -319,7 +361,7 @@ const DashboardView = {
                 // Ease out cubic
                 const easeProgress = 1 - Math.pow(1 - progress, 3);
 
-                displayStats[key] = Math.floor(startValue + easeProgress * (targetValue - startValue));
+                displayStats[key] = Math.round(startValue + easeProgress * (targetValue - startValue));
 
                 if (progress < 1) {
                     requestAnimationFrame(update);
@@ -335,8 +377,12 @@ const DashboardView = {
             animateNumber('juzCompleted', props.dashboardStats.juzCompleted || 0);
             animateNumber('totalSabaq', props.dashboardStats.weeklyActivity.totalSabaq || 0);
             animateNumber('totalManzil', props.dashboardStats.weeklyActivity.totalManzil || 0);
+            animateNumber('totalTilawah', props.dashboardStats.weeklyActivity.totalTilawah || 0);
+            animateNumber('avgUjian', props.dashboardStats.weeklyActivity.avgUjian || 0);
             animateNumber('monthlySabaq', props.dashboardStats.monthlyTarget.sabaqCurrent || 0);
             animateNumber('monthlyManzil', props.dashboardStats.monthlyTarget.manzilCurrent || 0);
+            animateNumber('monthlyTilawah', props.dashboardStats.monthlyTarget.tilawahCurrent || 0);
+            animateNumber('monthlyUjian', props.dashboardStats.monthlyTarget.ujianCurrent || 0);
         };
 
         // Watchers to trigger animations on data change
@@ -754,9 +800,9 @@ const DashboardView = {
                             <span class="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">{{ dashboardStats.monthlyTarget.diffLabel }}</span>
                         </div>
                         <div class="space-y-4">
-                            <div>
-                                <div class="flex justify-between text-[10px] font-bold mb-1.5">
-                                    <span class="text-slate-600">Sabaq</span>
+                            <div v-if="rekapSettings.visibility.sabaq">
+                                <div class="flex justify-between text-[10px] font-black mb-1.5 uppercase tracking-widest">
+                                    <span class="text-slate-400">Sabaq</span>
                                     <span class="text-slate-900">{{ displayStats.monthlySabaq }}/{{ dashboardStats.monthlyTarget.sabaqTarget }} Hal</span>
                                 </div>
                                 <div class="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
@@ -764,14 +810,34 @@ const DashboardView = {
                                          :style="{ width: Math.min(100, (displayStats.monthlySabaq / dashboardStats.monthlyTarget.sabaqTarget) * 100) + '%' }"></div>
                                 </div>
                             </div>
-                            <div>
-                                <div class="flex justify-between text-[10px] font-bold mb-1.5">
-                                    <span class="text-slate-600">Manzil</span>
+                            <div v-if="rekapSettings.visibility.manzil">
+                                <div class="flex justify-between text-[10px] font-black mb-1.5 uppercase tracking-widest">
+                                    <span class="text-slate-400">Manzil</span>
                                     <span class="text-slate-900">{{ displayStats.monthlyManzil }}/{{ dashboardStats.monthlyTarget.manzilTarget }} Hal</span>
                                 </div>
                                 <div class="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
                                     <div class="bg-emerald-500 h-full rounded-full transition-all duration-1000"
                                          :style="{ width: Math.min(100, (displayStats.monthlyManzil / dashboardStats.monthlyTarget.manzilTarget) * 100) + '%' }"></div>
+                                </div>
+                            </div>
+                            <div v-if="rekapSettings.visibility.tilawah">
+                                <div class="flex justify-between text-[10px] font-black mb-1.5 uppercase tracking-widest">
+                                    <span class="text-slate-400">Tilawah</span>
+                                    <span class="text-slate-900">{{ displayStats.monthlyTilawah }}/{{ dashboardStats.monthlyTarget.tilawahTarget }} Juz</span>
+                                </div>
+                                <div class="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                                    <div class="bg-amber-500 h-full rounded-full transition-all duration-1000"
+                                         :style="{ width: Math.min(100, (displayStats.monthlyTilawah / dashboardStats.monthlyTarget.tilawahTarget) * 100) + '%' }"></div>
+                                </div>
+                            </div>
+                            <div v-if="rekapSettings.visibility.ujian">
+                                <div class="flex justify-between text-[10px] font-black mb-1.5 uppercase tracking-widest">
+                                    <span class="text-slate-400">Ujian</span>
+                                    <span class="text-slate-900">{{ displayStats.monthlyUjian }}</span>
+                                </div>
+                                <div class="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                                    <div class="bg-indigo-500 h-full rounded-full transition-all duration-1000"
+                                         :style="{ width: displayStats.monthlyUjian + '%' }"></div>
                                 </div>
                             </div>
                         </div>
@@ -785,32 +851,46 @@ const DashboardView = {
                         :class="chartFilter === 'manzil' ? 'bg-emerald-500' : 'bg-primary'"></div>
 
                     <div class="flex flex-col gap-4 mb-4">
-                        <div class="flex justify-between items-center">
+                        <div class="flex flex-col gap-3">
                             <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Keaktifan (7 Hari)</span>
                             
                             <!-- Legend / Filter Tabs -->
-                            <div class="flex p-0.5 bg-slate-100 rounded-lg">
-                                <button @click="chartFilter = 'all'" 
-                                    class="px-3 py-1 text-[10px] font-bold rounded-md transition-all"
-                                    :class="chartFilter === 'all' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400'">All</button>
-                                <button @click="chartFilter = 'sabaq'" 
-                                    class="px-3 py-1 text-[10px] font-bold rounded-md transition-all"
-                                    :class="chartFilter === 'sabaq' ? 'bg-primary text-white shadow-sm' : 'text-slate-400'">Sabaq</button>
-                                <button @click="chartFilter = 'manzil'" 
-                                    class="px-3 py-1 text-[10px] font-bold rounded-md transition-all"
-                                    :class="chartFilter === 'manzil' ? 'bg-emerald-500 text-white shadow-sm' : 'text-slate-400'">Manzil</button>
+                            <div class="flex gap-2.5 px-1 relative">
+                                <button v-if="rekapSettings.visibility.sabaq && rekapSettings.visibility.manzil" @click="chartFilter = 'all'" 
+                                    class="pb-1 text-[10px] font-black uppercase tracking-widest transition-all duration-500 border-b"
+                                    :class="chartFilter === 'all' ? 'border-primary text-primary' : 'border-transparent text-slate-400'">ALL</button>
+                                <button v-if="rekapSettings.visibility.sabaq" @click="chartFilter = 'sabaq'" 
+                                    class="pb-1 text-[10px] font-black uppercase tracking-widest transition-all duration-500 border-b"
+                                    :class="chartFilter === 'sabaq' ? 'border-primary/40 text-primary' : 'border-transparent text-slate-400'">SABAQ</button>
+                                <button v-if="rekapSettings.visibility.manzil" @click="chartFilter = 'manzil'" 
+                                    class="pb-1 text-[10px] font-black uppercase tracking-widest transition-all duration-500 border-b"
+                                    :class="chartFilter === 'manzil' ? 'border-emerald-500/40 text-emerald-500' : 'border-transparent text-slate-400'">MANZIL</button>
+                                <button v-if="rekapSettings.visibility.tilawah" @click="chartFilter = 'tilawah'" 
+                                    class="pb-1 text-[10px] font-black uppercase tracking-widest transition-all duration-500 border-b"
+                                    :class="chartFilter === 'tilawah' ? 'border-amber-500/40 text-amber-500' : 'border-transparent text-slate-400'">TILAWAH</button>
+                                <button v-if="rekapSettings.visibility.ujian" @click="chartFilter = 'ujian'" 
+                                    class="pb-1 text-[10px] font-black uppercase tracking-widest transition-all duration-500 border-b"
+                                    :class="chartFilter === 'ujian' ? 'border-indigo-500/40 text-indigo-500' : 'border-transparent text-slate-400'">UJIAN</button>
                             </div>
                         </div>
 
                         <!-- Stats Summary -->
-                        <div class="flex items-center gap-4">
-                            <div v-if="chartFilter === 'all' || chartFilter === 'sabaq'" class="flex flex-col">
+                        <div class="flex items-center gap-4 overflow-x-auto pb-1 no-scrollbar">
+                            <div v-if="(chartFilter === 'all' || chartFilter === 'sabaq') && rekapSettings.visibility.sabaq" class="flex flex-col flex-shrink-0">
                                 <span class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Total Sabaq</span>
                                 <span class="text-sm font-black text-primary">{{ displayStats.totalSabaq }} Hal</span>
                             </div>
-                            <div v-if="chartFilter === 'all' || chartFilter === 'manzil'" class="flex flex-col border-l border-slate-100 pl-4">
+                            <div v-if="(chartFilter === 'all' || chartFilter === 'manzil') && rekapSettings.visibility.manzil" class="flex flex-col border-l border-slate-100 pl-4 flex-shrink-0">
                                 <span class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Total Manzil</span>
                                 <span class="text-sm font-black text-emerald-500">{{ displayStats.totalManzil }} Hal</span>
+                            </div>
+                            <div v-if="(chartFilter === 'all' || chartFilter === 'tilawah') && rekapSettings.visibility.tilawah" class="flex flex-col border-l border-slate-100 pl-4 flex-shrink-0">
+                                <span class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Total Tilawah</span>
+                                <span class="text-sm font-black text-amber-500">{{ displayStats.totalTilawah }} Juz</span>
+                            </div>
+                            <div v-if="(chartFilter === 'all' || chartFilter === 'ujian') && rekapSettings.visibility.ujian" class="flex flex-col border-l border-slate-100 pl-4 flex-shrink-0">
+                                <span class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Rerata Ujian</span>
+                                <span class="text-sm font-black text-indigo-500">{{ displayStats.avgUjian }}</span>
                             </div>
                         </div>
                     </div>
@@ -821,8 +901,8 @@ const DashboardView = {
                 </div>
             </div>
 
-            <!-- Admin/Guru Global Stats (Visible to Admin/Guru/Santri) -->
-            <div v-if="userSession.role !== 'wali'">
+            <!-- Admin/Guru Global Stats (Hidden for Santri/Wali) -->
+            <div v-if="userSession.role === 'admin' || userSession.role === 'guru'">
                 <div class="mb-6">
                     <div @click="$emit('navigate', 'santri')"
                         class="bg-white p-6 rounded-3xl border border-slate-100 card-shadow cursor-pointer hover:shadow-md transition-all group relative overflow-hidden">

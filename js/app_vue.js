@@ -262,15 +262,28 @@ createApp({
             });
         };
 
-        // Sync activeChildId with ujianForm for Wali
-        watch(activeChildId, (newId) => {
-            if (userSession.value?.role === 'wali' && newId) {
+        // Sync activeChildId or User Session with Form IDs
+        watch([activeChildId, userSession], ([newId, session]) => {
+            if (!session) return;
+            
+            // 1. For Wali: Sync with active child selection
+            if (session.role === 'wali' && newId) {
                 const s = uiData.santri.find(x => x._id === newId || x.santri_id === newId);
                 if (s) {
-                    ujian.ujianForm.santri_id = s.santri_id || s._id;
+                    const sid = s.santri_id || s._id;
+                    ujian.ujianForm.santri_id = sid;
+                    setoran.setoranForm.santri_id = sid;
+                }
+            } 
+            // 2. For Santri: Sync with their own identity
+            else if (session.role === 'santri') {
+                const sid = session.username || session.child_id; // Identity standard in this app
+                if (sid) {
+                    ujian.ujianForm.santri_id = sid;
+                    setoran.setoranForm.santri_id = sid;
                 }
             }
-        }, { immediate: true });
+        }, { immediate: true, deep: true });
 
         // Initialize Profile Composable
         const profile = useProfile(uiData, DB, userSession, refreshData);
@@ -733,6 +746,11 @@ createApp({
                 setoranList = setoranList.filter(d => mySantriIds.includes(d.santri_id) || mySantriNISs.includes(d.santri_id));
                 ujianList = ujianList.filter(d => mySantriIds.includes(d.santri_id) || mySantriNISs.includes(d.santri_id));
                 pelanggaranList = pelanggaranList.filter(d => mySantriIds.includes(d.santri_id) || mySantriNISs.includes(d.santri_id));
+
+                // v36: Sync userSession name with master santri data
+                if (santriList.length > 0 && santriList[0].full_name) {
+                    userSession.value.full_name = santriList[0].full_name;
+                }
             }
 
             // 3. Assign to Reactive State

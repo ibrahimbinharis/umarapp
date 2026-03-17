@@ -69,14 +69,18 @@ const SetoranView = {
             <div class="relative">
                 <label class="text-xs font-bold text-slate-600 mb-1 block">Santri</label>
 
-                <!-- Trigger Button -->
-                <button @click="$emit('update:isSetoranSantriDropdownOpen', !isSetoranSantriDropdownOpen)"
+                <!-- Trigger Button (Locked for Santri) -->
+                <button @click="userSession.role !== 'santri' ? $emit('update:isSetoranSantriDropdownOpen', !isSetoranSantriDropdownOpen) : null"
                     class="w-full p-3 border rounded-xl text-sm font-bold bg-white text-left flex justify-between items-center transition"
-                    :class="isSetoranSantriDropdownOpen ? 'ring-2 ring-primary/20 border-primary' : 'border-slate-200'">
+                    :class="[
+                        isSetoranSantriDropdownOpen ? 'ring-2 ring-primary/20 border-primary' : 'border-slate-200',
+                        userSession.role === 'santri' ? 'bg-slate-50 cursor-default' : ''
+                    ]">
                     <span :class="setoranForm.santri_id ? 'text-slate-900' : 'text-slate-400'">
                         {{ setoranForm.santri_id ? setoranSelectedSantriName : '-- Pilih Santri --' }}
                     </span>
-                    <span class="material-symbols-outlined text-slate-400">expand_more</span>
+                    <span v-if="userSession.role !== 'santri'" class="material-symbols-outlined text-slate-400">expand_more</span>
+                    <span v-else class="material-symbols-outlined text-slate-300 text-sm">lock</span>
                 </button>
 
                 <!-- Dropdown Content -->
@@ -408,15 +412,21 @@ const SetoranView = {
                 </div>
             </div>
 
-            <!-- Actions -->
-            <button @click="$emit('reset-setoran')"
-                class="w-full bg-slate-100 text-slate-600 py-2 rounded-xl font-bold shadow-sm text-sm hover:bg-slate-200 transition">
-                Reset Form
-            </button>
-            <button @click="$emit('save-setoran')"
-                class="w-full bg-primary text-white py-3 rounded-xl font-bold shadow-lg text-base hover:bg-blue-800 transition">
-                Simpan Setoran
-            </button>
+            <!-- Actions (Restricted for Santri) -->
+            <template v-if="userSession.role === 'admin' || userSession.role === 'guru' || appConfig?.isHolidayMode">
+                <button @click="$emit('reset-setoran')"
+                    class="w-full bg-slate-100 text-slate-600 py-2 rounded-xl font-bold shadow-sm text-sm hover:bg-slate-200 transition">
+                    Reset Form
+                </button>
+                <button @click="$emit('save-setoran')"
+                    class="w-full bg-primary text-white py-3 rounded-xl font-bold shadow-lg text-base hover:bg-blue-800 transition">
+                    Simpan Setoran
+                </button>
+            </template>
+            <div v-else-if="userSession.role === 'santri'" class="bg-amber-50 p-4 rounded-xl border border-amber-100 flex items-center gap-3">
+                <span class="material-symbols-outlined text-amber-600">lock</span>
+                <p class="text-[10px] font-bold text-amber-800 leading-tight">Input mandiri hanya aktif saat Masa Liburan. Silahkan hubungi Guru untuk update hari ini.</p>
+            </div>
         </div>
 
         <!-- Recent History -->
@@ -452,8 +462,8 @@ const SetoranView = {
                                 class="size-8 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-600 transition">
                                 <span class="material-symbols-outlined text-lg">more_vert</span>
                             </button>
-                            <!-- Dropdown -->
-                            <div v-if="isMenuOpen(r._id)" @click.stop
+                            <!-- Dropdown (Restricted for Santri except in Holiday Mode) -->
+                            <div v-if="isMenuOpen(r._id) && (userSession.role === 'admin' || userSession.role === 'guru' || (userSession.role === 'santri' && appConfig.isHolidayMode))" @click.stop
                                 class="absolute right-0 top-10 bg-white rounded-xl shadow-lg border z-50 py-1 min-w-[120px]">
                                 <button @click="$emit('edit-setoran', r); $emit('toggle-menu', r._id)"
                                     class="w-full px-4 py-2 text-left text-sm hover:bg-blue-50 text-blue-600 flex items-center gap-2">

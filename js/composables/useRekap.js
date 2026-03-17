@@ -176,11 +176,11 @@ const useRekap = (uiData, userSession) => {
                 kelas: s.kelas,
 
                 show_sabaq: rekapSettings.visibility.sabaq,
-                sabaq_act: perf.sabaq.actual,
+                sabaq_act: parseFloat(perf.sabaq.actual.toFixed(1)),
                 sabaq_tgt: perf.sabaq.target,
 
                 show_manzil: rekapSettings.visibility.manzil,
-                manzil_act: perf.manzil.actual,
+                manzil_act: parseFloat(perf.manzil.actual.toFixed(1)),
                 manzil_tgt: perf.manzil.target,
 
                 show_ujian: rekapSettings.visibility.ujian,

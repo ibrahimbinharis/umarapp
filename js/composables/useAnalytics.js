@@ -195,7 +195,21 @@ function useAnalytics(uiData, userSession) {
             ujian.push(dayUjianCount > 0 ? parseFloat((dayUjianSum / dayUjianCount).toFixed(1)) : 0);
         }
 
-        return { labels, sabaq, manzil, tilawah, ujian };
+        return { 
+            labels, 
+            sabaq, 
+            manzil, 
+            tilawah, 
+            ujian,
+            totalSabaq: parseFloat(sabaq.reduce((a, b) => a + b, 0).toFixed(1)),
+            totalManzil: parseFloat(manzil.reduce((a, b) => a + b, 0).toFixed(1)),
+            totalTilawah: parseFloat(tilawah.reduce((a, b) => a + b, 0).toFixed(1)),
+            avgUjian: (() => {
+                const nonZero = ujian.filter(v => v > 0);
+                if (nonZero.length === 0) return 0;
+                return parseFloat((nonZero.reduce((a, b) => a + b, 0) / nonZero.length).toFixed(1));
+            })()
+        };
     };
 
     /**

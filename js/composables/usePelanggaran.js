@@ -112,6 +112,12 @@ function usePelanggaran(uiData, DB, refreshData) {
      * Validates required fields and saves to DB
      */
     const submitPelanggaran = async () => {
+        // --- Role Protection (v36) ---
+        if (userSession.value?.role !== 'admin' && userSession.value?.role !== 'guru') {
+            window.showAlert("Anda tidak memiliki akses untuk tindakan ini.", "Ditolak", "danger");
+            return;
+        }
+
         // Validation
         if (!pelanggaranForm.santri_id) {
             window.showAlert('Pilih santri terlebih dahulu', 'Peringatan', 'warning');
@@ -172,6 +178,9 @@ function usePelanggaran(uiData, DB, refreshData) {
     };
 
     const editPelanggaran = (item) => {
+        // --- Role Protection (v36) ---
+        if (userSession.value?.role !== 'admin' && userSession.value?.role !== 'guru') return;
+
         if (!item) return;
         editingId.value = item._id;
         pelanggaranForm.santri_id = item.santri_id;
@@ -202,6 +211,12 @@ function usePelanggaran(uiData, DB, refreshData) {
      * @param {string} id - Record ID to delete
      */
     const deletePelanggaran = async (id) => {
+        // --- Role Protection (v36) ---
+        if (userSession.value?.role !== 'admin' && userSession.value?.role !== 'guru') {
+            window.showAlert("Anda tidak memiliki akses untuk tindakan ini.", "Ditolak", "danger");
+            return;
+        }
+
         window.showConfirm({
             title: 'Hapus Pelanggaran',
             message: 'Hapus data pelanggaran ini?',
@@ -249,6 +264,12 @@ function usePelanggaran(uiData, DB, refreshData) {
      * Save master pelanggaran type (CRUD)
      */
     const saveMasterPelanggaran = async () => {
+        // --- Role Protection (v36) ---
+        if (userSession.value?.role !== 'admin' && userSession.value?.role !== 'guru') {
+            window.showAlert("Hanya Admin/Guru yang dapat mengelola jenis pelanggaran.", "Ditolak", "danger");
+            return { success: false };
+        }
+
         return window.withSaving(async () => {
             if (!masterPelanggaranForm.name) { window.showAlert('Nama pelanggaran wajib diisi', 'Peringatan', 'warning'); return; }
             if (!masterPelanggaranForm.points || masterPelanggaranForm.points < 0) { window.showAlert('Poin harus diisi dengan angka positif', 'Peringatan', 'warning'); return; }
@@ -274,6 +295,12 @@ function usePelanggaran(uiData, DB, refreshData) {
      * @param {string} id - Master type ID to delete
      */
     const deleteMasterPelanggaran = async (id) => {
+        // --- Role Protection (v36) ---
+        if (userSession.value?.role !== 'admin' && userSession.value?.role !== 'guru') {
+             window.showAlert("Hanya Admin/Guru yang dapat mengelola jenis pelanggaran.", "Ditolak", "danger");
+             return;
+        }
+
         window.showConfirm({
             title: 'Hapus Jenis',
             message: 'Hapus jenis pelanggaran ini?',

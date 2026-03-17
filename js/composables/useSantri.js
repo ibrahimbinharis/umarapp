@@ -180,6 +180,12 @@ function useSantri(uiData, DB, userSession, modalState, refreshData, searchText)
     };
 
     const saveSantri = async () => {
+        // --- Role Protection (v36) ---
+        if (userSession.value?.role !== 'admin' && userSession.value?.role !== 'guru') {
+            window.showAlert("Anda tidak memiliki akses untuk melakukan tindakan ini.", "Akses Ditolak", "danger");
+            return;
+        }
+
         return window.withSaving(async () => {
             if (!santriForm.full_name) return window.showAlert("Nama Lengkap wajib diisi", "Peringatan", "warning");
             if (!santriForm.class_id) return window.showAlert("Kelas wajib dipilih", "Peringatan", "warning");
@@ -234,6 +240,12 @@ function useSantri(uiData, DB, userSession, modalState, refreshData, searchText)
     };
 
     const deleteSantri = async (item) => {
+        // --- Role Protection (v36) ---
+        if (userSession.value?.role !== 'admin' && userSession.value?.role !== 'guru') {
+            window.showAlert("Anda tidak memiliki akses untuk melakukan tindakan ini.", "Akses Ditolak", "danger");
+            return;
+        }
+
         window.showConfirm({
             title: 'Hapus Santri',
             message: `Hapus santri ${item.full_name}? SEMUA data terkait akan dipindahkan ke sampah (Soft Delete).`,
@@ -287,6 +299,12 @@ function useSantri(uiData, DB, userSession, modalState, refreshData, searchText)
     };
 
     const restoreSantri = async (item) => {
+        // --- Role Protection (v36) ---
+        if (userSession.value?.role !== 'admin' && userSession.value?.role !== 'guru') {
+            window.showAlert("Anda tidak memiliki akses untuk melakukan tindakan ini.", "Akses Ditolak", "danger");
+            return;
+        }
+
         window.showConfirm({
             title: 'Kembalikan Santri',
             message: `Kembalikan santri ${item.full_name} beserta seluruh datanya?`,

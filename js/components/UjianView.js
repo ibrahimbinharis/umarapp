@@ -86,8 +86,8 @@ const UjianView = {
         </div>
 
         <div class="grid md:grid-cols-3 gap-6">
-            <!-- Main Form -->
-            <div class="md:col-span-2 space-y-4">
+            <!-- Main Form (Restricted to Admin/Guru) -->
+            <div v-if="userSession.role === 'admin' || userSession.role === 'guru'" class="md:col-span-2 space-y-4">
                 <div class="bg-white p-5 rounded-2xl border border-slate-100 card-shadow space-y-4">
                     <h3 class="font-bold text-slate-800 border-b pb-2 mb-2">Form Input {{
                         ujianForm.tab === 'bulanan' ? 'Bulanan' : 'Semester' }}</h3>
@@ -108,15 +108,19 @@ const UjianView = {
                             <label class="block text-xs font-bold text-slate-700 mb-1">Santri</label>
                             <!-- Custom Searchable Dropdown (Setoran Style) -->
                             <div class="relative">
-                                <!-- Trigger Button -->
-                                <button @click="isDropdownOpen = !isDropdownOpen"
-                                     class="w-full px-4 py-3 rounded-xl border text-sm font-bold bg-white text-left flex justify-between items-center transition"
-                                     :class="isDropdownOpen ? 'ring-2 ring-primary/20 border-primary' : 'border-slate-200'">
-                                    <span :class="!ujianForm.santri_id ? 'text-slate-400' : 'text-slate-900'">
-                                        {{ selectedSantriLabel }}
-                                    </span>
-                                    <span class="material-symbols-outlined text-slate-400">expand_more</span>
-                                </button>
+                                 <!-- Trigger Button (Locked for Santri) -->
+                                 <button @click="userSession.role !== 'santri' ? isDropdownOpen = !isDropdownOpen : null"
+                                      class="w-full px-4 py-3 rounded-xl border text-sm font-bold bg-white text-left flex justify-between items-center transition"
+                                      :class="[
+                                         isDropdownOpen ? 'ring-2 ring-primary/20 border-primary' : 'border-slate-200',
+                                         userSession.role === 'santri' ? 'bg-slate-50 cursor-default' : ''
+                                      ]">
+                                     <span :class="!ujianForm.santri_id ? 'text-slate-400' : 'text-slate-900'">
+                                         {{ selectedSantriLabel }}
+                                     </span>
+                                     <span v-if="userSession.role !== 'santri'" class="material-symbols-outlined text-slate-400">expand_more</span>
+                                     <span v-else class="material-symbols-outlined text-slate-300 text-sm">lock</span>
+                                 </button>
 
                                 <!-- Backdrop (Click Outside) -->
                                 <div v-if="isDropdownOpen" @click="isDropdownOpen = false" class="fixed inset-0 z-10 bg-transparent cursor-default"></div>
@@ -355,8 +359,19 @@ const UjianView = {
                 </div>
             </div>
 
+            <!-- Lock Message for Santri/Wali -->
+            <div v-else class="md:col-span-2 space-y-4">
+                <div class="bg-white p-8 rounded-2xl border border-slate-100 card-shadow flex flex-col items-center text-center">
+                    <div class="size-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mb-4">
+                         <span class="material-symbols-outlined text-3xl">lock</span>
+                    </div>
+                    <h3 class="font-bold text-slate-800 mb-2">Akses Terbatas</h3>
+                    <p class="text-xs text-slate-500 max-w-xs">Hanya Admin dan Guru yang dapat memasukkan nilai ujian. Anda dapat melihat riwayat ujian pada panel di samping.</p>
+                </div>
+            </div>
+
             <!-- Sidebar History -->
-            <div class="bg-white p-4 rounded-2xl border border-slate-100 card-shadow h-fit">
+            <div class="md:col-span-1 bg-white p-4 rounded-2xl border border-slate-100 card-shadow h-fit">
                 <h3
                     class="font-bold border-b border-slate-100 pb-3 mb-3 text-sm flex items-center gap-2">
                     <span class="material-symbols-outlined text-slate-400 text-sm">history</span>

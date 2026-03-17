@@ -8,6 +8,7 @@ const RiwayatView = {
         filterCounts: { type: Object, default: () => ({}) }, // Optional
         activeFilterCount: { type: Number, default: 0 }, // Optional
         userSession: { type: Object, required: true },
+        appConfig: { type: Object, required: true },
         santriByLetter: { type: Array, default: () => [] },
 
         // Methods passed as props
@@ -369,8 +370,8 @@ const RiwayatView = {
         </teleport>
 
         <div class="bg-white rounded-xl border shadow-sm overflow-hidden mb-20 mx-2">
-            <!-- Bulk Action Bar (Hide for Wali) -->
-            <div v-if="riwayatState.selectedIds.length > 0 && userSession?.role !== 'wali'"
+            <!-- Bulk Action Bar (Strictly Admin/Guru) -->
+            <div v-if="riwayatState.selectedIds.length > 0 && (userSession.role === 'admin' || userSession.role === 'guru')"
                 class="p-2 pl-4 bg-red-50 border-b border-red-100 flex items-center animate-fade-in">
                 <button @click="deleteSelected"
                     class="text-xs bg-red-600 text-white px-3 py-1.5 rounded-lg font-bold hover:bg-red-700 transition flex items-center gap-1 shadow-sm">
@@ -383,7 +384,7 @@ const RiwayatView = {
                 <table class="w-full text-left border-collapse min-w-[600px]">
                     <thead class="bg-slate-50 text-slate-500 uppercase text-[10px] font-black tracking-wider border-b border-slate-100">
                         <tr>
-                            <th v-if="userSession?.role !== 'wali'" class="px-4 py-4 w-12 text-center">
+                             <th v-if="userSession.role === 'admin' || userSession.role === 'guru'" class="px-4 py-4 w-12 text-center">
                                 <input type="checkbox" @change="toggleSelectAll(paginatedRiwayat)"
                                     :checked="paginatedRiwayat.length > 0 && paginatedRiwayat.every(i => riwayatState.selectedIds.includes(i._id))"
                                     class="rounded border-slate-300 text-primary focus:ring-primary size-4">
@@ -393,7 +394,7 @@ const RiwayatView = {
                             <th class="px-4 py-4 w-32 text-center">Kategori</th>
                             <th class="px-4 py-4">Keterangan</th>
                             <th class="px-4 py-4 w-20 text-center">Hasil</th>
-                            <th v-if="userSession?.role !== 'wali'" class="px-4 py-4 w-12 text-center">Aksi</th>
+                            <th v-if="userSession.role === 'admin' || userSession.role === 'guru' || (userSession.role === 'santri' && appConfig.isHolidayMode)" class="px-4 py-4 w-12 text-center font-bold">Aksi</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-50">
@@ -401,8 +402,8 @@ const RiwayatView = {
                             class="hover:bg-slate-50/80 transition-colors group"
                             :class="item.__cat === 'pelanggaran' ? 'bg-red-50/20' : ''">
                             
-                            <!-- Checkbox -->
-                            <td v-if="userSession?.role !== 'wali'" class="px-4 py-4 text-center">
+                            <!-- Checkbox (Strictly Admin/Guru) -->
+                            <td v-if="userSession.role === 'admin' || userSession.role === 'guru'" class="px-4 py-4 text-center">
                                 <input type="checkbox"
                                     :checked="riwayatState.selectedIds.includes(item._id)"
                                     @change="toggleSelect(item._id)"
@@ -506,8 +507,8 @@ const RiwayatView = {
                                 </div>
                             </td>
 
-                            <!-- Aksi -->
-                            <td v-if="userSession?.role !== 'wali'" class="px-4 py-4 text-center relative">
+                            <!-- Aksi (Strictly Admin/Guru or Santri in Holiday Mode) -->
+                            <td v-if="userSession.role === 'admin' || userSession.role === 'guru' || (userSession.role === 'santri' && appConfig.isHolidayMode)" class="px-4 py-4 text-center relative">
                                 <button @click.stop="toggleActionMenu(item._id)"
                                     class="size-8 rounded-full flex items-center justify-center text-slate-400 hover:bg-white hover:text-primary hover:shadow-sm border border-transparent hover:border-slate-100 transition-all active:scale-90 shadow-none">
                                     <span class="material-symbols-outlined text-lg">more_vert</span>

@@ -269,7 +269,14 @@ const ProfileView = {
                 <div class="space-y-4">
                     <div>
                         <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">Nama Lengkap</label>
-                        <input v-model="profileForm.full_name" type="text"
+                        
+                        <!-- v36: Lock name for Santri (User Request v36.2) -->
+                        <div v-if="userSession.role === 'santri'" class="w-full px-4 py-3 rounded-2xl border border-slate-100 bg-slate-50 text-slate-500 font-bold text-sm flex items-center justify-between">
+                            <span>{{ profileForm.full_name }}</span>
+                            <span class="material-symbols-outlined text-slate-300 text-sm">lock</span>
+                        </div>
+
+                        <input v-else v-model="profileForm.full_name" type="text"
                             class="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:outline-none focus:border-primary focus:ring-4 focus:ring-blue-500/10 bg-slate-50/50 text-slate-700 transition-all">
                     </div>
 

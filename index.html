@@ -218,7 +218,7 @@
                             :top-santri-filter="topSantriFilter" :filtered-top-santri="filteredTopSantri"
                             :notifications="allNotifications" :unread-count="unreadCount" :ui-data="uiData"
                             :active-child-id="activeChildId" :select-child="selectChild" :app-config="appConfig"
-                            @update:activity-filter="activityFilter = $event"
+                            :rekap-settings="rekapSettings" @update:activity-filter="activityFilter = $event"
                             @update:top-santri-filter="topSantriFilter = $event" @mark-read="markAsRead"
                             @mark-all-read="markAllRead" @navigate="navigateTo"></dashboard-view>
                     </div>
@@ -404,7 +404,7 @@
                             :riwayat-total-pages="riwayatTotalPages"
                             :riwayat-filtered-santri-options="riwayatFilteredSantriOptions"
                             :riwayat-selected-santri-name="riwayatSelectedSantriName" :filter-counts="filterCounts"
-                            :active-filter-count="activeFilterCount" :user-session="userSession"
+                            :active-filter-count="activeFilterCount" :user-session="userSession" :app-config="appConfig"
                             :santri-by-letter="santriByLetter" :format-date-long="formatDateLong"
                             :format-time="formatTime" :get-santri-name="getSantriName"
                             :get-juz-from-page="getJuzFromPage" :select-riwayat-santri="selectRiwayatSantri"
@@ -1632,7 +1632,7 @@
 
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js?v=1.9').then(reg => {
+                navigator.serviceWorker.register('sw.js?v=2.0').then(reg => {
                     console.log('SW Registered!', reg);
 
                     // 1. Check if update is already waiting (e.g. from previous visit)

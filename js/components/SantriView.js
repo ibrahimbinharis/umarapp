@@ -142,7 +142,7 @@ const SantriView = {
 
         <!-- Floating Action Buttons -->
         <teleport to="body">
-            <div class="fixed bottom-24 right-4 flex flex-col gap-3 z-[9999]" v-if="uiData.santri && !isModalOpen">
+            <div class="fixed bottom-24 right-4 flex flex-col gap-3 z-[9999]" v-if="uiData.santri && !isModalOpen && (userSession.role === 'admin' || userSession.role === 'guru')">
                 <button @click="$emit('toggle-trash')"
                     :class="showTrash ? 'bg-red-500 text-white shadow-xl' : 'bg-white text-slate-400 shadow-lg'"
                     class="size-12 rounded-full flex items-center justify-center transition hover:scale-110 active:scale-95 border border-slate-100">
@@ -273,14 +273,16 @@ const SantriView = {
                                 class="flex items-center gap-2 px-4 py-1.5 text-xs font-bold text-slate-600 hover:bg-green-50 hover:text-green-600 transition text-left">
                                 <span class="material-symbols-outlined text-base">chat</span> WhatsApp
                             </a>
-                            <button @click="$emit('open-modal', item); $emit('toggle-dropdown', null)"
-                                class="flex items-center gap-2 px-4 py-1.5 text-xs font-bold text-slate-600 hover:bg-blue-50 hover:text-blue-600 transition text-left w-full">
-                                <span class="material-symbols-outlined text-base">edit</span> Edit
-                            </button>
-                            <button @click="$emit('delete', item); $emit('toggle-dropdown', null)"
-                                class="flex items-center gap-2 px-4 py-1.5 text-xs font-bold text-slate-600 hover:bg-red-50 hover:text-red-500 transition text-left w-full">
-                                <span class="material-symbols-outlined text-base">delete</span> Hapus
-                            </button>
+                            <template v-if="userSession.role === 'admin' || userSession.role === 'guru'">
+                                <button @click="$emit('open-modal', item); $emit('toggle-dropdown', null)"
+                                    class="flex items-center gap-2 px-4 py-1.5 text-xs font-bold text-slate-600 hover:bg-blue-50 hover:text-blue-600 transition text-left w-full">
+                                    <span class="material-symbols-outlined text-base">edit</span> Edit
+                                </button>
+                                <button @click="$emit('delete', item); $emit('toggle-dropdown', null)"
+                                    class="flex items-center gap-2 px-4 py-1.5 text-xs font-bold text-slate-600 hover:bg-red-50 hover:text-red-500 transition text-left w-full">
+                                    <span class="material-symbols-outlined text-base">delete</span> Hapus
+                                </button>
+                            </template>
                         </template>
                         <template v-else>
                             <button @click="$emit('restore', item); $emit('toggle-dropdown', null)"

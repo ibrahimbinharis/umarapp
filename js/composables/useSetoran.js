@@ -791,6 +791,16 @@ function useSetoran(uiData, DB, refreshData, userSession, appConfig) {
             return;
         }
 
+        // --- Role Protection (v36) ---
+        const role = userSession.value?.role;
+        const isHoliday = appConfig?.value?.isHolidayMode;
+        
+        // Only Admin, Guru, OR Santri during Holiday Mode can save
+        if (role !== 'admin' && role !== 'guru' && !(role === 'santri' && isHoliday)) {
+            window.showAlert("Anda tidak memiliki akses untuk menyimpan data saat ini.", "Dilarang", "danger");
+            return;
+        }
+
         return window.withSaving(async () => {
             try {
                 // Build payload
@@ -888,6 +898,15 @@ function useSetoran(uiData, DB, refreshData, userSession, appConfig) {
      */
     const deleteSetoran = async (setoranId) => {
         if (!setoranId) return;
+
+        // --- Role Protection (v36) ---
+        const role = userSession.value?.role;
+        const isHoliday = appConfig?.value?.isHolidayMode;
+        
+        if (role !== 'admin' && role !== 'guru' && !(role === 'santri' && isHoliday)) {
+            window.showAlert("Anda tidak memiliki akses untuk menghapus data saat ini.", "Dilarang", "danger");
+            return;
+        }
 
         window.showConfirm({
             title: 'Hapus Setoran',
