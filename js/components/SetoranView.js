@@ -462,8 +462,8 @@ const SetoranView = {
                                 class="size-8 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-600 transition">
                                 <span class="material-symbols-outlined text-lg">more_vert</span>
                             </button>
-                            <!-- Dropdown (Restricted for Santri except in Holiday Mode) -->
-                            <div v-if="isMenuOpen(r._id) && (userSession.role === 'admin' || userSession.role === 'guru' || (userSession.role === 'santri' && appConfig.isHolidayMode))" @click.stop
+                            <!-- Dropdown (Restricted for Santri/Wali except in Holiday Mode) -->
+                            <div v-if="isMenuOpen(r._id) && (userSession.role === 'admin' || userSession.role === 'guru' || ((userSession.role === 'santri' || userSession.role === 'wali') && appConfig.isHolidayMode))" @click.stop
                                 class="absolute right-0 top-10 bg-white rounded-xl shadow-lg border z-50 py-1 min-w-[120px]">
                                 <button @click="$emit('edit-setoran', r); $emit('toggle-menu', r._id)"
                                     class="w-full px-4 py-2 text-left text-sm hover:bg-blue-50 text-blue-600 flex items-center gap-2">

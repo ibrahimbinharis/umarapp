@@ -394,7 +394,7 @@ const RiwayatView = {
                             <th class="px-4 py-4 w-32 text-center">Kategori</th>
                             <th class="px-4 py-4">Keterangan</th>
                             <th class="px-4 py-4 w-20 text-center">Hasil</th>
-                            <th v-if="userSession.role === 'admin' || userSession.role === 'guru' || (userSession.role === 'santri' && appConfig.isHolidayMode)" class="px-4 py-4 w-12 text-center font-bold">Aksi</th>
+                            <th v-if="userSession.role === 'admin' || userSession.role === 'guru' || ((userSession.role === 'santri' || userSession.role === 'wali') && appConfig.isHolidayMode)" class="px-4 py-4 w-12 text-center font-bold">Aksi</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-50">
@@ -507,8 +507,8 @@ const RiwayatView = {
                                 </div>
                             </td>
 
-                            <!-- Aksi (Strictly Admin/Guru or Santri in Holiday Mode) -->
-                            <td v-if="userSession.role === 'admin' || userSession.role === 'guru' || (userSession.role === 'santri' && appConfig.isHolidayMode)" class="px-4 py-4 text-center relative">
+                            <!-- Aksi (Strictly Admin/Guru or Santri/Wali in Holiday Mode) -->
+                            <td v-if="userSession.role === 'admin' || userSession.role === 'guru' || ((userSession.role === 'santri' || userSession.role === 'wali') && appConfig.isHolidayMode)" class="px-4 py-4 text-center relative">
                                 <button @click.stop="toggleActionMenu(item._id)"
                                     class="size-8 rounded-full flex items-center justify-center text-slate-400 hover:bg-white hover:text-primary hover:shadow-sm border border-transparent hover:border-slate-100 transition-all active:scale-90 shadow-none">
                                     <span class="material-symbols-outlined text-lg">more_vert</span>
