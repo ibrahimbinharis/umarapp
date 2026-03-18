@@ -180,6 +180,7 @@ const useAuth = (currentView, loading) => {
                     console.error("SignOut error:", e);
                 } finally {
                     localStorage.removeItem('tahfidz_session');
+                    sessionStorage.removeItem('onboarding_shown'); // v36: Reset onboarding popup state on logout
                     userSession.value = null;
                     currentView.value = 'login';
                     loginForm.username = '';

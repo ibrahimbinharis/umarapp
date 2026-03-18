@@ -190,16 +190,18 @@ const DashboardView = {
                 activityChart.destroy();
             }
 
-            const labels = props.dashboardStats.weeklyActivity.labels.length > 0
-                ? props.dashboardStats.weeklyActivity.labels
+            const weekly = props.dashboardStats.weeklyActivity || {};
+
+            const labels = (weekly.labels && weekly.labels.length > 0)
+                ? weekly.labels
                 : ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Ahad'];
 
-            const sabaqData = props.dashboardStats.weeklyActivity.sabaq.length > 0
-                ? props.dashboardStats.weeklyActivity.sabaq
+            const sabaqData = (weekly.sabaq && weekly.sabaq.length > 0)
+                ? weekly.sabaq
                 : [0, 0, 0, 0, 0, 0, 0];
 
-            const manzilData = props.dashboardStats.weeklyActivity.manzil.length > 0
-                ? props.dashboardStats.weeklyActivity.manzil
+            const manzilData = (weekly.manzil && weekly.manzil.length > 0)
+                ? weekly.manzil
                 : [0, 0, 0, 0, 0, 0, 0];
 
             const datasets = [];
@@ -239,28 +241,10 @@ const DashboardView = {
             }
 
             if ((chartFilter.value === 'all' || chartFilter.value === 'tilawah') && props.rekapSettings?.visibility?.tilawah) {
-                const tilawahData = props.dashboardStats.weeklyActivity.tilawah.length > 0 ? props.dashboardStats.weeklyActivity.tilawah : [0, 0, 0, 0, 0, 0, 0];
+                const tilawahData = (weekly.tilawah && weekly.tilawah.length > 0) ? weekly.tilawah : [0, 0, 0, 0, 0, 0, 0];
                 datasets.push({
                     label: 'Tilawah (Juz)',
                     data: tilawahData,
-                    borderColor: 'rgba(168, 85, 247, 1)',
-                    backgroundColor: 'rgba(168, 85, 247, 1)',
-                    fill: false,
-                    tension: 0.4,
-                    pointRadius: 0,
-                    pointHoverRadius: 4,
-                    pointBackgroundColor: 'rgba(168, 85, 247, 1)',
-                    pointBorderColor: '#fff',
-                    pointBorderWidth: 2,
-                    borderWidth: 2
-                });
-            }
-
-            if ((chartFilter.value === 'all' || chartFilter.value === 'ujian') && props.rekapSettings?.visibility?.ujian) {
-                const ujianData = props.dashboardStats.weeklyActivity.ujian.length > 0 ? props.dashboardStats.weeklyActivity.ujian : [0, 0, 0, 0, 0, 0, 0];
-                datasets.push({
-                    label: 'Ujian (Nilai)',
-                    data: ujianData,
                     borderColor: 'rgba(245, 158, 11, 1)',
                     backgroundColor: 'rgba(245, 158, 11, 1)',
                     fill: false,
@@ -268,6 +252,24 @@ const DashboardView = {
                     pointRadius: 0,
                     pointHoverRadius: 4,
                     pointBackgroundColor: 'rgba(245, 158, 11, 1)',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    borderWidth: 2
+                });
+            }
+
+            if ((chartFilter.value === 'all' || chartFilter.value === 'ujian') && props.rekapSettings?.visibility?.ujian) {
+                const ujianData = (weekly.ujian && weekly.ujian.length > 0) ? weekly.ujian : [0, 0, 0, 0, 0, 0, 0];
+                datasets.push({
+                    label: 'Ujian (Nilai)',
+                    data: ujianData,
+                    borderColor: 'rgba(99, 102, 241, 1)',
+                    backgroundColor: 'rgba(99, 102, 241, 1)',
+                    fill: false,
+                    tension: 0.4,
+                    pointRadius: 0,
+                    pointHoverRadius: 4,
+                    pointBackgroundColor: 'rgba(99, 102, 241, 1)',
                     pointBorderColor: '#fff',
                     pointBorderWidth: 2,
                     borderWidth: 2
@@ -459,6 +461,29 @@ const DashboardView = {
             if (props.userSession?.role === 'wali' && !props.activeChildId && props.uiData?.santri?.length > 0) {
                 props.selectChild(props.uiData.santri[0]._id || props.uiData.santri[0].santri_id);
             }
+
+            // v36: Onboarding Popup for Wali with NO linked santri (User Request v36.2)
+            // Added sessionStorage check to prevent it from appearing every time we switch menus (v36.3)
+            const hasShownOnboarding = sessionStorage.getItem('onboarding_shown');
+            
+            if (props.userSession?.role === 'wali' && (!props.uiData?.santri || props.uiData.santri.length === 0) && !hasShownOnboarding) {
+                setTimeout(() => {
+                    // Mark as shown immediately so navigation doesn't trigger it again
+                    sessionStorage.setItem('onboarding_shown', 'true');
+
+                    window.showConfirm({
+                        title: 'NIS Belum Terhubung',
+                        message: 'Data Belum Tersedia, Masukkan NIS santri untuk mulai memantau secara realtime.',
+                        confirmText: 'Hubungkan',
+                        cancelText: 'Nanti Saja',
+                        type: 'info',
+                        onConfirm: () => {
+                            emit('navigate', 'connect_santri');
+                        }
+                    });
+                }, 1000); // 1s delay for better UX
+            }
+
             initCharts();
             initGenderChart();
             runAllAnimations(); // Trigger on initial load

@@ -252,8 +252,8 @@ const RekapView = {
             const config = {
                 sabaq: { label: 'Halaman Sabaq', color: 'rgba(30, 64, 175, 1)' },
                 manzil: { label: 'Halaman Manzil', color: 'rgba(16, 185, 129, 1)' },
-                tilawah: { label: 'Juz Tilawah', color: 'rgba(168, 85, 247, 1)' },
-                ujian: { label: 'Nilai Ujian', color: 'rgba(245, 158, 11, 1)' }
+                tilawah: { label: 'Juz Tilawah', color: 'rgba(245, 158, 11, 1)' },
+                ujian: { label: 'Nilai Ujian', color: 'rgba(99, 102, 241, 1)' }
             };
 
             let datasets = [];
@@ -577,14 +577,14 @@ const RekapView = {
                                         row.sabaq_tgt }} <span class="text-[9px] font-normal">Hal</span></div>
                                 </td>
                                 <td v-if="row.show_manzil" class="px-4 py-3 text-center">
-                                    <div class="font-bold text-purple-600">{{ row.manzil_act }} / {{
+                                    <div class="font-bold text-emerald-600">{{ row.manzil_act }} / {{
                                         row.manzil_tgt }} <span class="text-[9px] font-normal">Hal</span></div>
                                 </td>
-                                <td v-if="row.show_ujian" class="px-4 py-3 text-center font-bold">
+                                <td v-if="row.show_ujian" class="px-4 py-3 text-center font-bold text-indigo-600">
                                     {{ row.ujian_avg }}
                                 </td>
                                 <td v-if="row.show_tilawah" class="px-4 py-3 text-center">
-                                    <div class="font-bold text-emerald-600">{{ row.tilawah_act }} / {{
+                                    <div class="font-bold text-amber-500">{{ row.tilawah_act }} / {{
                                         row.tilawah_tgt }} <span class="text-[9px] font-normal">Juz</span></div>
                                 </td>
                                 <td class="px-4 py-3 text-center text-red-500 font-bold">

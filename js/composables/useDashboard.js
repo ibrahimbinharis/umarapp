@@ -144,8 +144,8 @@ function useDashboard(uiData, userSession, activeChildId, appConfig) {
                 ? userSession.value.username
                 : (overrideChildId || activeChildId.value || userSession.value.child_id);
 
-            let santri = allSantris.find(s => s._id === targetId || s.santri_id === targetId || s.nis === targetId);
-            if (!santri && allSantris.length > 0) santri = allSantris[0];
+            // v36: Use uiData.santri (linked list) instead of allSantris (global list) for Personal lookup
+            let santri = (uiData.santri || []).find(s => s._id === targetId || s.santri_id === targetId || s.nis === targetId);
 
             if (santri) {
                 const perf = analytics.calculateStudentPerformance(santri, context, settings);
@@ -166,6 +166,33 @@ function useDashboard(uiData, userSession, activeChildId, appConfig) {
                 dashboardStats.weeklyActivity = trend;
                 dashboardStats.totalSabaq = trend.totalSabaq; // Update total for summary card
                 dashboardStats.totalManzil = trend.totalManzil; // Update total for summary card
+            } else {
+                // v36: Clear stats if no linked child found or unlinked
+                dashboardStats.juzCompleted = 0;
+                dashboardStats.juzRemaining = 30;
+                dashboardStats.monthlyTarget = {
+                    sabaqCurrent: 0,
+                    sabaqTarget: 20,
+                    manzilCurrent: 0,
+                    manzilTarget: 10,
+                    tilawahCurrent: 0,
+                    tilawahTarget: 1,
+                    ujianCurrent: 0,
+                    diffLabel: 'No Data'
+                };
+                dashboardStats.weeklyActivity = { 
+                    labels: [], 
+                    sabaq: [], 
+                    manzil: [], 
+                    tilawah: [], 
+                    ujian: [], 
+                    totalSabaq: 0, 
+                    totalManzil: 0,
+                    totalTilawah: 0,
+                    avgUjian: 0
+                };
+                dashboardStats.totalSabaq = 0;
+                dashboardStats.totalManzil = 0;
             }
         } else {
             // Admin/Guru: Average

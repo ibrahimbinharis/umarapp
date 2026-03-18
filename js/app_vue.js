@@ -773,11 +773,15 @@ createApp({
             uiData.settings = activeData.filter(d => d.__type === 'settings');
 
             // Initialize or Validate activeChildId for Wali
-            if (userSession.value?.role === 'wali' && santriList.length > 0) {
-                const validIds = santriList.map(s => s._id).concat(santriList.map(s => s.santri_id));
+            if (userSession.value?.role === 'wali') {
+                const validIds = (santriList || []).map(s => s._id).concat((santriList || []).map(s => s.santri_id));
                 const isValid = activeChildId.value && validIds.some(id => String(id) === String(activeChildId.value));
 
-                if (!activeChildId.value || !isValid) {
+                if (santriList.length === 0) {
+                    console.log("[Wali] No linked santri. Clearing active child.");
+                    activeChildId.value = null;
+                    localStorage.removeItem('active_child_id');
+                } else if (!activeChildId.value || !isValid) {
                     const firstId = santriList[0]._id || santriList[0].santri_id;
                     console.log(`[Wali] Resetting active child to: ${firstId} (Previous: ${activeChildId.value})`);
                     activeChildId.value = firstId;
