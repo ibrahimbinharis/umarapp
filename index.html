@@ -40,6 +40,7 @@
     <!-- PWA -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#1E40AF">
+    <link rel="icon" type="image/png" href="image/logo_new.png">
     <link rel="apple-touch-icon" href="image/logo_new.png">
     <style>
         .toast-slide-enter-active,
@@ -1635,7 +1636,7 @@
 
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js?v=2.3').then(reg => {
+                navigator.serviceWorker.register('sw.js?v=2.1').then(reg => {
                     console.log('SW Registered!', reg);
 
                     // 1. Check if update is already waiting (e.g. from previous visit)
