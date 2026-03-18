@@ -1,4 +1,4 @@
-const CACHE_NAME = "v2.2";
+const CACHE_NAME = "v2.3";
 const ASSETS_TO_CACHE = [
     "./",
     "./index.html",
@@ -7,6 +7,9 @@ const ASSETS_TO_CACHE = [
     "./image/logo_new.png",
     "./image/192pxlogo_new.png",
     "./image/512pxlogo_new.png",
+
+    // External Libs
+    "https://cdn.jsdelivr.net/npm/idb-keyval@6/dist/umd.js",
 
     // Core Logic
     "./js/core.js",

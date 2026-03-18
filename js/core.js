@@ -15,9 +15,9 @@ const sb = createClient(APP_CONFIG.supabaseUrl, APP_CONFIG.supabaseKey);
 // --- Global State ---
 window.surahList = [];
 let currentUser = null;
-let allData = localStorage.getItem(DB_KEY) ? JSON.parse(localStorage.getItem(DB_KEY)) : [];
+let allData = []; // Will be populated by DB.init()
 let dataMap = { santri: {}, guru: {}, mapel: {}, kelas: {} }; // Indexing
-buildIndexes(); // Build initial index
+// buildIndexes() moved to DB.init()
 
 // --- API: EQURAN.ID (Keep existing Logic) ---
 async function initSurahData() {
@@ -65,20 +65,63 @@ async function hashPassword(plainPassword) {
 
 // --- 3. DATABASE ENGINE (Supabase Adapter) ---
 const DB = {
+    init: async () => {
+        const idb = window.idbKeyval;
+        if (!idb) {
+            console.error("idb-keyval not loaded!");
+            return;
+        }
+        
+        try {
+            const data = await idb.get(DB_KEY);
+            if (data && Array.isArray(data)) {
+                allData = data;
+                console.log("[DB] Loaded from IndexedDB:", allData.length, "rows");
+            } else {
+                console.log("[DB] IndexedDB empty, checking localStorage migration...");
+                const oldData = localStorage.getItem(DB_KEY);
+                if (oldData) {
+                    allData = JSON.parse(oldData);
+                    await idb.set(DB_KEY, allData);
+                    console.log("[DB] Migrated data from localStorage to IndexedDB");
+                    // DO NOT clear localStorage manually to avoid data loss if browser fails
+                } else {
+                    allData = [];
+                }
+            }
+        } catch (e) {
+            console.error("[DB Init] Error:", e);
+            allData = [];
+        }
+        buildIndexes();
+    },
     getAll: () => {
         // Return Synchronous Cache for UI Speed
         return allData;
     },
-    saveAll: (data) => {
-        localStorage.setItem(DB_KEY, JSON.stringify(data));
+    saveAll: async (data) => {
         allData = data;
         buildIndexes();
+        if (window.idbKeyval) {
+            await window.idbKeyval.set(DB_KEY, data);
+        }
     },
 
     // --- MUTATION QUEUE (Offline Support) ---
-    getQueue: () => {
-        const q = localStorage.getItem(QUEUE_KEY);
-        let parsed = q ? JSON.parse(q) : [];
+    getQueue: async () => {
+        if (!window.idbKeyval) return [];
+        const q = await window.idbKeyval.get(QUEUE_KEY);
+        let parsed = q || [];
+
+        // Also check localStorage for queue migration
+        if (parsed.length === 0) {
+            const oldQ = localStorage.getItem(QUEUE_KEY);
+            if (oldQ) {
+                parsed = JSON.parse(oldQ);
+                await window.idbKeyval.set(QUEUE_KEY, parsed);
+                localStorage.removeItem(QUEUE_KEY);
+            }
+        }
 
         // Auto-fix: Filter out legacy 'riwayat_hafalan' items that cause 404 loops
         const valid = parsed.filter(item => item.collection !== 'riwayat_hafalan');
@@ -86,20 +129,22 @@ const DB = {
         // Update local storage if we filtered anything (Self-healing)
         if (valid.length !== parsed.length) {
             console.warn("Cleaned up legacy queue items:", parsed.length - valid.length);
-            localStorage.setItem(QUEUE_KEY, JSON.stringify(valid));
+            await window.idbKeyval.set(QUEUE_KEY, valid);
         }
 
         return valid;
     },
-    addToQueue: (action, collection, payload) => {
-        const q = DB.getQueue();
+    addToQueue: async (action, collection, payload) => {
+        if (!window.idbKeyval) return;
+        const q = await DB.getQueue();
         q.push({ action, collection, payload, timestamp: Date.now() });
-        localStorage.setItem(QUEUE_KEY, JSON.stringify(q));
+        await window.idbKeyval.set(QUEUE_KEY, q);
     },
-    removeFromQueue: (timestamp) => {
-        let q = DB.getQueue();
+    removeFromQueue: async (timestamp) => {
+        if (!window.idbKeyval) return;
+        let q = await DB.getQueue();
         q = q.filter(item => item.timestamp !== timestamp);
-        localStorage.setItem(QUEUE_KEY, JSON.stringify(q));
+        await window.idbKeyval.set(QUEUE_KEY, q);
     },
 
     triggerAutoSync: () => {
@@ -123,10 +168,10 @@ const DB = {
 
         // 1. Optimistic UI Update
         allData.unshift(item);
-        DB.saveAll(allData);
+        await DB.saveAll(allData);
 
         // 2. Queue for Cloud
-        DB.addToQueue('create', collection, item);
+        await DB.addToQueue('create', collection, item);
         DB.triggerAutoSync();
 
         return item;
@@ -144,11 +189,11 @@ const DB = {
 
         // 1. Optimistic Update
         allData[idx] = { ...allData[idx], ...updates };
-        DB.saveAll(allData);
+        await DB.saveAll(allData);
 
         // 2. Queue for Cloud (Only send updates id)
         console.log(`[DB] Queuing update for ${collection} ID: ${id}`);
-        DB.addToQueue('update', collection, { _id: id, ...updates });
+        await DB.addToQueue('update', collection, { _id: id, ...updates });
         DB.triggerAutoSync();
 
         return allData[idx];
@@ -165,11 +210,11 @@ const DB = {
 
             // We keep it in allData (as a tombstone) but UI filters it out via loadData()
             allData[idx] = item;
-            DB.saveAll(allData);
+            await DB.saveAll(allData);
 
             // 2. Queue as UPDATE (to set _deleted=true on server)
             // We use 'update' action instead of 'delete' action to avoid FK constraints
-            DB.addToQueue('update', collection, { _id: id, _deleted: true });
+            await DB.addToQueue('update', collection, { _id: id, _deleted: true });
             DB.triggerAutoSync();
         }
     },
@@ -208,10 +253,10 @@ const DB = {
             // Growing tables: fetch only last 3 months to avoid memory bloat
             const growingTables = ['setoran', 'absensi', 'pelanggaran', 'ujian'];
 
-            // 3 months ago cutoff
-            const threeMonthsAgo = new Date();
-            threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
-            const cutoffDate = threeMonthsAgo.toISOString();
+            // 1 year ago cutoff (Updated from 3 months since we use IndexedDB now)
+            const oneYearAgo = new Date();
+            oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+            const cutoffDate = oneYearAgo.toISOString();
 
             let cloudData = [];
 
@@ -230,16 +275,16 @@ const DB = {
                 })
             );
 
-            // Fetch growing tables (last 3 months only, max 2000 rows each)
+            // Fetch growing tables (last 1 year, max 20000 rows each)
             const growingPromises = growingTables.map(table =>
                 sb.from(table)
                     .select('*')
                     .gte('created_at', cutoffDate)
                     .order('created_at', { ascending: false })
-                    .limit(2000)
+                    .limit(20000)
                     .then(res => {
                         if (res.error) throw res.error;
-                        console.log(`[Sync] ${table}: fetched ${res.data.length} rows (last 3 months)`);
+                        console.log(`[Sync] ${table}: fetched ${res.data.length} rows (last 1 year)`);
                         return res.data.map(d => normalizeRecord(d, table));
                     })
             );
@@ -272,7 +317,7 @@ const DB = {
 
             // Merge Strategy: Server Wins but Local Queue Re-applied
             let mergedData = [...cloudData];
-            const queue = DB.getQueue();
+            const queue = await DB.getQueue();
 
             // --- DEFENSIVE MERGE: Anti-Blink Protection ---
             // If we just uploaded an item, it might be removed from queue but NOT YET visible in the query result (race condition).
@@ -336,7 +381,7 @@ const DB = {
                 mergedData = [...mergedData, ...localCreates];
             }
 
-            DB.saveAll(mergedData);
+            await DB.saveAll(mergedData);
 
             // Trigger Vue Reactivity (if available globally)
             if (window.loadData && typeof window.loadData === 'function') {
@@ -537,7 +582,7 @@ const DB = {
     // Push to Supabase (Process Queue)
     syncToCloud: async () => {
         if (!navigator.onLine) return;
-        const queue = DB.getQueue();
+        const queue = await DB.getQueue();
         if (queue.length === 0) return;
 
         if (window.updateSyncUI) window.updateSyncUI('uploading', 'Menyimpan...');
@@ -583,12 +628,12 @@ const DB = {
 
                     if (isUnrecoverable) {
                         console.warn("Unrecoverable sync error. Removing from queue.", res.error.message);
-                        DB.removeFromQueue(timestamp);
+                        await DB.removeFromQueue(timestamp);
                     } else {
                         console.error("Push Error", res.error);
                     }
                 } else {
-                    DB.removeFromQueue(timestamp);
+                    await DB.removeFromQueue(timestamp);
                 }
             } catch (e) {
                 console.error("Mutation Error", e);
@@ -669,6 +714,7 @@ function initRealtime() {
                 }
 
                 // Save patched data to localStorage
+                // Intentionally not awaited to not block realtime flow
                 DB.saveAll(allData);
 
                 // Debounce: re-compute Vue reactive state (lightweight, no network)

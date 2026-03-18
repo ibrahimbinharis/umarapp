@@ -1134,6 +1134,9 @@ createApp({
 
             loading.value = true;
             try {
+                // v37: Wait for IndexedDB migration and loading
+                await DB.init();
+
                 await initSurahData();
                 // Populate Surah List after Init
                 if (window.surahList) uiData.surahList = window.surahList;
