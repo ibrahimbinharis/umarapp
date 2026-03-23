@@ -4,11 +4,13 @@ const RekapView = {
         'kelasOptions', 'rekapHafalanData', 'rekapGlobalStats', 'rekapSettings',
         'rekapTrendData', 'userSession', 'rekapSearch', 'rekapSantriId',
         'isRekapSantriDropdownOpen', 'rekapFilteredSantriOptions', 'selectRekapSantri',
+        'rekapSortLimit', 'rekapSortCategory',
         'uiData'
     ],
     emits: [
         'update:rekapStartDate', 'update:rekapEndDate', 'update:rekapKelas', 'update:rekapGender',
         'update:rekapSearch', 'update:rekapSantriId', 'update:isRekapSantriDropdownOpen',
+        'update:rekapSortLimit', 'update:rekapSortCategory',
         'export-to-excel', 'export-to-pdf', 'export-to-pdf-raport', 'export-to-pdf-mockup', 'save-settings',
         'set-range-realtime', 'set-range-kemarin', 'set-range-7hari', 'set-range-30hari', 'set-range-bulan-ini'
     ],
@@ -399,8 +401,8 @@ const RekapView = {
 
         <!-- Date Block Filter (Top) -->
         <div class="px-2 pt-2">
-            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-                <div class="flex flex-col gap-4">
+            <div class="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+                <div class="flex flex-col gap-3">
                     <!-- Custom Range Picker Trigger -->
                     <div @click="isCalendarOpen = true; tempRange.start = rekapStartDate; tempRange.end = rekapEndDate" 
                         class="flex items-center justify-center bg-white border border-slate-200 py-2 px-3 rounded-lg cursor-pointer hover:border-slate-300 transition-colors">
@@ -409,24 +411,52 @@ const RekapView = {
                         </div>
                     </div>
 
-                    <!-- Filters for Class & Gender -->
-                    <div class="grid grid-cols-2 gap-3">
-                        <div class="relative">
-                            <select :value="rekapKelas" @change="$emit('update:rekapKelas', $event.target.value)" 
-                                class="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl text-xs font-bold appearance-none outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors">
-                                <option value="">Semua Kelas</option>
-                                <option v-for="k in kelasOptions" :value="k.name">{{ k.name }}</option>
-                            </select>
+                    <!-- Extra Filters (Admin & Guru Only) -->
+                    <template v-if="['admin', 'guru'].includes(userSession?.role || '')">
+                        <!-- Filters for Class & Gender -->
+                        <div class="grid grid-cols-2 gap-3">
+                            <div class="relative">
+                                <select :value="rekapKelas" @change="$emit('update:rekapKelas', $event.target.value)" 
+                                    class="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-xl text-xs font-bold appearance-none outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors">
+                                    <option value="">Semua Kelas</option>
+                                    <option v-for="k in kelasOptions" :value="k.name">{{ k.name }}</option>
+                                </select>
+                            </div>
+                            <div class="relative">
+                                <select :value="rekapGender" @change="$emit('update:rekapGender', $event.target.value)" 
+                                    class="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-xl text-xs font-bold appearance-none outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors">
+                                    <option value="">Semua Gender</option>
+                                    <option value="L">Putra</option>
+                                    <option value="P">Putri</option>
+                                </select>
+                            </div>
                         </div>
-                        <div class="relative">
-                            <select :value="rekapGender" @change="$emit('update:rekapGender', $event.target.value)" 
-                                class="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl text-xs font-bold appearance-none outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors">
-                                <option value="">Semua</option>
-                                <option value="L">Putra</option>
-                                <option value="P">Putri</option>
-                            </select>
+
+                        <!-- Ranking & Category Filters -->
+                        <div class="grid grid-cols-2 gap-3 border-t border-slate-50 pt-3 mt-0.5">
+                            <div class="relative group">
+                                <select :value="rekapSortLimit" @change="$emit('update:rekapSortLimit', $event.target.value)" 
+                                    class="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-xl text-xs font-bold appearance-none outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all cursor-pointer">
+                                    <option value="all">-- Semua --</option>
+                                    <option value="top10">10 Terbaik</option>
+                                    <option value="bottom10">10 Terburuk</option>
+                                </select>
+                                <span class="material-symbols-outlined absolute right-3 top-2.5 text-slate-400 pointer-events-none text-xs">unfold_more</span>
+                            </div>
+                            <div class="relative group">
+                                <select :value="rekapSortCategory" @change="$emit('update:rekapSortCategory', $event.target.value)" 
+                                    class="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-xl text-xs font-bold appearance-none outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all cursor-pointer text-slate-700">
+                                    <option value="nilai_akhir">Nilai Akhir</option>
+                                    <option value="sabaq">Sabaq</option>
+                                    <option value="sabqi">Sabqi</option>
+                                    <option value="manzil">Manzil</option>
+                                    <option value="ujian">Ujian</option>
+                                    <option value="pelanggaran">Pelanggaran</option>
+                                </select>
+                                <span class="material-symbols-outlined absolute right-3 top-2.5 text-slate-400 pointer-events-none text-xs">sort</span>
+                            </div>
                         </div>
-                    </div>
+                    </template>
                 </div>
             </div>
         </div>

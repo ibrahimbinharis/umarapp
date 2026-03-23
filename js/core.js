@@ -1,6 +1,6 @@
 const APP_CONFIG = {
     appName: "E-Umar",
-    version: "v2.3",
+    version: "v2.1",
     supabaseUrl: "https://fxtmilqvxomuvkxxzjli.supabase.co",
     supabaseKey: "sb_publishable_aXcK3znrtRo0d3gH-Wg1Ew_-0Z3262O"
 };
@@ -832,6 +832,33 @@ function showLoading(show, msg = '') {
     </div>`;
     document.body.insertAdjacentHTML('beforeend', html);
 }
+
+// --- UI SAFETY STUBS ---
+// Dipasang di sini (core.js) agar tersedia SEBELUM Vue app mount.
+// Saat app_vue.js sudah siap, window.showConfirm/showAlert/showToast
+// akan di-overwrite dengan implementasi premium yang sesungguhnya.
+// Ini mencegah error "window.showConfirm is not a function" jika
+// composable dipanggil terlalu awal (race condition saat init).
+window.showConfirm = window.showConfirm || function(options) {
+    console.warn('[UI Stub] showConfirm belum siap, menggunakan fallback.');
+    if (options && typeof options.onConfirm === 'function') {
+        if (confirm(options.message || 'Apakah Anda yakin?')) {
+            options.onConfirm();
+        } else if (typeof options.onCancel === 'function') {
+            options.onCancel();
+        }
+    }
+};
+
+window.showAlert = window.showAlert || function(message, title, type) {
+    console.warn('[UI Stub] showAlert belum siap, menggunakan fallback.');
+    alert((title ? title + ': ' : '') + message);
+};
+
+window.showToast = window.showToast || function(message, type, duration) {
+    console.warn('[UI Stub] showToast belum siap, menggunakan fallback.');
+    console.log('[Toast]', type, message);
+};
 
 function updateSyncUI(status, msg) {
     if (status === 'error') console.warn(msg);

@@ -49,6 +49,8 @@ const useRekap = (uiData, userSession) => {
     const rekapGender = ref(''); // '' | 'L' | 'P'
     const rekapSearch = ref('');
     const rekapSantriId = ref('');
+    const rekapSortLimit = ref('all'); // 'all' | 'top10' | 'bottom10'
+    const rekapSortCategory = ref('nilai_akhir'); // 'nilai_akhir' | 'sabaq' | 'sabqi' | 'manzil' | 'ujian' | 'pelanggaran'
     const isRekapSantriDropdownOpen = ref(false);
 
     // --- Range Shortcut Helpers ---
@@ -148,11 +150,19 @@ const useRekap = (uiData, userSession) => {
     const rekapHafalanData = computed(() => {
         let santris = uiData.santri || [];
 
+        // --- Role-Based Filtering ---
+        const role = userSession.value?.role;
+        if (role === 'santri') {
+            const myId = userSession.value.username || userSession.value._id || userSession.value.santri_id;
+            santris = santris.filter(s => s._id === myId || s.santri_id === myId || s.nis === myId);
+        } else if (role === 'wali') {
+            const childId = userSession.value.child_id;
+            const santriIds = userSession.value.santri_ids || [];
+            santris = santris.filter(s => s._id === childId || s.santri_id === childId || s.nis === childId || santriIds.includes(s._id) || santriIds.includes(s.santri_id));
+        }
+
         if (rekapKelas.value) santris = santris.filter(s => s.kelas === rekapKelas.value);
         if (rekapGender.value) santris = santris.filter(s => s.gender === rekapGender.value);
-        if (rekapSantriId.value) {
-            santris = santris.filter(s => s.santri_id === rekapSantriId.value || s._id === rekapSantriId.value || s.nis === rekapSantriId.value);
-        }
 
         const isMatch = (dateStr) => {
             if (!dateStr) return false;
@@ -166,8 +176,9 @@ const useRekap = (uiData, userSession) => {
             pelanggaran: (uiData.all_pelanggaran || uiData.pelanggaran || []).filter(d => isMatch(d.date || d.created_at))
         };
 
-        return santris.map(s => {
+        const sorted = santris.map(s => {
             const perf = analytics.calculateStudentPerformance(s, context, rekapSettings);
+            const mySetoran = context.setoran.filter(x => x.santri_id === s._id || x.santri_id === s.santri_id || x.santri_id === s.nis);
 
             return {
                 id: s._id,
@@ -176,7 +187,9 @@ const useRekap = (uiData, userSession) => {
                 kelas: s.kelas,
 
                 show_sabaq: rekapSettings.visibility.sabaq,
-                sabaq_act: parseFloat(perf.sabaq.actual.toFixed(1)),
+                sabaq_act: parseFloat(mySetoran.filter(x => x.setoran_type === 'Sabaq').reduce((acc, curr) => acc + (parseFloat(curr.pages) || 0), 0).toFixed(1)),
+                sabqi_act: parseFloat(mySetoran.filter(x => x.setoran_type === 'Sabqi').reduce((acc, curr) => acc + (parseFloat(curr.pages) || 0), 0).toFixed(1)),
+                sabaq_total: parseFloat(perf.sabaq.actual.toFixed(1)),
                 sabaq_tgt: perf.sabaq.target,
 
                 show_manzil: rekapSettings.visibility.manzil,
@@ -244,7 +257,23 @@ const useRekap = (uiData, userSession) => {
                     };
                 })()
             };
-        }).sort((a, b) => b.nilai_akhir - a.nilai_akhir);
+        }).sort((a, b) => {
+            const cat = rekapSortCategory.value;
+            const valA = cat === 'sabaq' ? a.sabaq_act : (cat === 'sabqi' ? a.sabqi_act : (cat === 'ujian' ? a.ujian_avg : (cat === 'manzil' ? a.manzil_act : (cat === 'pelanggaran' ? a.pelanggaran_poin : a.nilai_akhir))));
+            const valB = cat === 'sabaq' ? b.sabaq_act : (cat === 'sabqi' ? b.sabqi_act : (cat === 'ujian' ? b.ujian_avg : (cat === 'manzil' ? b.manzil_act : (cat === 'pelanggaran' ? b.pelanggaran_poin : b.nilai_akhir))));
+            
+            if (cat === 'pelanggaran') {
+                return valA - valB; // Lower is better
+            }
+            return valB - valA; // Higher is better
+        });
+
+        if (rekapSortLimit.value === 'top10') {
+            return sorted.slice(0, 10);
+        } else if (rekapSortLimit.value === 'bottom10') {
+            return sorted.reverse().slice(0, 10);
+        }
+        return sorted;
     });
 
     const rekapGlobalStats = computed(() => {
@@ -253,7 +282,8 @@ const useRekap = (uiData, userSession) => {
 
         const count = data.length;
         const total = data.reduce((acc, row) => {
-            acc.sabaq_act += row.sabaq_act;
+            acc.sabaq_total += row.sabaq_total;
+            acc.sabqi_act += row.sabqi_act;
             acc.sabaq_tgt += row.sabaq_tgt;
             acc.manzil_act += row.manzil_act;
             acc.manzil_tgt += row.manzil_tgt;
@@ -264,7 +294,7 @@ const useRekap = (uiData, userSession) => {
             acc.nilai_akhir += row.nilai_akhir;
             return acc;
         }, {
-            sabaq_act: 0, sabaq_tgt: 0,
+            sabaq_total: 0, sabqi_act: 0, sabaq_tgt: 0,
             manzil_act: 0, manzil_tgt: 0,
             tilawah_act: 0, tilawah_tgt: 0,
             ujian_avg: 0, pelanggaran_poin: 0, nilai_akhir: 0
@@ -315,7 +345,8 @@ const useRekap = (uiData, userSession) => {
 
         return {
             avg: {
-                sabaq_act: parseFloat((total.sabaq_act / count).toFixed(1)),
+                sabaq_act: parseFloat((total.sabaq_total / count).toFixed(1)),
+                sabqi_act: parseFloat((total.sabqi_act / count).toFixed(1)),
                 sabaq_tgt: Math.round(total.sabaq_tgt / count),
                 manzil_act: parseFloat((total.manzil_act / count).toFixed(1)),
                 manzil_tgt: Math.round(total.manzil_tgt / count),
@@ -326,7 +357,7 @@ const useRekap = (uiData, userSession) => {
                 pelanggaran_poin: Math.round(total.pelanggaran_poin / count)
             },
             comparison: {
-                sabaq: analytics.calculateComparison(total.sabaq_act / count, prevAvg.sabaq),
+                sabaq: analytics.calculateComparison(total.sabaq_total / count, prevAvg.sabaq),
                 manzil: analytics.calculateComparison(total.manzil_act / count, prevAvg.manzil),
                 tilawah: analytics.calculateComparison(total.tilawah_act / count, prevAvg.tilawah),
                 ujian: analytics.calculateComparison(total.ujian_avg / count, prevAvg.ujian)
@@ -602,7 +633,8 @@ const useRekap = (uiData, userSession) => {
 
     return {
         rekapStartDate, rekapEndDate, rekapKelas, rekapGender,
-        rekapSearch, rekapSantriId, isRekapSantriDropdownOpen,
+        rekapSearch, rekapSantriId, isRekapSantriDropdownOpen, 
+        rekapSortLimit, rekapSortCategory,
         rekapFilteredSantriOptions, selectRekapSantri,
         setRangeRealtime, setRangeKemarin, setRange7Hari, setRange30Hari, setRangeBulanIni,
         monthNames, rekapHafalanData, rekapGlobalStats, rekapSettings,
