@@ -383,6 +383,12 @@ const RekapView = {
             toggleMetric: (m) => {
                 if (activeMetric.value === m) activeMetric.value = 'all';
                 else activeMetric.value = m;
+            },
+            toggleRekapSantriDropdown: () => {
+                if (!props.isRekapSantriDropdownOpen) {
+                    emit('update:rekapSearch', '');
+                }
+                emit('update:isRekapSantriDropdownOpen', !props.isRekapSantriDropdownOpen);
             }
         };
     },
@@ -466,7 +472,7 @@ const RekapView = {
             <div class="relative">
                 
                 <!-- Trigger Button -->
-                <button @click="$emit('update:isRekapSantriDropdownOpen', !isRekapSantriDropdownOpen)"
+                <button @click="toggleRekapSantriDropdown"
                     class="w-full p-3 border rounded-xl text-sm font-bold bg-white text-left flex justify-between items-center transition shadow-sm active:scale-[0.99]"
                     :class="isRekapSantriDropdownOpen ? 'ring-2 ring-blue-500/20 border-blue-500' : 'border-slate-200'">
                     <span :class="rekapSantriId ? 'text-slate-900' : 'text-slate-400'">

@@ -139,18 +139,47 @@ function useDashboard(uiData, userSession, activeChildId, appConfig) {
         // 2. Personalized View (Wali/Santri) or Global Avg (Admin)
         const isPersonal = userSession.value && (userSession.value.role === 'wali' || userSession.value.role === 'santri');
 
+        // --- PREPARE LAST MONTH CONTEXT ---
+        const lastMonthDate = new Date(now);
+        lastMonthDate.setMonth(now.getMonth() - 1);
+        const lastMonth = lastMonthDate.getMonth();
+        const lastMonthYear = lastMonthDate.getFullYear();
+        const isLastMonth = (d) => {
+            const date = new Date(d);
+            return date.getMonth() === lastMonth && date.getFullYear() === lastMonthYear;
+        };
+
+        const lastMonthContext = {
+            setoran: (uiData.all_setoran || uiData.setoran || []).filter(d => isLastMonth(d.setoran_date || d.created_at)),
+            ujian: (uiData.all_ujian || uiData.ujian || []).filter(d => isLastMonth(d.date || d.created_at)),
+            pelanggaran: (uiData.all_pelanggaran || uiData.pelanggaran || []).filter(d => isLastMonth(d.date || d.created_at))
+        };
+
         if (isPersonal) {
             const targetId = userSession.value.role === 'santri'
                 ? userSession.value.username
                 : (overrideChildId || activeChildId.value || userSession.value.child_id);
 
-            // v36: Use uiData.santri (linked list) instead of allSantris (global list) for Personal lookup
             let santri = (uiData.santri || []).find(s => s._id === targetId || s.santri_id === targetId || s.nis === targetId);
 
             if (santri) {
                 const perf = analytics.calculateStudentPerformance(santri, context, settings);
-                dashboardStats.juzCompleted = perf.juzCompleted;
-                dashboardStats.juzRemaining = 30 - perf.juzCompleted;
+                
+                // Calculate historical Juz count by finding exams passed this month
+                const examsThisMonth = (uiData.all_ujian || uiData.ujian || []).filter(u => {
+                    const isPassed = (u.score >= 60 || u.grade === 'Centang');
+                    const isQuranSemester = (u.type || '').includes('Semester') && (u.type || '').includes('Quran');
+                    const isCurrentMonth = new Date(u.date).getMonth() === now.getMonth() && new Date(u.date).getFullYear() === now.getFullYear();
+                    const isThisSantri = u.santri_id === santri.santri_id || u.santri_id === santri._id;
+                    return isPassed && isQuranSemester && isCurrentMonth && isThisSantri;
+                });
+                
+                const juzCompletedNow = perf.juzCompleted;
+                const juzCompletedPrev = Math.max(0, juzCompletedNow - examsThisMonth.length);
+                const juzComp = analytics.calculateComparison(juzCompletedNow, juzCompletedPrev);
+
+                dashboardStats.juzCompleted = juzCompletedNow;
+                dashboardStats.juzRemaining = 30 - juzCompletedNow;
                 dashboardStats.monthlyTarget = {
                     sabaqCurrent: perf.sabaq.actual,
                     sabaqTarget: perf.sabaq.target,
@@ -159,38 +188,27 @@ function useDashboard(uiData, userSession, activeChildId, appConfig) {
                     tilawahCurrent: parseFloat((perf.tilawah.actual / 20).toFixed(1)),
                     tilawahTarget: parseFloat((perf.tilawah.target / 20).toFixed(1)),
                     ujianCurrent: parseFloat(perf.ujian.avg.toFixed(1)),
-                    diffLabel: perf.sabaq.actual >= perf.sabaq.target ? 'Selesai' : `-${perf.sabaq.target - perf.sabaq.actual} Hal`
+                    diffLabel: perf.sabaq.actual >= perf.sabaq.target ? 'Selesai' : `-${perf.sabaq.target - perf.sabaq.actual} Hal`,
+                    
+                    // Comparison Data
+                    sabaqComp: analytics.calculateComparison(perf.sabaq.actual, (analytics.calculateStudentPerformance(santri, lastMonthContext, settings)).sabaq.actual),
+                    manzilComp: analytics.calculateComparison(perf.manzil.actual, (analytics.calculateStudentPerformance(santri, lastMonthContext, settings)).manzil.actual),
+                    tilawahComp: analytics.calculateComparison(perf.tilawah.actual, (analytics.calculateStudentPerformance(santri, lastMonthContext, settings)).tilawah.actual),
+                    juzComp: juzComp
                 };
 
                 const trend = analytics.getTrendData(uiData.setoran || [], 7, [santri._id, santri.santri_id]);
                 dashboardStats.weeklyActivity = trend;
-                dashboardStats.totalSabaq = trend.totalSabaq; // Update total for summary card
-                dashboardStats.totalManzil = trend.totalManzil; // Update total for summary card
+                dashboardStats.totalSabaq = trend.totalSabaq; 
+                dashboardStats.totalManzil = trend.totalManzil; 
             } else {
-                // v36: Clear stats if no linked child found or unlinked
                 dashboardStats.juzCompleted = 0;
                 dashboardStats.juzRemaining = 30;
                 dashboardStats.monthlyTarget = {
-                    sabaqCurrent: 0,
-                    sabaqTarget: 20,
-                    manzilCurrent: 0,
-                    manzilTarget: 10,
-                    tilawahCurrent: 0,
-                    tilawahTarget: 1,
-                    ujianCurrent: 0,
-                    diffLabel: 'No Data'
+                    sabaqCurrent: 0, sabaqTarget: 20, manzilCurrent: 0, manzilTarget: 10, tilawahCurrent: 0, tilawahTarget: 1, ujianCurrent: 0, diffLabel: 'No Data',
+                    sabaqComp: { percent: 0, status: 'stable' }, manzilComp: { percent: 0, status: 'stable' }, tilawahComp: { percent: 0, status: 'stable' }, juzComp: { percent: 0, status: 'stable' }
                 };
-                dashboardStats.weeklyActivity = { 
-                    labels: [], 
-                    sabaq: [], 
-                    manzil: [], 
-                    tilawah: [], 
-                    ujian: [], 
-                    totalSabaq: 0, 
-                    totalManzil: 0,
-                    totalTilawah: 0,
-                    avgUjian: 0
-                };
+                dashboardStats.weeklyActivity = { labels: [], sabaq: [], manzil: [], tilawah: [], ujian: [], totalSabaq: 0, totalManzil: 0, totalTilawah: 0, avgUjian: 0 };
                 dashboardStats.totalSabaq = 0;
                 dashboardStats.totalManzil = 0;
             }
@@ -200,9 +218,30 @@ function useDashboard(uiData, userSession, activeChildId, appConfig) {
             dashboardStats.totalManzil = parseFloat(totalManzilAllTime.toFixed(1));
 
             if (allSantris.length > 0) {
-                const avgJuz = leaderboard.reduce((sum, p) => sum + p.juzCompleted, 0) / allSantris.length;
-                dashboardStats.juzCompleted = Math.round(avgJuz * 10) / 10;
+                const leaderboardWithJuz = leaderboard.map(p => {
+                    const santri = allSantris.find(s => s.santri_id === p.santri_id || s._id === p.id);
+                    const examsCount = (uiData.all_ujian || uiData.ujian || []).filter(u => {
+                        const isPassed = (u.score >= 60 || u.grade === 'Centang');
+                        const isQuranSemester = (u.type || '').includes('Semester') && (u.type || '').includes('Quran');
+                        const isCurrentMonth = new Date(u.date).getMonth() === now.getMonth() && new Date(u.date).getFullYear() === now.getFullYear();
+                        const isThisSantri = u.santri_id === p.santri_id || u.santri_id === p.id;
+                        return isPassed && isQuranSemester && isCurrentMonth && isThisSantri;
+                    }).length;
+                    
+                    return { ...p, juzPrev: Math.max(0, p.juzCompleted - examsCount) };
+                });
+
+                const avgJuzNow = leaderboardWithJuz.reduce((sum, p) => sum + p.juzCompleted, 0) / allSantris.length;
+                const avgJuzPrev = leaderboardWithJuz.reduce((sum, p) => sum + p.juzPrev, 0) / allSantris.length;
+
+                dashboardStats.juzCompleted = Math.round(avgJuzNow * 10) / 10;
                 dashboardStats.juzRemaining = Math.max(0, 30 - dashboardStats.juzCompleted);
+
+                // Prev month averages for sabaq/manzil
+                const prevData = allSantris.map(s => analytics.calculateStudentPerformance(s, lastMonthContext, settings));
+                const prevAvgSabaq = prevData.reduce((sum, p) => sum + p.sabaq.actual, 0) / allSantris.length;
+                const prevAvgManzil = prevData.reduce((sum, p) => sum + p.manzil.actual, 0) / allSantris.length;
+                const prevAvgTilawah = prevData.reduce((sum, p) => sum + p.tilawah.actual, 0) / allSantris.length;
 
                 const avgActS = leaderboard.reduce((sum, p) => sum + p.sabaq.actual, 0) / allSantris.length;
                 const avgTarS = leaderboard.reduce((sum, p) => sum + p.sabaq.target, 0) / allSantris.length;
@@ -220,14 +259,18 @@ function useDashboard(uiData, userSession, activeChildId, appConfig) {
                     tilawahCurrent: Math.round((avgActT / 20) * 10) / 10,
                     tilawahTarget: Math.round(avgTarT / 20),
                     ujianCurrent: Math.round(avgActU * 10) / 10,
-                    diffLabel: `Avg: ${Math.round(avgActS)} Hal`
+                    diffLabel: `Avg: ${Math.round(avgActS)} Hal`,
+
+                    // Comparison Data
+                    sabaqComp: analytics.calculateComparison(avgActS, prevAvgSabaq),
+                    manzilComp: analytics.calculateComparison(avgActM, prevAvgManzil),
+                    tilawahComp: analytics.calculateComparison(avgActT, prevAvgTilawah),
+                    juzComp: analytics.calculateComparison(avgJuzNow, avgJuzPrev)
                 };
             }
 
             const trend = analytics.getTrendData(uiData.setoran || [], 7);
             dashboardStats.weeklyActivity = trend;
-            // Admin/Guru can see both: All Time pages in some cards and Weekly Total in summary cards
-            // Here we prioritize weekly totals for the summary cards near chart
             dashboardStats.totalSabaq = trend.totalSabaq;
             dashboardStats.totalManzil = trend.totalManzil;
         }

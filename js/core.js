@@ -71,7 +71,7 @@ const DB = {
             console.error("idb-keyval not loaded!");
             return;
         }
-        
+
         try {
             const data = await idb.get(DB_KEY);
             if (data && Array.isArray(data)) {
@@ -839,7 +839,7 @@ function showLoading(show, msg = '') {
 // akan di-overwrite dengan implementasi premium yang sesungguhnya.
 // Ini mencegah error "window.showConfirm is not a function" jika
 // composable dipanggil terlalu awal (race condition saat init).
-window.showConfirm = window.showConfirm || function(options) {
+window.showConfirm = window.showConfirm || function (options) {
     console.warn('[UI Stub] showConfirm belum siap, menggunakan fallback.');
     if (options && typeof options.onConfirm === 'function') {
         if (confirm(options.message || 'Apakah Anda yakin?')) {
@@ -850,12 +850,12 @@ window.showConfirm = window.showConfirm || function(options) {
     }
 };
 
-window.showAlert = window.showAlert || function(message, title, type) {
+window.showAlert = window.showAlert || function (message, title, type) {
     console.warn('[UI Stub] showAlert belum siap, menggunakan fallback.');
     alert((title ? title + ': ' : '') + message);
 };
 
-window.showToast = window.showToast || function(message, type, duration) {
+window.showToast = window.showToast || function (message, type, duration) {
     console.warn('[UI Stub] showToast belum siap, menggunakan fallback.');
     console.log('[Toast]', type, message);
 };

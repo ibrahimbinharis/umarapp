@@ -815,7 +815,9 @@ const DashboardView = {
                                 <span class="text-[9px] font-bold text-slate-400 mt-0.5">JUZ</span>
                             </div>
                         </div>
-                        <p class="text-[10px] font-bold text-slate-500">{{ Math.round((dashboardStats.juzCompleted / 30) * 100) }}% Tercapai</p>
+                        <div class="flex items-center gap-2">
+                            <p class="text-[10px] font-bold text-slate-500">{{ Math.round((dashboardStats.juzCompleted / 30) * 100) }}% Tercapai</p>
+                        </div>
                     </div>
 
                     <!-- Target Monthly Bar -->
@@ -826,7 +828,7 @@ const DashboardView = {
                         </div>
                         <div class="space-y-4">
                             <div v-if="rekapSettings.visibility.sabaq">
-                                <div class="flex justify-between text-[10px] font-black mb-1.5 uppercase tracking-widest">
+                                <div class="flex justify-between items-center text-[10px] font-black mb-1.5 uppercase tracking-widest">
                                     <span class="text-slate-400">Sabaq</span>
                                     <span class="text-slate-900">{{ displayStats.monthlySabaq }}/{{ dashboardStats.monthlyTarget.sabaqTarget }} Hal</span>
                                 </div>
@@ -834,9 +836,15 @@ const DashboardView = {
                                     <div class="bg-primary h-full rounded-full transition-all duration-1000" 
                                          :style="{ width: Math.min(100, (displayStats.monthlySabaq / dashboardStats.monthlyTarget.sabaqTarget) * 100) + '%' }"></div>
                                 </div>
+                                <div v-if="dashboardStats.monthlyTarget.sabaqComp" class="flex justify-end mt-1">
+                                    <span class="text-[8px] font-black flex items-center"
+                                        :class="dashboardStats.monthlyTarget.sabaqComp.status === 'up' ? 'text-emerald-500' : (dashboardStats.monthlyTarget.sabaqComp.status === 'down' ? 'text-red-500' : 'text-slate-400')">
+                                        {{ dashboardStats.monthlyTarget.sabaqComp.status === 'up' ? '↑' : (dashboardStats.monthlyTarget.sabaqComp.status === 'down' ? '↓' : '') }}{{ Math.abs(dashboardStats.monthlyTarget.sabaqComp.percent) }}% vs bln lalu
+                                    </span>
+                                </div>
                             </div>
                             <div v-if="rekapSettings.visibility.manzil">
-                                <div class="flex justify-between text-[10px] font-black mb-1.5 uppercase tracking-widest">
+                                <div class="flex justify-between items-center text-[10px] font-black mb-1.5 uppercase tracking-widest">
                                     <span class="text-slate-400">Manzil</span>
                                     <span class="text-slate-900">{{ displayStats.monthlyManzil }}/{{ dashboardStats.monthlyTarget.manzilTarget }} Hal</span>
                                 </div>
@@ -844,15 +852,27 @@ const DashboardView = {
                                     <div class="bg-emerald-500 h-full rounded-full transition-all duration-1000"
                                          :style="{ width: Math.min(100, (displayStats.monthlyManzil / dashboardStats.monthlyTarget.manzilTarget) * 100) + '%' }"></div>
                                 </div>
+                                <div v-if="dashboardStats.monthlyTarget.manzilComp" class="flex justify-end mt-1">
+                                    <span class="text-[8px] font-black flex items-center"
+                                        :class="dashboardStats.monthlyTarget.manzilComp.status === 'up' ? 'text-emerald-500' : (dashboardStats.monthlyTarget.manzilComp.status === 'down' ? 'text-red-500' : 'text-slate-400')">
+                                        {{ dashboardStats.monthlyTarget.manzilComp.status === 'up' ? '↑' : (dashboardStats.monthlyTarget.manzilComp.status === 'down' ? '↓' : '') }}{{ Math.abs(dashboardStats.monthlyTarget.manzilComp.percent) }}% vs bln lalu
+                                    </span>
+                                </div>
                             </div>
                             <div v-if="rekapSettings.visibility.tilawah">
-                                <div class="flex justify-between text-[10px] font-black mb-1.5 uppercase tracking-widest">
+                                <div class="flex justify-between items-center text-[10px] font-black mb-1.5 uppercase tracking-widest">
                                     <span class="text-slate-400">Tilawah</span>
                                     <span class="text-slate-900">{{ displayStats.monthlyTilawah }}/{{ dashboardStats.monthlyTarget.tilawahTarget }} Juz</span>
                                 </div>
                                 <div class="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
                                     <div class="bg-amber-500 h-full rounded-full transition-all duration-1000"
                                          :style="{ width: Math.min(100, (displayStats.monthlyTilawah / dashboardStats.monthlyTarget.tilawahTarget) * 100) + '%' }"></div>
+                                </div>
+                                <div v-if="dashboardStats.monthlyTarget.tilawahComp" class="flex justify-end mt-1">
+                                    <span class="text-[8px] font-black flex items-center"
+                                        :class="dashboardStats.monthlyTarget.tilawahComp.status === 'up' ? 'text-emerald-500' : (dashboardStats.monthlyTarget.tilawahComp.status === 'down' ? 'text-red-500' : 'text-slate-400')">
+                                        {{ dashboardStats.monthlyTarget.tilawahComp.status === 'up' ? '↑' : (dashboardStats.monthlyTarget.tilawahComp.status === 'down' ? '↓' : '') }}{{ Math.abs(dashboardStats.monthlyTarget.tilawahComp.percent) }}% vs bln lalu
+                                    </span>
                                 </div>
                             </div>
                             <div v-if="rekapSettings.visibility.ujian">

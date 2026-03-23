@@ -150,19 +150,11 @@ const useRekap = (uiData, userSession) => {
     const rekapHafalanData = computed(() => {
         let santris = uiData.santri || [];
 
-        // --- Role-Based Filtering ---
-        const role = userSession.value?.role;
-        if (role === 'santri') {
-            const myId = userSession.value.username || userSession.value._id || userSession.value.santri_id;
-            santris = santris.filter(s => s._id === myId || s.santri_id === myId || s.nis === myId);
-        } else if (role === 'wali') {
-            const childId = userSession.value.child_id;
-            const santriIds = userSession.value.santri_ids || [];
-            santris = santris.filter(s => s._id === childId || s.santri_id === childId || s.nis === childId || santriIds.includes(s._id) || santriIds.includes(s.santri_id));
-        }
-
         if (rekapKelas.value) santris = santris.filter(s => s.kelas === rekapKelas.value);
         if (rekapGender.value) santris = santris.filter(s => s.gender === rekapGender.value);
+        if (rekapSantriId.value) {
+            santris = santris.filter(s => s.santri_id === rekapSantriId.value || s._id === rekapSantriId.value || s.nis === rekapSantriId.value);
+        }
 
         const isMatch = (dateStr) => {
             if (!dateStr) return false;
