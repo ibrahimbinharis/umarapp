@@ -444,6 +444,34 @@
                             @set-range-kemarin="setRangeKemarin" @set-range-7hari="setRange7Hari"
                             @set-range-30hari="setRange30Hari" @set-range-bulan-ini="setRangeBulanIni"></rekap-view>
                     </div>
+                    
+                    <!-- UANG SAKU VIEW -->
+                    <div v-if="currentView === 'uang_saku'" class="h-full w-full">
+                        <uang-saku-view 
+                            :ui-data="uiData" 
+                            :user-session="userSession"
+                            v-model:us-active-santri="usActiveSantri"
+                            v-model:is-santri-dropdown-open="isSantriDropdownOpen" 
+                            v-model:santri-search-query="santriSearchQuery"
+                            v-model:list-tab="listTab"
+                            :is-tx-modal-open="isTxModalOpen"
+                            :is-edit-mode="isEditMode"
+                            :us-menu-states="usMenuStates"
+                            :tx-form="txForm"
+                            :list-semua="listSemua"
+                            :list-masuk="listMasuk"
+                            :list-keluar="listKeluar"
+                            :saldo="saldo"
+                            :format-rp="formatRp"
+                            @open-modal="openTxModal"
+                            @edit-modal="openEditModal"
+                            @close-modal="closeTxModal"
+                            @save-tx="saveTransaction"
+                            @delete-tx="deleteTransaction"
+                            @toggle-menu="toggleUsMenu"
+                            @close-menus="closeUsMenus">
+                        </uang-saku-view>
+                    </div>
 
                     <!-- PENGUMUMAN VIEW (Component) -->
                     <div v-if="currentView === 'pengumuman'">
@@ -1571,6 +1599,8 @@
     <script src="js/services/NotificationService.js"></script>
     <script src="js/services/PushService.js"></script>
     <script src="js/composables/useNotifications.js"></script>
+    <script src="js/composables/useUangSaku.js"></script>
+    <script src="js/components/UangSakuView.js"></script>
     <script src="js/app_vue.js"></script>
 
     <!-- Service Worker Registration -->
@@ -1637,7 +1667,7 @@
 
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js?v=2.2').then(reg => {
+                navigator.serviceWorker.register('sw.js?v=2.3').then(reg => {
                     console.log('SW Registered!', reg);
 
                     // 1. Check if update is already waiting (e.g. from previous visit)

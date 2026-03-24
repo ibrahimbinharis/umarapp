@@ -275,6 +275,28 @@ function useDashboard(uiData, userSession, activeChildId, appConfig) {
             dashboardStats.totalManzil = trend.totalManzil;
         }
 
+        // --- RANK MOVEMENT (LAST MONTH VS THIS MONTH) ---
+        // Calculate last month's leaderboard to compare against current
+        const prevLeaderboard = allSantris.map(s => analytics.calculateStudentPerformance(s, lastMonthContext, settings));
+        
+        // Sort both by total score
+        const prevSorted = prevLeaderboard.slice().sort((a, b) => b.total - a.total);
+        const currSorted = (dashboardStats.leaderboard || []).slice().sort((a, b) => b.total - a.total);
+        
+        // Map ID -> rank for both periods
+        const prevRankMap = {};
+        prevSorted.forEach((p, idx) => { prevRankMap[p.santri_id || p.id] = idx + 1; });
+        const currRankMap = {};
+        currSorted.forEach((p, idx) => { currRankMap[p.santri_id || p.id] = idx + 1; });
+        
+        // Apply rankChange = prevRank - currRank (positive = moved up, negative = moved down)
+        dashboardStats.leaderboard = dashboardStats.leaderboard.map(p => {
+            const id = p.santri_id || p.id;
+            const prevRank = prevRankMap[id];
+            const currRank = currRankMap[id];
+            return { ...p, rankChange: (prevRank && currRank) ? prevRank - currRank : 0 };
+        });
+
         loadRecentActivities();
     };
 

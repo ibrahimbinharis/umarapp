@@ -710,7 +710,7 @@ const DashboardView = {
                 <div class="space-y-2 max-h-64 overflow-y-auto pr-1">
                     <div v-for="(s, idx) in filteredTopSantri" :key="idx"
                         class="flex items-center gap-3 p-2 rounded-xl border border-slate-50 bg-slate-50/50">
-                        <div class="size-8 rounded-full flex items-center justify-center font-bold text-sm"
+                        <div class="size-8 rounded-full flex items-center justify-center font-bold text-sm shrink-0"
                             :class="{
                                 'bg-yellow-100 text-yellow-700': idx === 0,
                                 'bg-slate-200 text-slate-600': idx > 0
@@ -718,7 +718,14 @@ const DashboardView = {
                             {{ idx + 1 }}
                         </div>
                         <div class="flex-1 min-w-0">
-                            <p class="font-bold text-slate-800 text-sm truncate">{{ s.name }}</p>
+                            <div class="flex items-center gap-1.5">
+                                <p class="font-bold text-slate-800 text-sm truncate">{{ s.name }}</p>
+                                <span v-if="s.rankChange !== 0"
+                                    class="text-[9px] font-black shrink-0"
+                                    :class="s.rankChange > 0 ? 'text-emerald-500' : 'text-red-500'">
+                                    {{ s.rankChange > 0 ? '↑' : '↓' }}{{ Math.abs(s.rankChange) }}
+                                </span>
+                            </div>
                             <p class="text-xs text-slate-500">{{ s.class }}</p>
                         </div>
                         <div class="text-right">

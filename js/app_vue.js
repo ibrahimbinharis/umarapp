@@ -18,6 +18,7 @@ const MENU_CONFIG = [
     { id: 'pelanggaran', label: "Pelanggaran", icon: "warning", roles: ['admin', 'guru'], inBottom: false },
     { id: 'profile', label: "Pengaturan", icon: "settings", roles: ['admin', 'guru', 'wali', 'santri'], inBottom: false },
     { id: 'rekap', label: "Rekap", icon: "analytics", roles: ['admin', 'guru', 'wali', 'santri'], inBottom: false },
+    { id: 'uang_saku', label: "Uang Saku", icon: "account_balance_wallet", roles: ['admin', 'guru', 'wali', 'santri'], inBottom: false },
     { id: 'connect_santri', label: "Sambungkan Santri", icon: "family_restroom", roles: ['wali'], inBottom: false },
 ];
 
@@ -194,7 +195,10 @@ createApp({
             all_santri: [],
             all_setoran: [],
             all_ujian: [],
-            all_pelanggaran: []
+            all_pelanggaran: [],
+            
+            uang_saku: [],
+            all_uang_saku: []
         });
 
         // Initialize Pelanggaran Composable
@@ -240,6 +244,9 @@ createApp({
 
         // Initialize Riwayat Composable
         const riwayat = useRiwayat(uiData, DB, refreshData, { setoran, ujian, pelanggaran }, currentView, userSession);
+
+        // Initialize Uang Saku Composable
+        const uang_saku = useUangSaku(uiData, DB, refreshData, userSession);
 
 
         // Initialize Active Child State (Move up for dashboard dependency)
@@ -708,7 +715,7 @@ createApp({
 
 
 
-        const loadData = () => {
+        function loadData() {
             const rawData = DB.getAll();
             window.allData = rawData;
             buildIndexes();
@@ -722,6 +729,7 @@ createApp({
             let setoranList = activeData.filter(d => d.__type === 'setoran');
             let ujianList = activeData.filter(d => d.__type === 'ujian');
             let pelanggaranList = activeData.filter(d => d.__type === 'pelanggaran');
+            let uangSakuList = activeData.filter(d => d.__type === 'uang_saku');
 
             // 2. APPLY WALI FILTER (Wali only sees their linked children's data)
             if (userSession.value && userSession.value.role === 'wali') {
@@ -734,6 +742,7 @@ createApp({
                 setoranList = setoranList.filter(d => mySantriIds.includes(d.santri_id) || mySantriNISs.includes(d.santri_id));
                 ujianList = ujianList.filter(d => mySantriIds.includes(d.santri_id) || mySantriNISs.includes(d.santri_id));
                 pelanggaranList = pelanggaranList.filter(d => mySantriIds.includes(d.santri_id) || mySantriNISs.includes(d.santri_id));
+                uangSakuList = uangSakuList.filter(d => mySantriIds.includes(d.santri_id) || mySantriNISs.includes(d.santri_id));
             } else if (userSession.value && userSession.value.role === 'santri') {
                 const myId = userSession.value._id;
                 const myNis = userSession.value.username; // Often NIS is stored in username for santri role
@@ -746,6 +755,7 @@ createApp({
                 setoranList = setoranList.filter(d => mySantriIds.includes(d.santri_id) || mySantriNISs.includes(d.santri_id));
                 ujianList = ujianList.filter(d => mySantriIds.includes(d.santri_id) || mySantriNISs.includes(d.santri_id));
                 pelanggaranList = pelanggaranList.filter(d => mySantriIds.includes(d.santri_id) || mySantriNISs.includes(d.santri_id));
+                uangSakuList = uangSakuList.filter(d => mySantriIds.includes(d.santri_id) || mySantriNISs.includes(d.santri_id));
 
                 // v36: Sync userSession name with master santri data
                 if (santriList.length > 0 && santriList[0].full_name) {
@@ -758,11 +768,13 @@ createApp({
             uiData.all_setoran = activeData.filter(d => d.__type === 'setoran');
             uiData.all_ujian = activeData.filter(d => d.__type === 'ujian');
             uiData.all_pelanggaran = activeData.filter(d => d.__type === 'pelanggaran');
+            uiData.all_uang_saku = activeData.filter(d => d.__type === 'uang_saku');
 
             uiData.santri = santriList;
             uiData.setoran = setoranList;
             uiData.ujian = ujianList;
             uiData.pelanggaran = pelanggaranList;
+            uiData.uang_saku = uangSakuList;
 
             uiData.guru = activeData.filter(d => d.__type === 'user' && d.role === 'guru');
             uiData.mapel = activeData.filter(d => d.__type === 'mapel');
@@ -1253,6 +1265,8 @@ createApp({
             ...useRekap(uiData, userSession), // Pass uiData and userSession
             // Notifications
             ...notifications,
+            // Uang Saku
+            ...uang_saku,
             // Pengumuman
             ...pengumuman,
             // Dashboard
@@ -1280,6 +1294,7 @@ createApp({
         ExamCounter,
         QuranView,
         PengumumanView,
+        UangSakuView,
         InstallView
     }
 }).mount('#app');

@@ -260,12 +260,55 @@ const useRekap = (uiData, userSession) => {
             return valB - valA; // Higher is better
         });
 
+        // --- RANK MOVEMENT (PREV PERIOD VS CURRENT) ---
+        // Build prev period leaderboard for rank comparison
+        const sortedByTotal = [...sorted].sort((a, b) => b.nilai_akhir - a.nilai_akhir);
+        
+        // Calculate prev period total score for each santri in sorted list
+        const prevPeriodRankList = santris.map(s => {
+            const pStart = new Date(rekapStartDate.value);
+            const pEnd = new Date(rekapEndDate.value);
+            const diffDays = Math.ceil(Math.abs(pEnd - pStart) / (1000 * 60 * 60 * 24)) + 1;
+            const prevEnd = new Date(pStart);
+            prevEnd.setDate(prevEnd.getDate() - 1);
+            const prevStart = new Date(prevEnd);
+            prevStart.setDate(prevStart.getDate() - (diffDays - 1));
+            const pSStr = toYMD(prevStart);
+            const pEStr = toYMD(prevEnd);
+            const prevCtxForRank = {
+                setoran: (uiData.all_setoran || uiData.setoran || []).filter(d => {
+                    const dt = (d.setoran_date || d.created_at || '').split('T')[0];
+                    return (d.santri_id === s._id || d.santri_id === s.santri_id) && dt >= pSStr && dt <= pEStr;
+                }),
+                ujian: (uiData.all_ujian || uiData.ujian || []).filter(d => {
+                    const dt = (d.date || d.created_at || '').split('T')[0];
+                    return (d.santri_id === s._id || d.santri_id === s.santri_id) && dt >= pSStr && dt <= pEStr;
+                }),
+                pelanggaran: (uiData.all_pelanggaran || uiData.pelanggaran || []).filter(d => {
+                    const dt = (d.date || d.created_at || '').split('T')[0];
+                    return (d.santri_id === s._id || d.santri_id === s.santri_id) && dt >= pSStr && dt <= pEStr;
+                })
+            };
+            const pPerf = analytics.calculateStudentPerformance(s, prevCtxForRank, rekapSettings);
+            return { id: s._id, total: pPerf.total };
+        }).sort((a, b) => b.total - a.total);
+
+        const prevRankMap = {};
+        prevPeriodRankList.forEach((p, idx) => { prevRankMap[p.id] = idx + 1; });
+        const currRankMap = {};
+        sortedByTotal.forEach((p, idx) => { currRankMap[p.id] = idx + 1; });
+
+        const finalResult = sorted.map(p => ({
+            ...p,
+            rankChange: (prevRankMap[p.id] && currRankMap[p.id]) ? prevRankMap[p.id] - currRankMap[p.id] : 0
+        }));
+
         if (rekapSortLimit.value === 'top10') {
-            return sorted.slice(0, 10);
+            return finalResult.slice(0, 10);
         } else if (rekapSortLimit.value === 'bottom10') {
-            return sorted.reverse().slice(0, 10);
+            return [...finalResult].reverse().slice(0, 10);
         }
-        return sorted;
+        return finalResult;
     });
 
     const rekapGlobalStats = computed(() => {
@@ -335,6 +378,26 @@ const useRekap = (uiData, userSession) => {
             ujian: prevData.reduce((acc, p) => acc + p.ujian.avg, 0) / prevData.length
         } : { sabaq: 0, manzil: 0, tilawah: 0, ujian: 0 };
 
+        // --- Real-time Rank Support ---
+        // Rank movements: Compare current vs prev period rankings
+        const topList = [...data].sort((a, b) => b.nilai_akhir - a.nilai_akhir);
+        
+        // Build prev period rank map using prevData already calculated above
+        const prevRankList = prevData.slice().sort((a, b) => b.total - a.total);
+        const prevRankMapGlobal = {};
+        prevRankList.forEach((p, idx) => { prevRankMapGlobal[p.santri_id || p.id] = idx + 1; });
+        const currRankMapGlobal = {};
+        topList.forEach((p, idx) => { currRankMapGlobal[p.id] = idx + 1; });
+
+        const topWithChange = topList.map(p => {
+            const prevRank = prevRankMapGlobal[p.id];
+            const currRank = currRankMapGlobal[p.id];
+            return {
+                ...p,
+                rankChange: (prevRank && currRank) ? prevRank - currRank : 0
+            };
+        });
+
         return {
             avg: {
                 sabaq_act: parseFloat((total.sabaq_total / count).toFixed(1)),
@@ -354,7 +417,7 @@ const useRekap = (uiData, userSession) => {
                 tilawah: analytics.calculateComparison(total.tilawah_act / count, prevAvg.tilawah),
                 ujian: analytics.calculateComparison(total.ujian_avg / count, prevAvg.ujian)
             },
-            top: [...data].sort((a, b) => b.nilai_akhir - a.nilai_akhir),
+            top: topWithChange,
             needsAttention: bottom3,
             totalStudents: count
         };

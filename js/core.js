@@ -1,6 +1,6 @@
 const APP_CONFIG = {
     appName: "E-Umar",
-    version: "v2.2",
+    version: "v2.3",
     supabaseUrl: "https://fxtmilqvxomuvkxxzjli.supabase.co",
     supabaseKey: "sb_publishable_aXcK3znrtRo0d3gH-Wg1Ew_-0Z3262O"
 };
@@ -251,7 +251,7 @@ const DB = {
             // Static/small tables: fetch all (jumlah tidak tumbuh cepat)
             const staticTables = ['users', 'santri', 'kelas', 'mapel', 'jadwal', 'pelanggaran_type', 'settings'];
             // Growing tables: fetch only last 3 months to avoid memory bloat
-            const growingTables = ['setoran', 'absensi', 'pelanggaran', 'ujian'];
+            const growingTables = ['setoran', 'absensi', 'pelanggaran', 'ujian', 'uang_saku'];
 
             // 1 year ago cutoff (Updated from 3 months since we use IndexedDB now)
             const oneYearAgo = new Date();

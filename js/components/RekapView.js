@@ -605,8 +605,17 @@ const RekapView = {
                         <tbody class="divide-y">
                             <tr v-for="row in rekapHafalanData" :key="row.id">
                                 <td class="px-4 py-3 font-medium text-slate-700">
-                                    {{ row.nama }}<br>
-                                    <span class="text-[10px] text-slate-400">{{ row.kelas }}</span>
+                                    <div class="flex items-center justify-between gap-2">
+                                        <div>
+                                            {{ row.nama }}<br>
+                                            <span class="text-[10px] text-slate-400">{{ row.kelas }}</span>
+                                        </div>
+                                        <div v-if="row.rankChange !== 0" class="shrink-0">
+                                            <span class="text-[9px] font-black" :class="row.rankChange > 0 ? 'text-emerald-500' : 'text-red-500'">
+                                                {{ row.rankChange > 0 ? '↑' : '↓' }}{{ Math.abs(row.rankChange) }}
+                                            </span>
+                                        </div>
+                                    </div>
                                 </td>
                                 <td v-if="row.show_sabaq" class="px-4 py-3 text-center">
                                     <div class="font-bold text-blue-600">{{ row.sabaq_act }} / {{
@@ -708,9 +717,14 @@ const RekapView = {
                         <div v-for="(s, idx) in rekapGlobalStats.top" :key="idx"
                             @click="selectRekapSantri({ _id: s.id, full_name: s.nama })"
                             class="flex items-center gap-3 p-3 rounded-xl border border-slate-100 bg-white hover:bg-slate-50 cursor-pointer transition-colors">
-                            <div class="size-8 rounded-full flex items-center justify-center font-bold text-sm"
+                            <div class="size-8 rounded-full flex flex-col items-center justify-center font-bold text-sm shrink-0"
                                 :class="idx < 3 ? 'bg-yellow-50 text-yellow-700' : 'bg-slate-100 text-slate-500'">
-                                {{ idx + 1 }}
+                                <span :class="{'text-xs': s.rankChange !== 0}">{{ idx + 1 }}</span>
+                                <span v-if="s.rankChange !== 0" 
+                                    class="text-[8px] font-black leading-none mt-[-2px]"
+                                    :class="s.rankChange > 0 ? 'text-emerald-500' : 'text-red-500'">
+                                    {{ s.rankChange > 0 ? '↑' : '↓' }}{{ Math.abs(s.rankChange) }}
+                                </span>
                             </div>
                             <div class="flex-1 min-w-0 text-left">
                                 <p class="font-bold text-slate-800 text-sm truncate">{{ s.nama }}</p>
