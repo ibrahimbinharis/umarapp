@@ -537,7 +537,7 @@ const RekapView = {
 
         <!-- Shortcuts (Bottom of Filter Group) -->
         <div class="px-2 -mt-2">
-            <div class="flex gap-2 pb-1 overflow-x-auto scrollbar-hide">
+            <div class="flex gap-2 pb-2 overflow-x-auto scrollbar-custom scroll-smooth">
                 <button v-for="tag in [
                     { id: 'bulan-ini', label: 'Bulan Ini' },
                     { id: 'realtime', label: 'Hari Ini' },

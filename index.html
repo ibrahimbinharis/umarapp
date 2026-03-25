@@ -57,6 +57,25 @@
             opacity: 0;
             transform: translate(-50%, 20px) scale(0.9);
         }
+
+        /* Modern thin horizontal scrollbar */
+        .scrollbar-custom::-webkit-scrollbar {
+            height: 3px;
+        }
+        .scrollbar-custom::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 10px;
+        }
+        .scrollbar-custom::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+        .scrollbar-custom::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
     </style>
 </head>
 
@@ -442,7 +461,8 @@
                             @export-to-pdf-raport="exportToPDFRaport" @export-to-pdf-mockup="exportToPDFMockup"
                             @save-settings="saveSettings" @set-range-realtime="setRangeRealtime"
                             @set-range-kemarin="setRangeKemarin" @set-range-7hari="setRange7Hari"
-                            @set-range-30hari="setRange30Hari" @set-range-bulan-ini="setRangeBulanIni"></rekap-view>
+                            @set-range-30hari="setRange30Hari" @set-range-bulan-ini="setRangeBulanIni"
+                            @set-range-semua="setRangeSemua"></rekap-view>
                     </div>
                     
                     <!-- UANG SAKU VIEW -->
@@ -1667,7 +1687,7 @@
 
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js?v=2.4').then(reg => {
+                navigator.serviceWorker.register('sw.js?v=2.5').then(reg => {
                     console.log('SW Registered!', reg);
 
                     // 1. Check if update is already waiting (e.g. from previous visit)

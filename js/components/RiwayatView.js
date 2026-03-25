@@ -148,15 +148,7 @@ const RiwayatView = {
                 <h2 class="text-2xl font-bold text-slate-900">Riwayat</h2>
                 <p class="text-xs text-slate-500">Murojaah, Ziyadah & Ujian</p>
             </div>
-            <!-- Filter Icon Button -->
-            <button @click="riwayatState.isFilterOpen = !riwayatState.isFilterOpen"
-                class="relative size-10 rounded-full flex items-center justify-center transition text-slate-600 hover:opacity-70">
-                <span class="material-symbols-outlined">tune</span>
-                <span v-if="activeFilterCount > 0" 
-                    class="absolute -top-1 -right-1 size-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
-                    {{ activeFilterCount }}
-                </span>
-            </button>
+            <!-- Filter Icon Removed (v37) - Replaced by Capsules -->
         </div>
 
         <!-- Santri Search Dropdown (Like Setoran/Input) -->
@@ -226,6 +218,45 @@ const RiwayatView = {
                     class="fixed inset-0 z-[90] cursor-default"></div>
             </div>
         </div>
+        
+        <!-- Quick Period & Category Shortcuts (Capsules) -->
+        <div class="px-2 pt-2 pb-2 mt-4 space-y-3">
+            <!-- Row 1: Period -->
+            <div class="flex gap-2 overflow-x-auto scrollbar-custom scroll-smooth pb-2">
+                <button v-for="tag in [
+                    { id: '', label: 'Semua' },
+                    { id: 'today', label: 'Hari Ini' },
+                    { id: 'yesterday', label: 'Kemarin' },
+                    { id: 'month', label: 'Bulan Ini' },
+                    { id: 'last30', label: '30 Hari' },
+                    { id: 'custom', label: 'Custom' }
+                ]" :key="tag.id"
+                    @click="tag.id === 'custom' ? isCalendarOpen = true : setQuickDateFilter(tag.id)"
+                    class="px-4 py-1.5 rounded-full text-[11px] font-bold whitespace-nowrap transition-all border"
+                    :class="riwayatState.quickDateFilter === tag.id ? 'bg-slate-800 text-white border-slate-800 shadow-sm' : 'bg-white text-slate-500 border-slate-100 hover:bg-slate-50'">
+                    {{ tag.label }}
+                </button>
+            </div>
+
+            <!-- Row 2: Category (Simplified, no more modal needed!) -->
+            <div class="flex gap-2 overflow-x-auto scrollbar-custom scroll-smooth pb-2">
+                <button v-for="cat in [
+                    { id: '', label: 'Semua' },
+                    { id: 'setoran', label: 'Setoran' },
+                    { id: 'sabaq', label: 'Sabaq' },
+                    { id: 'sabqi', label: 'Sabqi' },
+                    { id: 'manzil', label: 'Manzil' },
+                    { id: 'tilawah', label: 'Tilawah' },
+                    { id: 'ujian', label: 'Ujian' },
+                    { id: 'pelanggaran', label: 'Pelanggaran' }
+                ]" :key="cat.id"
+                    @click="riwayatState.category = cat.id"
+                    class="px-4 py-1.5 rounded-full text-[11px] font-bold whitespace-nowrap transition-all border"
+                    :class="riwayatState.category === cat.id ? 'bg-blue-600 text-white border-blue-600 shadow-sm' : 'bg-white text-slate-500 border-slate-100 hover:bg-slate-50'">
+                    {{ cat.label }}
+                </button>
+            </div>
+        </div>
 
         <!-- Active Filters Summary (Optional - shows when filters are active) -->
         <div v-if="activeFilterCount > 0" class="mx-2 text-xs text-slate-500 flex items-center gap-2">
@@ -251,123 +282,7 @@ const RiwayatView = {
             </span>
         </div>
 
-        <!-- Filter Popup/Modal - Teleported to body -->
-        <teleport to="body">
-            <div v-if="riwayatState.isFilterOpen" 
-                class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-start justify-center p-4 animate-in fade-in duration-200"
-                style="z-index: 9999;"
-                @click.self="riwayatState.isFilterOpen = false">
-                <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md mt-20 animate-in slide-in-from-top-4 duration-200" @click.stop>
-                    <!-- Header -->
-                    <div class="p-4 border-b border-slate-100 flex items-center justify-between">
-                        <h3 class="font-bold text-slate-900">Filter Riwayat</h3>
-                        <button @click="riwayatState.isFilterOpen = false"
-                            class="size-8 rounded-full hover:bg-slate-100 flex items-center justify-center transition">
-                            <span class="material-symbols-outlined text-slate-400">close</span>
-                        </button>
-                    </div>
 
-                    <!-- Filter Content -->
-                    <div class="p-4 space-y-4" style="max-height: 60vh; overflow-y: visible;">
-                        <!-- Category Dropdown -->
-                        <div>
-                            <label class="text-xs font-bold text-slate-600 mb-2 block">Kategori</label>
-                            <select v-model="riwayatState.category"
-                                class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm font-bold bg-white focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 outline-none">
-                                <option value="">Semua ({{ filterCounts.all }})</option>
-                                <option value="setoran">Setoran ({{ filterCounts.setoran }})</option>
-                                <option value="sabaq">Sabaq ({{ filterCounts.sabaq }})</option>
-                                <option value="sabqi">Sabqi ({{ filterCounts.sabqi }})</option>
-                                <option value="manzil">Manzil ({{ filterCounts.manzil }})</option>
-                                <option value="tilawah">Tilawah ({{ filterCounts.tilawah }})</option>
-                                <option value="ujian">Ujian ({{ filterCounts.ujian }})</option>
-                                <option value="pelanggaran">Pelanggaran ({{ filterCounts.pelanggaran }})</option>
-                            </select>
-                        </div>
-
-                        <!-- Date Range Dropdown -->
-                        <div>
-                            <label class="text-xs font-bold text-slate-600 mb-2 block">Periode</label>
-                            <select v-model="riwayatState.quickDateFilter" @change="setQuickDateFilter(riwayatState.quickDateFilter)"
-                                class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm font-bold bg-white focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 outline-none">
-                                <option value="">Semua Waktu</option>
-                                <option value="today">Hari Ini</option>
-                                <option value="week">Minggu Ini</option>
-                                <option value="month">Bulan Ini</option>
-                                <option value="custom">Pilih Tanggal...</option>
-                            </select>
-                        </div>
-
-                        <!-- Custom Date Range Display (Trigger for Calendar) -->
-                        <div v-if="riwayatState.quickDateFilter === 'custom'" 
-                            @click="isCalendarOpen = true; tempRange.start = riwayatState.startDate; tempRange.end = riwayatState.endDate"
-                            class="bg-white border border-slate-200 px-3 py-2 rounded-lg cursor-pointer hover:border-slate-300 transition animate-in fade-in slide-in-from-top-2 duration-200">
-                            <div class="text-sm font-bold text-slate-700 text-center">
-                                {{ formatDateShort(riwayatState.startDate) }} - {{ formatDateShort(riwayatState.endDate || riwayatState.startDate) }}
-                            </div>
-                        </div>
-
-                        <!-- Santri Dropdown -->
-                        <div>
-                            <label class="text-xs font-bold text-slate-600 mb-2 block">Santri</label>
-                            <div class="relative" style="z-index: 100;">
-                                <button
-                                    @click.stop="riwayatState.isSantriDropdownOpen = !riwayatState.isSantriDropdownOpen"
-                                    class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm font-bold bg-white text-left flex justify-between items-center transition hover:border-slate-300">
-                                    <span :class="riwayatState.santriId ? 'text-slate-900' : 'text-slate-400'">
-                                        {{ riwayatState.santriId ? riwayatSelectedSantriName : 'Semua Santri' }}
-                                    </span>
-                                    <span class="material-symbols-outlined text-slate-400 text-lg">expand_more</span>
-                                </button>
-
-                                <!-- Santri Dropdown -->
-                                <div v-if="riwayatState.isSantriDropdownOpen"
-                                    class="absolute left-0 right-0 top-full mt-2 bg-white border border-slate-100 rounded-xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-100"
-                                    style="z-index: 9999;">
-                                    <div class="p-2 border-b border-slate-50">
-                                        <div class="flex items-center gap-2 bg-slate-50 px-3 py-2 rounded-lg">
-                                            <span class="material-symbols-outlined text-slate-400 text-lg">search</span>
-                                            <input v-model="riwayatState.santriSearch" type="text"
-                                                placeholder="Cari nama..."
-                                                class="bg-transparent w-full text-sm font-bold outline-none placeholder:font-normal text-slate-700"
-                                                @click.stop>
-                                        </div>
-                                    </div>
-                                    <div class="max-h-48 overflow-y-auto custom-scrollbar">
-                                        <div @click="selectRiwayatSantri({ santri_id: '' })"
-                                            class="px-4 py-3 hover:bg-slate-50 cursor-pointer border-b border-slate-50 transition-colors">
-                                            <p class="text-sm font-bold text-slate-500 italic">Semua Santri</p>
-                                        </div>
-                                        <div v-for="s in riwayatFilteredSantriOptions" :key="s._id"
-                                            @click="selectRiwayatSantri(s)"
-                                            class="px-4 py-3 hover:bg-slate-50 cursor-pointer border-b border-slate-50 last:border-0 transition-colors">
-                                            <p class="text-sm font-bold text-slate-800">{{ s.full_name }}</p>
-                                            <p class="text-[10px] text-slate-500">{{ s.santri_id }} &bull; {{ s.kelas || '-' }}</p>
-                                        </div>
-                                        <div v-if="riwayatFilteredSantriOptions.length === 0"
-                                            class="p-4 text-center text-slate-400 text-xs italic">
-                                            Tidak ditemukan
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Footer Actions -->
-                    <div class="p-4 border-t border-slate-100 flex gap-2">
-                        <button @click="resetAllFilters"
-                            class="flex-1 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-bold transition">
-                            Reset
-                        </button>
-                        <button @click="riwayatState.isFilterOpen = false"
-                            class="flex-1 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold transition">
-                            Terapkan
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </teleport>
 
         <div class="bg-white rounded-xl border shadow-sm overflow-hidden mb-20 mx-2">
             <!-- Bulk Action Bar (Strictly Admin/Guru) -->
@@ -561,7 +476,7 @@ const RiwayatView = {
         <teleport to="body">
             <div v-if="isCalendarOpen" 
                 class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-300"
-                style="z-index: 10000;"
+                style="z-index: 100;"
                 @click.self="isCalendarOpen = false">
                 <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-300">
                     <div class="p-6">

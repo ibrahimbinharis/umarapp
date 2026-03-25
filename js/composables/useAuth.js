@@ -174,15 +174,20 @@ const useAuth = (currentView, loading) => {
             message: 'Keluar dari aplikasi?',
             confirmText: 'Ya, Keluar',
             onConfirm: async () => {
-                try {
-                    // v37: Clear Push Subscription on Logout to prevent legacy notifications on shared device
-                    if (window.PushService && userSession.value) {
-                         await window.PushService.unsubscribeUser(userSession.value._id);
-                    }
-                    await sb.auth.signOut();
-                } catch (e) {
-                    console.error("SignOut error:", e);
-                } finally {
+                    try {
+                        // v37: Clear Push Subscription on Logout with 3s Timeout Protection
+                        if (window.PushService && userSession.value) {
+                             console.log("[Auth] Attempting push unsubscription...");
+                             const unsubscribePromise = window.PushService.unsubscribeUser(userSession.value._id);
+                             const timeoutPromise = new Promise(resolve => setTimeout(resolve, 3000));
+                             
+                             // Race between unsubscription and 3s timeout
+                             await Promise.race([unsubscribePromise, timeoutPromise]);
+                        }
+                        await sb.auth.signOut();
+                    } catch (e) {
+                        console.error("SignOut handling error:", e);
+                    } finally {
                     localStorage.removeItem('tahfidz_session');
                     sessionStorage.removeItem('onboarding_shown'); // v36: Reset onboarding popup state on logout
                     userSession.value = null;

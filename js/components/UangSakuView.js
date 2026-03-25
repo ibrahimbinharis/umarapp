@@ -277,8 +277,8 @@ const UangSakuView = {
                             <button @click.stop="toggleMenu(item._id)" class="size-8 flex items-center justify-center text-slate-300 hover:text-slate-600 rounded-full transition hover:bg-slate-100">
                                 <span class="material-symbols-outlined text-lg">more_vert</span>
                             </button>
-                            <div v-if="usMenuStates[item._id]" class="fixed inset-0 z-20 cursor-default" @click.stop="closeMenus"></div>
-                            <div v-if="usMenuStates[item._id]" class="absolute right-0 top-9 w-32 bg-white border border-slate-100 shadow-xl rounded-2xl z-30 flex flex-col py-1 overflow-hidden animate-scale-in origin-top-right">
+                            <div v-if="usMenuStates[item._id]" class="fixed inset-0 z-[60] bg-black/0" @click.stop="closeMenus"></div>
+                            <div v-if="usMenuStates[item._id]" class="absolute right-0 top-9 w-32 bg-white border border-slate-100 shadow-2xl rounded-2xl z-[70] flex flex-col py-1 overflow-hidden animate-scale-in origin-top-right">
                                 <button @click.stop="openEdit(item); closeMenus()" class="flex items-center gap-2 px-4 py-2 text-xs font-bold text-slate-600 hover:bg-blue-50 hover:text-blue-600 transition text-left">
                                     <span class="material-symbols-outlined text-base">edit</span> Edit
                                 </button>
@@ -315,9 +315,9 @@ const UangSakuView = {
                                 <span class="material-symbols-outlined text-lg">more_vert</span>
                             </button>
                             
-                            <div v-if="usMenuStates[item._id]" class="fixed inset-0 z-20 cursor-default" @click.stop="closeMenus"></div>
+                            <div v-if="usMenuStates[item._id]" class="fixed inset-0 z-[60] bg-black/0" @click.stop="closeMenus"></div>
                             
-                            <div v-if="usMenuStates[item._id]" class="absolute right-0 top-9 w-32 bg-white border border-slate-100 shadow-xl rounded-xl z-30 flex flex-col py-1 overflow-hidden animate-scale-in origin-top-right">
+                            <div v-if="usMenuStates[item._id]" class="absolute right-0 top-9 w-32 bg-white border border-slate-100 shadow-2xl rounded-xl z-[70] flex flex-col py-1 overflow-hidden animate-scale-in origin-top-right">
                                 <button @click.stop="openEdit(item); closeMenus()" class="flex items-center gap-2 px-4 py-2 text-xs font-bold text-slate-600 hover:bg-blue-50 hover:text-blue-600 transition text-left">
                                     <span class="material-symbols-outlined text-base">edit</span> Edit
                                 </button>
@@ -354,9 +354,9 @@ const UangSakuView = {
                                 <span class="material-symbols-outlined text-lg">more_vert</span>
                             </button>
                             
-                            <div v-if="usMenuStates[item._id]" class="fixed inset-0 z-20 cursor-default" @click.stop="closeMenus"></div>
+                            <div v-if="usMenuStates[item._id]" class="fixed inset-0 z-[60] bg-black/0" @click.stop="closeMenus"></div>
                             
-                            <div v-if="usMenuStates[item._id]" class="absolute right-0 top-9 w-32 bg-white border border-slate-100 shadow-xl rounded-xl z-30 flex flex-col py-1 overflow-hidden animate-scale-in origin-top-right">
+                            <div v-if="usMenuStates[item._id]" class="absolute right-0 top-9 w-32 bg-white border border-slate-100 shadow-2xl rounded-xl z-[70] flex flex-col py-1 overflow-hidden animate-scale-in origin-top-right">
                                 <button @click.stop="openEdit(item); closeMenus()" class="flex items-center gap-2 px-4 py-2 text-xs font-bold text-slate-600 hover:bg-blue-50 hover:text-blue-600 transition text-left">
                                     <span class="material-symbols-outlined text-base">edit</span> Edit
                                 </button>
@@ -440,8 +440,8 @@ const UangSakuView = {
                             <h3 class="font-bold text-lg leading-none">
                                 {{ isEditMode ? 'Edit Transaksi' : 'Input Transaksi' }}
                             </h3>
-                            <button @click="closeModal" class="size-8 rounded-full bg-white/20 text-white flex items-center justify-center hover:bg-white/30 transition">
-                                <span class="material-symbols-outlined text-sm">close</span>
+                            <button @click="closeModal" class="text-white hover:opacity-75 transition-opacity">
+                                <span class="material-symbols-outlined text-xl">close</span>
                             </button>
                         </div>
 

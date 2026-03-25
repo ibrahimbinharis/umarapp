@@ -18,8 +18,8 @@ const PushService = {
      * Otomatis meminta izin jika belum pernah diminta sebelumnya.
      */
     async init() {
-        if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-            console.warn('[Push] Browser tidak mendukung Push Notifications.');
+        if (!('serviceWorker' in navigator) || !('PushManager' in window) || window.location.protocol === 'file:') {
+            console.warn('[Push] Push Notifications tidak didukung atau tidak diizinkan di protokol "file:".');
             return;
         }
 

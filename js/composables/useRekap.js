@@ -91,6 +91,11 @@ const useRekap = (uiData, userSession) => {
         rekapEndDate.value = toYMD(d);
     };
 
+    const setRangeSemua = () => {
+        rekapStartDate.value = '';
+        rekapEndDate.value = '';
+    };
+
     // Sync with User Context
     watch(userSession, (newVal) => {
         if (newVal && newVal.role === 'santri') {
@@ -691,7 +696,7 @@ const useRekap = (uiData, userSession) => {
         rekapSearch, rekapSantriId, isRekapSantriDropdownOpen, 
         rekapSortLimit, rekapSortCategory,
         rekapFilteredSantriOptions, selectRekapSantri,
-        setRangeRealtime, setRangeKemarin, setRange7Hari, setRange30Hari, setRangeBulanIni,
+        setRangeRealtime, setRangeKemarin, setRange7Hari, setRange30Hari, setRangeBulanIni, setRangeSemua,
         monthNames, rekapHafalanData, rekapGlobalStats, rekapSettings,
         saveSettings, exportToPDF, exportToExcel, exportToPDFRaport, exportToPDFMockup,
         rekapTrendData

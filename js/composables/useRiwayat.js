@@ -320,6 +320,12 @@ const useRiwayat = (uiData, DB, refreshData, modules = {}, currentView, userSess
                 riwayatState.startDate = formatDate(today);
                 riwayatState.endDate = formatDate(today);
                 break;
+            case 'yesterday':
+                const yesterday = new Date(today);
+                yesterday.setDate(today.getDate() - 1);
+                riwayatState.startDate = formatDate(yesterday);
+                riwayatState.endDate = formatDate(yesterday);
+                break;
             case 'week':
                 const weekStart = new Date(today);
                 weekStart.setDate(today.getDate() - today.getDay()); // Start of week (Sunday)
@@ -329,6 +335,12 @@ const useRiwayat = (uiData, DB, refreshData, modules = {}, currentView, userSess
             case 'month':
                 const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
                 riwayatState.startDate = formatDate(monthStart);
+                riwayatState.endDate = formatDate(today);
+                break;
+            case 'last30':
+                const d30 = new Date(today);
+                d30.setDate(today.getDate() - 30);
+                riwayatState.startDate = formatDate(d30);
                 riwayatState.endDate = formatDate(today);
                 break;
             case 'custom':

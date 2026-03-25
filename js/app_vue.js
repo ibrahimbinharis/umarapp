@@ -1102,9 +1102,17 @@ createApp({
                 }
 
                 // 3. Uang Saku detail back logic (v37)
-                if (currentView.value === 'uang_saku' && uang_saku.usActiveSantri.value && (!event.state || !event.state.detail)) {
-                    uang_saku.usActiveSantri.value = '';
-                    return;
+                if (currentView.value === 'uang_saku') {
+                    // Back from Modal
+                    if (uang_saku.isTxModalOpen.value && (!event.state || !event.state.modal)) {
+                        uang_saku.closeTxModal();
+                        return;
+                    }
+                    // Back from Detail Santri
+                    if (uang_saku.usActiveSantri.value && (!event.state || !event.state.detail)) {
+                        uang_saku.usActiveSantri.value = '';
+                        return;
+                    }
                 }
 
                 // Special handling for Double Back on Dashboard

@@ -82,6 +82,9 @@ function useUangSaku(uiData, DB, refreshUI, userSession) {
         }
         resetForm(type);
         isTxModalOpen.value = true;
+
+        // v37: Navigation Guard for Modal
+        window.history.pushState({ view: 'uang_saku', detail: true, modal: true }, '', '#uang_saku-form');
     };
 
     // Open Modal (Edit Mode)
@@ -95,6 +98,9 @@ function useUangSaku(uiData, DB, refreshUI, userSession) {
         txForm.tanggal = item.tanggal;
         
         isTxModalOpen.value = true;
+
+        // v37: Navigation Guard for Modal
+        window.history.pushState({ view: 'uang_saku', detail: true, modal: true }, '', '#uang_saku-form');
     };
 
     // Close Modal
