@@ -459,11 +459,13 @@ const ProfileView = {
                             <template v-for="roleDef in [
                                 { role: 'admin', label: 'Admin', types: [
                                     { key: 'pelanggaran',  label: 'Pelanggaran',            icon: 'warning' },
+                                    { key: 'uang_saku',    label: 'Riwayat Uang Saku',      icon: 'payments' },
                                     { key: 'pengumuman',   label: 'Pengumuman',              icon: 'campaign' },
                                     { key: 'alert_harian', label: 'Alert Harian (Otomatis)', icon: 'schedule' },
                                 ]},
                                 { role: 'guru', label: 'Guru', types: [
                                     { key: 'pelanggaran',  label: 'Pelanggaran',            icon: 'warning' },
+                                    { key: 'uang_saku',    label: 'Riwayat Uang Saku',      icon: 'payments' },
                                     { key: 'pengumuman',   label: 'Pengumuman',              icon: 'campaign' },
                                     { key: 'alert_harian', label: 'Alert Harian (Otomatis)', icon: 'schedule' },
                                 ]},
@@ -471,6 +473,8 @@ const ProfileView = {
                                     { key: 'setoran',      label: 'Setoran Diterima',        icon: 'menu_book' },
                                     { key: 'ujian',        label: 'Ujian Selesai',           icon: 'assignment_turned_in' },
                                     { key: 'pelanggaran',  label: 'Pelanggaran',             icon: 'warning' },
+                                    { key: 'uang_saku',    label: 'Uang Saku Ananda',        icon: 'payments' },
+                                    { key: 'uang_saku_low', label: 'Saldo Menipis (Peringatan)', icon: 'error_outline' },
                                     { key: 'pengumuman',   label: 'Pengumuman',              icon: 'campaign' },
                                     { key: 'alert_harian', label: 'Alert Harian (Otomatis)', icon: 'schedule' },
                                 ]},
@@ -503,43 +507,55 @@ const ProfileView = {
                                     <!-- Expanded: Notification Types -->
                                     <div v-if="expandedRole === roleDef.role"
                                         class="border-t border-slate-100 divide-y divide-slate-50">
-                                        <div v-for="notifType in roleDef.types" :key="notifType.key"
-                                            class="flex items-center justify-between px-4 py-2.5">
-                                            <div class="flex items-center gap-2.5">
-                                                <span class="material-symbols-outlined text-sm"
-                                                    :class="(appConfig.notifications.types?.[notifType.key]?.enabled !== false) && (appConfig.notifications.types?.[notifType.key]?.targets || roleDef.types.map(t=>t.key).concat([roleDef.role])).includes(roleDef.role) ? 'text-primary' : 'text-slate-300'">
-                                                    {{ notifType.icon }}
-                                                </span>
-                                                <span class="text-xs font-semibold text-slate-600">{{ notifType.label }}</span>
+                                        <div v-for="notifType in roleDef.types" :key="notifType.key">
+                                            <div class="flex items-center justify-between px-4 py-2.5">
+                                                <div class="flex items-center gap-2.5">
+                                                    <span class="material-symbols-outlined text-sm"
+                                                        :class="(appConfig.notifications.types?.[notifType.key]?.enabled !== false) && (appConfig.notifications.types?.[notifType.key]?.targets || roleDef.types.map(t=>t.key).concat([roleDef.role])).includes(roleDef.role) ? 'text-primary' : 'text-slate-300'">
+                                                        {{ notifType.icon }}
+                                                    </span>
+                                                    <span class="text-xs font-semibold text-slate-600">{{ notifType.label }}</span>
+                                                </div>
+                                                <!-- Toggle: tambah/hapus role ini dari targets jenis notif -->
+                                                <button @click.stop="() => {
+                                                    const allDefaultRolesForType = notifType.key === 'setoran' || notifType.key === 'ujian' ? ['wali'] : ['wali','guru','admin'];
+                                                    const current = appConfig.notifications.types?.[notifType.key]?.targets || allDefaultRolesForType;
+                                                    const isOn = current.includes(roleDef.role);
+                                                    const newTargets = isOn ? current.filter(r => r !== roleDef.role) : [...current, roleDef.role];
+                                                    saveAppConfig({ ['notifications.types.' + notifType.key + '.targets']: newTargets });
+                                                }"
+                                                :disabled="!(appConfig.notifications.targets || []).includes(roleDef.role)"
+                                                class="w-9 h-5 rounded-full transition-all duration-300 relative p-[3px] flex-shrink-0"
+                                                :class="[
+                                                    (() => {
+                                                        const allDefaultRolesForType = notifType.key === 'setoran' || notifType.key === 'ujian' ? ['wali'] : ['wali','guru','admin'];
+                                                        const current = appConfig.notifications.types?.[notifType.key]?.targets || allDefaultRolesForType;
+                                                        return current.includes(roleDef.role) ? 'bg-primary' : 'bg-slate-200';
+                                                    })(),
+                                                    !(appConfig.notifications.targets || []).includes(roleDef.role) ? 'opacity-30 cursor-not-allowed' : ''
+                                                ]">
+                                                <div class="size-[13px] bg-white rounded-full shadow-sm transition-all duration-300 transform"
+                                                    :class="(() => {
+                                                        const allDefaultRolesForType = notifType.key === 'setoran' || notifType.key === 'ujian' ? ['wali'] : ['wali','guru','admin'];
+                                                        const current = appConfig.notifications.types?.[notifType.key]?.targets || allDefaultRolesForType;
+                                                        return current.includes(roleDef.role) ? 'translate-x-[16px]' : 'translate-x-0';
+                                                    })()"></div>
+                                                </button>
                                             </div>
-                                            <!-- Toggle: tambah/hapus role ini dari targets jenis notif -->
-                                            <button @click.stop="() => {
-                                                const defaultTargets = roleDef.types.map(t => t.key).length > 0
-                                                    ? (roleDef.role === 'wali' ? ['wali'] : ['admin', 'guru', 'admin'].filter((v,i,a)=>a.indexOf(v)===i))
-                                                    : [roleDef.role];
-                                                const allDefaultRolesForType = notifType.key === 'setoran' || notifType.key === 'ujian' ? ['wali'] : ['wali','guru','admin'];
-                                                const current = appConfig.notifications.types?.[notifType.key]?.targets || allDefaultRolesForType;
-                                                const isOn = current.includes(roleDef.role);
-                                                const newTargets = isOn ? current.filter(r => r !== roleDef.role) : [...current, roleDef.role];
-                                                saveAppConfig({ ['notifications.types.' + notifType.key + '.targets']: newTargets });
-                                            }"
-                                            :disabled="!(appConfig.notifications.targets || []).includes(roleDef.role)"
-                                            class="w-9 h-5 rounded-full transition-all duration-300 relative p-[3px] flex-shrink-0"
-                                            :class="[
-                                                (() => {
-                                                    const allDefaultRolesForType = notifType.key === 'setoran' || notifType.key === 'ujian' ? ['wali'] : ['wali','guru','admin'];
-                                                    const current = appConfig.notifications.types?.[notifType.key]?.targets || allDefaultRolesForType;
-                                                    return current.includes(roleDef.role) ? 'bg-primary' : 'bg-slate-200';
-                                                })(),
-                                                !(appConfig.notifications.targets || []).includes(roleDef.role) ? 'opacity-30 cursor-not-allowed' : ''
-                                            ]">
-                                            <div class="size-[13px] bg-white rounded-full shadow-sm transition-all duration-300 transform"
-                                                :class="(() => {
-                                                    const allDefaultRolesForType = notifType.key === 'setoran' || notifType.key === 'ujian' ? ['wali'] : ['wali','guru','admin'];
-                                                    const current = appConfig.notifications.types?.[notifType.key]?.targets || allDefaultRolesForType;
-                                                    return current.includes(roleDef.role) ? 'translate-x-[16px]' : 'translate-x-0';
-                                                })()"></div>
-                                        </button>
+
+                                            <!-- Setting Spesifik: Minimal Saldo (Formatted Label) -->
+                                            <div v-if="notifType.key === 'uang_saku_low' && roleDef.role === 'wali' && (appConfig.notifications.targets || []).includes('wali')" 
+                                                class="px-5 pb-3 flex items-center justify-end gap-1.5 text-right">
+                                                <span class="text-[9px] font-bold text-slate-400">Batas minimal saldo Rp.</span>
+                                                <input type="text" 
+                                                    :value="new Intl.NumberFormat('id-ID').format(appConfig.notifications.types?.uang_saku_low?.min_balance_threshold || 10000)"
+                                                    @input="(e) => {
+                                                        const val = e.target.value.replace(/\D/g, '');
+                                                        saveAppConfig({ 'notifications.types.uang_saku_low.min_balance_threshold': parseInt(val) || 0 });
+                                                    }"
+                                                    class="w-20 bg-slate-50 border-b border-slate-200 text-[10px] font-black text-slate-600 focus:outline-none focus:border-primary text-center py-0.5"
+                                                    placeholder="10.000">
+                                            </div>
                                         </div>
                                     </div>
                                 </div>

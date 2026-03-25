@@ -182,16 +182,29 @@ const PushService = {
     /**
      * Hapus Subscription (dipanggil saat Logout)
      */
-    async unsubscribeUser() {
+    async unsubscribeUser(userId) {
+        if (!userId) return;
         try {
             const registration = await navigator.serviceWorker.ready;
             const subscription = await registration.pushManager.getSubscription();
+            
             if (subscription) {
+                // 1. Hitung device ID yang sesuai untuk dihapus dari DB
+                const endpointHash = subscription.endpoint.split('/').pop().slice(-16);
+                const deviceId = userId + '_' + endpointHash;
+
+                console.log('[Push] Menghapus subscription dari DB:', deviceId);
+                
+                // 2. Hapus record dari database Supabase (PENTING!)
+                const { error } = await sb.from('push_subscriptions').delete().eq('_id', deviceId);
+                if (error) console.warn('[Push] Gagal hapus record DB:', error.message);
+
+                // 3. Unsubscribe browser (opsional, tapi disarankan agar token benar-benar mati)
                 await subscription.unsubscribe();
-                console.log('[Push] User unsubscribed.');
+                console.log('[Push] Unsubscribe browser berhasil.');
             }
         } catch (e) {
-            console.error('[Push] Gagal unsubscribe:', e);
+            console.error('[Push] Gagal proses unsubscribe:', e);
         }
     },
 

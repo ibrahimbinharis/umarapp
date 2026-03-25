@@ -152,19 +152,32 @@ function useUangSaku(uiData, DB, refreshUI, userSession) {
 
         window.submitBtnLoading = true;
         try {
+            let savedItem = null;
             if (isEditMode.value && editingId.value) {
                 // UPDATE
-                await DB.update(editingId.value, payload);
+                savedItem = await DB.update(editingId.value, payload);
                 window.showToast("Perubahan disimpan", "success");
             } else {
                 // CREATE
                 payload.created_by = window.currentUser ? window.currentUser._id : 'system';
-                await DB.create('uang_saku', payload);
+                savedItem = await DB.create('uang_saku', payload);
                 window.showToast("Transaksi berhasil disimpan", "success");
             }
             
-            if (refreshUI) refreshUI();
+            if (refreshUI) await refreshUI();
             closeTxModal();
+
+            // v37: Trigger Notification for Wali
+            if (savedItem && activeSantriObj.value && window.NotificationService) {
+                // We use the updated 'saldo' value after refreshUI()
+                window.NotificationService.notifyUangSaku(
+                    activeSantriObj.value, 
+                    payload.type, 
+                    payload.jumlah, 
+                    saldo.value, 
+                    savedItem._id
+                );
+            }
         } catch (error) {
             console.error("Save Uang Saku error:", error);
             window.showAlert("Gagal menyimpan: " + error.message, "Error", "error");
@@ -203,6 +216,15 @@ function useUangSaku(uiData, DB, refreshUI, userSession) {
             activeSantriId.value = userSession.value.username;
         }
     };
+
+    // v37: Navigation Guard for System Back
+    watch(activeSantriId, (newVal) => {
+        // Only push state if we are moving TO a detail view (newVal is truthy)
+        // and we are NOT already in a detail history state
+        if (newVal && (!window.history.state || !window.history.state.detail)) {
+            window.history.pushState({ view: 'uang_saku', detail: true }, '', '#uang_saku-detail');
+        }
+    });
 
     onMounted(checkRoleAndAutoSelect);
     watch(() => userSession?.value, checkRoleAndAutoSelect);

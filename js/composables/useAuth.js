@@ -175,6 +175,10 @@ const useAuth = (currentView, loading) => {
             confirmText: 'Ya, Keluar',
             onConfirm: async () => {
                 try {
+                    // v37: Clear Push Subscription on Logout to prevent legacy notifications on shared device
+                    if (window.PushService && userSession.value) {
+                         await window.PushService.unsubscribeUser(userSession.value._id);
+                    }
                     await sb.auth.signOut();
                 } catch (e) {
                     console.error("SignOut error:", e);

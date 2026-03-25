@@ -256,7 +256,7 @@ const UangSakuView = {
             <!-- List Semua -->
             <div v-if="listTab === 'semua'" class="space-y-3 mt-4 fade-in">
                 <div v-for="item in listSemua" :key="item._id" 
-                    class="bg-white border text-left border-slate-100 p-4 rounded-3xl shadow-sm flex items-center justify-between group hover:border-slate-300 transition-all overflow-hidden relative">
+                    class="bg-white border text-left border-slate-100 p-4 rounded-3xl shadow-sm flex items-center justify-between group hover:border-slate-300 transition-all relative">
                     <div class="flex items-center gap-3">
                         <div class="size-11 rounded-2xl flex items-center justify-center font-bold"
                             :class="item.type === 'masuk' ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'">
@@ -297,7 +297,7 @@ const UangSakuView = {
 
             <!-- List Pemasukan -->
             <div v-if="listTab === 'masuk'" class="space-y-3 mt-4 fade-in">
-                <div v-for="item in listMasuk" :key="item.id" class="bg-white border text-left border-slate-100 p-4 rounded-2xl shadow-sm flex items-center justify-between group hover:border-emerald-200 transition">
+                <div v-for="item in listMasuk" :key="item._id" class="bg-white border text-left border-slate-100 p-4 rounded-3xl shadow-sm flex items-center justify-between group hover:border-emerald-200 transition relative">
                     <div class="flex items-center gap-3">
                         <div class="size-10 rounded-full bg-emerald-50 text-emerald-500 flex items-center justify-center">
                             <span class="material-symbols-outlined">south_west</span>
@@ -336,7 +336,7 @@ const UangSakuView = {
 
             <!-- List Pengeluaran -->
             <div v-if="listTab === 'keluar'" class="space-y-3 mt-4 fade-in">
-                <div v-for="item in listKeluar" :key="item.id" class="bg-white border text-left border-slate-100 p-4 rounded-2xl shadow-sm flex items-center justify-between group hover:border-red-200 transition">
+                <div v-for="item in listKeluar" :key="item._id" class="bg-white border text-left border-slate-100 p-4 rounded-3xl shadow-sm flex items-center justify-between group hover:border-red-200 transition relative">
                     <div class="flex items-center gap-3">
                         <div class="size-10 rounded-full bg-red-50 text-red-500 flex items-center justify-center">
                             <span class="material-symbols-outlined">north_east</span>

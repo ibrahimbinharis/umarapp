@@ -1096,9 +1096,14 @@ createApp({
                 }
 
                 // 2. Hafalan sub-view back logic
-                // If we are in Hafalan and moving back from detail to list
                 if (currentView.value === 'hafalan' && ujian.ujianForm.santri_id && (!event.state || !event.state.detail)) {
                     ujian.ujianForm.santri_id = '';
+                    return;
+                }
+
+                // 3. Uang Saku detail back logic (v37)
+                if (currentView.value === 'uang_saku' && uang_saku.usActiveSantri.value && (!event.state || !event.state.detail)) {
+                    uang_saku.usActiveSantri.value = '';
                     return;
                 }
 

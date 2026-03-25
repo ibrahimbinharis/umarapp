@@ -20,6 +20,8 @@ const NotificationService = {
             setoran: { enabled: true, targets: ['wali'] },
             ujian: { enabled: true, targets: ['wali'] },
             pelanggaran: { enabled: true, targets: ['wali', 'guru', 'admin'] },
+            uang_saku: { enabled: true, targets: ['wali'] },
+            uang_saku_low: { enabled: true, targets: ['wali'], min_balance_threshold: 10000 },
             pengumuman: { enabled: true, targets: ['wali', 'guru', 'admin'] },
             alert_harian: { enabled: true, targets: ['wali', 'guru', 'admin'] }
         };
@@ -291,6 +293,76 @@ const NotificationService = {
         } catch (err) {
             console.error("[Notifikasi] Pembersihan gagal:", err);
         }
+    },
+
+    /**
+     * Beri tahu Wali saat ada Transaksi Uang Saku
+     * (Pemasukan / Pengeluaran)
+     */
+    async notifyUangSaku(santri, type, amount, currentSaldo, sourceId) {
+        if (!this.isTypeAllowed('uang_saku', 'wali')) return;
+
+        let waliId = santri.wali_id;
+        if (!waliId) {
+            const { data } = await sb.from('santri').select('wali_id').eq('_id', santri._id).maybeSingle();
+            if (data) waliId = data.wali_id;
+        }
+        if (!waliId) return;
+
+        // Role Validation
+        const { data: user } = await sb.from('users').select('role').eq('_id', waliId).maybeSingle();
+        if (!user || user.role !== 'wali') return;
+
+        const typeLabel = type === 'masuk' ? 'Pemasukan' : 'Pengeluaran';
+        const symbol = type === 'masuk' ? '+' : '-';
+        const formattedAmount = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(amount);
+        const formattedSaldo = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(currentSaldo);
+
+        await this.create({
+            id: sourceId,
+            userId: waliId,
+            title: `Laporan Keuangan: ${typeLabel}`,
+            message: `Tercatat ${typeLabel} pada Uang Saku Ananda ${santri.full_name} sebesar (${symbol}${formattedAmount}). Sisa Saldo: ${formattedSaldo}.`,
+            type: type === 'masuk' ? 'success' : 'info',
+            relatedId: santri._id,
+            role: 'wali'
+        });
+
+        // Trigger Auto Low Balance Check
+        if (type === 'keluar') {
+            await this.checkLowBalance(santri, currentSaldo, waliId);
+        }
+    },
+
+    /**
+     * Peringatan Saldo Menipis
+     */
+    async checkLowBalance(santri, currentSaldo, forcedWaliId = null) {
+        const config = this.getConfig();
+        const typeConfig = config.types.uang_saku_low;
+        if (!typeConfig || !typeConfig.enabled) return;
+
+        const threshold = typeConfig.min_balance_threshold || 10000;
+        if (currentSaldo > threshold) return;
+
+        let waliId = forcedWaliId || santri.wali_id;
+        if (!waliId) {
+            const { data } = await sb.from('santri').select('wali_id').eq('_id', santri._id).maybeSingle();
+            if (data) waliId = data.wali_id;
+        }
+        if (!waliId) return;
+
+        const formattedSaldo = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(currentSaldo);
+
+        await this.create({
+            id: `lowbal_${santri._id}_${new Date().toISOString().split('T')[0]}`,
+            userId: waliId,
+            title: `Peringatan: Saldo Menipis`,
+            message: `Mohon perhatian, sisa saldo Uang Saku Ananda ${santri.full_name} saat ini tinggal ${formattedSaldo}. Silakan melakukan pengisian ulang.`,
+            type: 'warning',
+            relatedId: santri._id,
+            role: 'wali'
+        });
     }
 };
 
