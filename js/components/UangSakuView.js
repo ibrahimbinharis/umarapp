@@ -20,7 +20,14 @@ const UangSakuView = {
     },
     emits: ['update:usActiveSantri', 'update:isSantriDropdownOpen', 'update:santriSearchQuery', 'update:listTab', 'select-santri', 'open-modal', 'edit-modal', 'close-modal', 'save-tx', 'delete-tx', 'toggle-menu', 'close-menus'],
     setup(props, { emit }) {
-        const { computed } = Vue;
+        const { computed, onMounted, onUnmounted } = Vue;
+
+        // v37: Global Click outside handler (Standard professional way)
+        const handleOutsideClick = () => {
+            if (props.usActiveMenuId) emit('close-menus');
+        };
+        onMounted(() => document.addEventListener('click', handleOutsideClick));
+        onUnmounted(() => document.removeEventListener('click', handleOutsideClick));
 
         const filteredSantriList = computed(() => {
             if (!props.uiData.santri) return [];
@@ -157,11 +164,6 @@ const UangSakuView = {
     },
     template: `
     <div class="fade-in space-y-6 pb-24 pt-2">
-        <!-- Global Dropdown Backdrop Teleported to Body -->
-        <teleport to="body">
-            <div v-if="usActiveMenuId" class="fixed inset-0 z-[60] cursor-default bg-black/0" @click.stop="closeMenus"></div>
-        </teleport>
-
         <!-- Unified Header & Filter Area (Show only if no santri selected) -->
         <div v-if="!activeSantriObj" class="px-2 flex flex-col gap-4">
             
@@ -278,11 +280,12 @@ const UangSakuView = {
                             {{ item.type === 'masuk' ? '+' : '-' }}{{ formatRp(item.jumlah) }}
                         </p>
                         
-                        <div v-if="userSession.role !== 'santri' && userSession.role !== 'wali'" class="relative">
+                        <div v-if="userSession.role !== 'santri' && userSession.role !== 'wali'" class="relative" :class="{'z-50': usActiveMenuId === item._id}">
                             <button @click.stop="toggleMenu(item._id)" class="size-8 flex items-center justify-center text-slate-300 hover:text-slate-600 rounded-full transition hover:bg-slate-100">
                                 <span class="material-symbols-outlined text-lg">more_vert</span>
                             </button>
-                            <div v-if="usActiveMenuId === item._id" class="absolute right-0 top-9 w-32 bg-white border border-slate-100 shadow-2xl rounded-2xl z-[70] flex flex-col py-1 overflow-hidden animate-scale-in origin-top-right">
+                            
+                            <div v-if="usActiveMenuId === item._id" class="absolute right-0 top-9 w-32 bg-white border border-slate-100 shadow-2xl rounded-2xl z-20 flex flex-col py-1 overflow-hidden animate-scale-in origin-top-right">
                                 <button @click.stop="openEdit(item); closeMenus()" class="flex items-center gap-2 px-4 py-2 text-xs font-bold text-slate-600 hover:bg-blue-50 hover:text-blue-600 transition text-left">
                                     <span class="material-symbols-outlined text-base">edit</span> Edit
                                 </button>
@@ -318,8 +321,8 @@ const UangSakuView = {
                             <button @click.stop="toggleMenu(item._id)" class="size-8 flex items-center justify-center text-slate-300 hover:text-slate-600 rounded-full transition hover:bg-slate-100">
                                 <span class="material-symbols-outlined text-lg">more_vert</span>
                             </button>
-                            
-                            <div v-if="usActiveMenuId === item._id" class="absolute right-0 top-9 w-32 bg-white border border-slate-100 shadow-2xl rounded-xl z-[70] flex flex-col py-1 overflow-hidden animate-scale-in origin-top-right">
+
+                            <div v-if="usActiveMenuId === item._id" class="absolute right-0 top-9 w-32 bg-white border border-slate-100 shadow-2xl rounded-xl z-20 flex flex-col py-1 overflow-hidden animate-scale-in origin-top-right">
                                 <button @click.stop="openEdit(item); closeMenus()" class="flex items-center gap-2 px-4 py-2 text-xs font-bold text-slate-600 hover:bg-blue-50 hover:text-blue-600 transition text-left">
                                     <span class="material-symbols-outlined text-base">edit</span> Edit
                                 </button>
@@ -355,8 +358,8 @@ const UangSakuView = {
                             <button @click.stop="toggleMenu(item._id)" class="size-8 flex items-center justify-center text-slate-300 hover:text-slate-600 rounded-full transition hover:bg-slate-100">
                                 <span class="material-symbols-outlined text-lg">more_vert</span>
                             </button>
-                            
-                            <div v-if="usActiveMenuId === item._id" class="absolute right-0 top-9 w-32 bg-white border border-slate-100 shadow-2xl rounded-xl z-[70] flex flex-col py-1 overflow-hidden animate-scale-in origin-top-right">
+
+                            <div v-if="usActiveMenuId === item._id" class="absolute right-0 top-9 w-32 bg-white border border-slate-100 shadow-2xl rounded-xl z-20 flex flex-col py-1 overflow-hidden animate-scale-in origin-top-right">
                                 <button @click.stop="openEdit(item); closeMenus()" class="flex items-center gap-2 px-4 py-2 text-xs font-bold text-slate-600 hover:bg-blue-50 hover:text-blue-600 transition text-left">
                                     <span class="material-symbols-outlined text-base">edit</span> Edit
                                 </button>
