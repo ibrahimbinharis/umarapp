@@ -16,7 +16,7 @@ const UangSakuView = {
         saldo: Number,
         formatRp: Function,
         isEditMode: Boolean,
-        usMenuStates: Object
+        usActiveMenuId: String
     },
     emits: ['update:usActiveSantri', 'update:isSantriDropdownOpen', 'update:santriSearchQuery', 'update:listTab', 'select-santri', 'open-modal', 'edit-modal', 'close-modal', 'save-tx', 'delete-tx', 'toggle-menu', 'close-menus'],
     setup(props, { emit }) {
@@ -157,6 +157,11 @@ const UangSakuView = {
     },
     template: `
     <div class="fade-in space-y-6 pb-24 pt-2">
+        <!-- Global Dropdown Backdrop Teleported to Body -->
+        <teleport to="body">
+            <div v-if="usActiveMenuId" class="fixed inset-0 z-[60] cursor-default bg-black/0" @click.stop="closeMenus"></div>
+        </teleport>
+
         <!-- Unified Header & Filter Area (Show only if no santri selected) -->
         <div v-if="!activeSantriObj" class="px-2 flex flex-col gap-4">
             
@@ -256,7 +261,7 @@ const UangSakuView = {
             <!-- List Semua -->
             <div v-if="listTab === 'semua'" class="space-y-3 mt-4 fade-in">
                 <div v-for="item in listSemua" :key="item._id" 
-                    class="bg-white border text-left border-slate-100 p-4 rounded-3xl shadow-sm flex items-center justify-between group hover:border-slate-300 transition-all relative">
+                    class="bg-white border text-left border-slate-100 p-4 rounded-3xl shadow-sm flex items-center justify-between group hover:border-slate-300 transition-all">
                     <div class="flex items-center gap-3">
                         <div class="size-11 rounded-2xl flex items-center justify-center font-bold"
                             :class="item.type === 'masuk' ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'">
@@ -267,7 +272,7 @@ const UangSakuView = {
                             <p class="text-[10px] font-medium text-slate-400">{{ formatDateLocal(item.tanggal) }}</p>
                         </div>
                     </div>
-                    <div class="flex items-center gap-2 text-right relative">
+                    <div class="flex items-center gap-2 text-right">
                         <p class="font-black text-sm whitespace-nowrap"
                             :class="item.type === 'masuk' ? 'text-emerald-500' : 'text-red-500'">
                             {{ item.type === 'masuk' ? '+' : '-' }}{{ formatRp(item.jumlah) }}
@@ -277,8 +282,7 @@ const UangSakuView = {
                             <button @click.stop="toggleMenu(item._id)" class="size-8 flex items-center justify-center text-slate-300 hover:text-slate-600 rounded-full transition hover:bg-slate-100">
                                 <span class="material-symbols-outlined text-lg">more_vert</span>
                             </button>
-                            <div v-if="usMenuStates[item._id]" class="fixed inset-0 z-[60] bg-black/0" @click.stop="closeMenus"></div>
-                            <div v-if="usMenuStates[item._id]" class="absolute right-0 top-9 w-32 bg-white border border-slate-100 shadow-2xl rounded-2xl z-[70] flex flex-col py-1 overflow-hidden animate-scale-in origin-top-right">
+                            <div v-if="usActiveMenuId === item._id" class="absolute right-0 top-9 w-32 bg-white border border-slate-100 shadow-2xl rounded-2xl z-[70] flex flex-col py-1 overflow-hidden animate-scale-in origin-top-right">
                                 <button @click.stop="openEdit(item); closeMenus()" class="flex items-center gap-2 px-4 py-2 text-xs font-bold text-slate-600 hover:bg-blue-50 hover:text-blue-600 transition text-left">
                                     <span class="material-symbols-outlined text-base">edit</span> Edit
                                 </button>
@@ -297,7 +301,7 @@ const UangSakuView = {
 
             <!-- List Pemasukan -->
             <div v-if="listTab === 'masuk'" class="space-y-3 mt-4 fade-in">
-                <div v-for="item in listMasuk" :key="item._id" class="bg-white border text-left border-slate-100 p-4 rounded-3xl shadow-sm flex items-center justify-between group hover:border-emerald-200 transition relative">
+                <div v-for="item in listMasuk" :key="item._id" class="bg-white border text-left border-slate-100 p-4 rounded-3xl shadow-sm flex items-center justify-between group hover:border-emerald-200 transition">
                     <div class="flex items-center gap-3">
                         <div class="size-10 rounded-full bg-emerald-50 text-emerald-500 flex items-center justify-center">
                             <span class="material-symbols-outlined">south_west</span>
@@ -307,7 +311,7 @@ const UangSakuView = {
                             <p class="text-[10px] font-medium text-slate-400">{{ formatDateLocal(item.tanggal) }}</p>
                         </div>
                     </div>
-                    <div class="flex items-center gap-1.5 text-right relative">
+                    <div class="flex items-center gap-1.5 text-right">
                         <p class="font-black text-emerald-500 text-sm whitespace-nowrap">+{{ formatRp(item.jumlah) }}</p>
                         
                         <div v-if="userSession.role !== 'santri' && userSession.role !== 'wali'" class="relative">
@@ -315,9 +319,7 @@ const UangSakuView = {
                                 <span class="material-symbols-outlined text-lg">more_vert</span>
                             </button>
                             
-                            <div v-if="usMenuStates[item._id]" class="fixed inset-0 z-[60] bg-black/0" @click.stop="closeMenus"></div>
-                            
-                            <div v-if="usMenuStates[item._id]" class="absolute right-0 top-9 w-32 bg-white border border-slate-100 shadow-2xl rounded-xl z-[70] flex flex-col py-1 overflow-hidden animate-scale-in origin-top-right">
+                            <div v-if="usActiveMenuId === item._id" class="absolute right-0 top-9 w-32 bg-white border border-slate-100 shadow-2xl rounded-xl z-[70] flex flex-col py-1 overflow-hidden animate-scale-in origin-top-right">
                                 <button @click.stop="openEdit(item); closeMenus()" class="flex items-center gap-2 px-4 py-2 text-xs font-bold text-slate-600 hover:bg-blue-50 hover:text-blue-600 transition text-left">
                                     <span class="material-symbols-outlined text-base">edit</span> Edit
                                 </button>
@@ -336,7 +338,7 @@ const UangSakuView = {
 
             <!-- List Pengeluaran -->
             <div v-if="listTab === 'keluar'" class="space-y-3 mt-4 fade-in">
-                <div v-for="item in listKeluar" :key="item._id" class="bg-white border text-left border-slate-100 p-4 rounded-3xl shadow-sm flex items-center justify-between group hover:border-red-200 transition relative">
+                <div v-for="item in listKeluar" :key="item._id" class="bg-white border text-left border-slate-100 p-4 rounded-3xl shadow-sm flex items-center justify-between group hover:border-red-200 transition">
                     <div class="flex items-center gap-3">
                         <div class="size-10 rounded-full bg-red-50 text-red-500 flex items-center justify-center">
                             <span class="material-symbols-outlined">north_east</span>
@@ -346,7 +348,7 @@ const UangSakuView = {
                             <p class="text-[10px] font-medium text-slate-400">{{ formatDateLocal(item.tanggal) }}</p>
                         </div>
                     </div>
-                    <div class="flex items-center gap-1.5 text-right relative">
+                    <div class="flex items-center gap-1.5 text-right">
                         <p class="font-black text-red-500 text-sm whitespace-nowrap">-{{ formatRp(item.jumlah) }}</p>
                         
                         <div v-if="userSession.role !== 'santri' && userSession.role !== 'wali'" class="relative">
@@ -354,9 +356,7 @@ const UangSakuView = {
                                 <span class="material-symbols-outlined text-lg">more_vert</span>
                             </button>
                             
-                            <div v-if="usMenuStates[item._id]" class="fixed inset-0 z-[60] bg-black/0" @click.stop="closeMenus"></div>
-                            
-                            <div v-if="usMenuStates[item._id]" class="absolute right-0 top-9 w-32 bg-white border border-slate-100 shadow-2xl rounded-xl z-[70] flex flex-col py-1 overflow-hidden animate-scale-in origin-top-right">
+                            <div v-if="usActiveMenuId === item._id" class="absolute right-0 top-9 w-32 bg-white border border-slate-100 shadow-2xl rounded-xl z-[70] flex flex-col py-1 overflow-hidden animate-scale-in origin-top-right">
                                 <button @click.stop="openEdit(item); closeMenus()" class="flex items-center gap-2 px-4 py-2 text-xs font-bold text-slate-600 hover:bg-blue-50 hover:text-blue-600 transition text-left">
                                     <span class="material-symbols-outlined text-base">edit</span> Edit
                                 </button>

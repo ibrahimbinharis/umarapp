@@ -37,11 +37,7 @@ const PelanggaranView = {
     },
     template: `
     <div class="h-full flex flex-col bg-slate-50">
-        <!-- Header -->
-        <div class="p-4 bg-white border-b border-slate-200 sticky top-0 z-20">
-            <h2 class="font-bold text-xl text-slate-800">Pelanggaran</h2>
-            <p class="text-xs text-slate-500">Catat dan kelola pelanggaran santri</p>
-        </div>
+
 
         <!-- TABS (Hide for Wali) -->
         <div v-if="userSession?.role !== 'wali'" class="p-2 bg-slate-100 m-2 rounded-xl flex border border-slate-200 relative z-10">

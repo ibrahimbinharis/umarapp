@@ -155,7 +155,8 @@
 
                 <!-- MOBILE HEADER -->
                 <header v-if="isHeaderVisible"
-                    class="md:hidden fixed top-0 left-0 right-0 z-40 bg-white/90 backdrop-blur-md border-b border-slate-200 px-4 h-16 flex items-center justify-between shadow-sm">
+                    class="md:hidden fixed top-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-100 px-4 h-16 flex items-center justify-between shadow-sm transition-all duration-300 transform-gpu"
+                    :class="isHeaderHidden ? '-translate-y-full' : 'translate-y-0'">
                     <div class="flex items-center gap-3">
                         <img src="image/logo_new.png" alt="Logo" class="w-8 h-8 object-contain">
                         <div class="flex flex-col">
@@ -191,7 +192,7 @@
                 <main class="flex-1 w-full md:transition-all" :class="[
                         currentView === 'quran' ? 'p-0 h-full overflow-hidden' : 'overflow-y-auto px-4 pb-24 md:px-6 md:py-6 md:pb-8',
                         isHeaderVisible ? (currentView === 'quran' ? 'pt-20 md:pt-0' : 'pt-20') : ''
-                    ]">
+                    ]" @scroll="handleGlobalScroll">
 
                     <!-- DASHBOARD SKELETON -->
                     <div v-if="loading && currentView === 'dashboard'" class="fade-in space-y-6 animate-pulse">
@@ -476,7 +477,7 @@
                             v-model:list-tab="listTab"
                             :is-tx-modal-open="isTxModalOpen"
                             :is-edit-mode="isEditMode"
-                            :us-menu-states="usMenuStates"
+                            :us-active-menu-id="usActiveMenuId"
                             :tx-form="txForm"
                             :list-semua="listSemua"
                             :list-masuk="listMasuk"
@@ -1687,7 +1688,7 @@
 
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js?v=2.5').then(reg => {
+                navigator.serviceWorker.register('sw.js?v=2.6').then(reg => {
                     console.log('SW Registered!', reg);
 
                     // 1. Check if update is already waiting (e.g. from previous visit)

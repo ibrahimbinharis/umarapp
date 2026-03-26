@@ -610,6 +610,24 @@ createApp({
         const isSidebarVisible = computed(() => !!userSession.value && currentView.value !== 'login');
         const isHeaderVisible = computed(() => !!userSession.value && currentView.value !== 'login');
 
+        // v37: Auto-hide header on scroll logic
+        const isHeaderHidden = ref(false);
+        let lastScrollTop = 0;
+        const handleGlobalScroll = (e) => {
+            if (window.innerWidth >= 768) {
+                if (isHeaderHidden.value) isHeaderHidden.value = false;
+                return;
+            }
+            const st = e.target.scrollTop;
+            if (Math.abs(st - lastScrollTop) < 10) return;
+            if (st > lastScrollTop && st > 100) {
+                isHeaderHidden.value = true;
+            } else {
+                isHeaderHidden.value = false;
+            }
+            lastScrollTop = Math.max(0, st);
+        };
+
 
 
 
@@ -1250,7 +1268,7 @@ createApp({
             updateSalah, finishExam,
             cropModal, cropperImage, handleFileSelect, cancelCrop, saveCrop, // Cropper Exports
             mapelList, syncState,
-            myMenus, bottomMenus, isSidebarVisible, isHeaderVisible,
+            myMenus, bottomMenus, isSidebarVisible, isHeaderVisible, isHeaderHidden, handleGlobalScroll,
             navigateTo, handleLogin, handleRegister, isRegisterMode, logout, getInitials, refreshData, forceSync,
             syncStatus, dataStats,
             isSaving, // Global save guard for disabling buttons

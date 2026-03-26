@@ -22,8 +22,7 @@ function useUangSaku(uiData, DB, refreshUI, userSession) {
     const isTxModalOpen = ref(false);
     const isEditMode = ref(false);
     const editingId = ref(null);
-    const usMenuStates = ref({}); // Tracks 3-dot menu for each transaction
-    const usGenderFilter = ref(''); // '' (all) | 'L' (putra) | 'P' (putri)
+    const usActiveMenuId = ref(null); // Tracks 3-dot menu for each transaction
 
     const txForm = reactive({
         type: 'masuk',
@@ -44,35 +43,16 @@ function useUangSaku(uiData, DB, refreshUI, userSession) {
     };
 
     const toggleUsMenu = (id) => {
-        const current = usMenuStates.value[id];
-        usMenuStates.value = {}; // Close all
-        if (!current) usMenuStates.value[id] = true;
+        if (usActiveMenuId.value === id) {
+            usActiveMenuId.value = null;
+        } else {
+            usActiveMenuId.value = id;
+        }
     };
 
     const closeUsMenus = () => {
-        usMenuStates.value = {};
+        usActiveMenuId.value = null;
     };
-
-    // Global Statistics (Total across all/filtered santri)
-    const globalSummary = computed(() => {
-        const santriList = (uiData.santri || []);
-        const filteredSantri = !usGenderFilter.value
-            ? santriList 
-            : santriList.filter(s => s.gender === usGenderFilter.value);
-            
-        const filteredSantriIds = new Set(filteredSantri.map(s => s._id || s.santri_id));
-        
-        const txList = (uiData.uang_saku || []).filter(tx => !tx._deleted && filteredSantriIds.has(tx.santri_id));
-        
-        const totalIn = txList.filter(tx => tx.type === 'masuk').reduce((acc, curr) => acc + (parseInt(curr.jumlah) || 0), 0);
-        const totalOut = txList.filter(tx => tx.type === 'keluar').reduce((acc, curr) => acc + (parseInt(curr.jumlah) || 0), 0);
-        
-        return {
-            totalMasuk: totalIn,
-            totalKeluar: totalOut,
-            saldo: totalIn - totalOut
-        };
-    });
 
     // Open Modal (Add Mode)
     const openTxModal = (type = 'masuk') => {
@@ -243,7 +223,7 @@ function useUangSaku(uiData, DB, refreshUI, userSession) {
         isTxModalOpen,
         isEditMode,
         editingId,
-        usMenuStates,
+        usActiveMenuId,
         txForm,
         listSemua: santriUangSaku,
         listMasuk,
@@ -251,8 +231,6 @@ function useUangSaku(uiData, DB, refreshUI, userSession) {
         totalMasuk,
         totalKeluar,
         saldo,
-        globalSummary,
-        usGenderFilter,
         openTxModal,
         openEditModal,
         closeTxModal,
