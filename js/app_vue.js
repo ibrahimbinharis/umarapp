@@ -211,10 +211,10 @@ createApp({
         const guru = useGuru(uiData, DB, modalState);
 
         // Initialize Mapel Composable
-        const mapel = useMapel(uiData, DB);
+        const mapel = useMapel(uiData, DB, modalState);
 
         // Initialize Kelas Composable
-        const kelas = useKelas(uiData, DB);
+        const kelas = useKelas(uiData, DB, modalState);
 
         // Initialize Jadwal Composable
         const jadwal = useJadwal(uiData, DB, modalState);
@@ -223,7 +223,7 @@ createApp({
         const absensi = useAbsensi(uiData, DB, modalState);
 
         // Initialize Target Composable
-        const target = useTarget(uiData, DB);
+        const target = useTarget(uiData, DB, modalState);
 
         // Initialize Setoran Composable
         const setoran = useSetoran(uiData, DB, refreshData, userSession, appConfig);
@@ -1133,6 +1133,12 @@ createApp({
                     }
                 }
 
+                // 4. Profile sub-menu back logic (v37)
+                if (currentView.value === 'profile' && profile.activeSubMenu.value && (!event.state || !event.state.sub)) {
+                    profile.activeSubMenu.value = null;
+                    return;
+                }
+
                 // Special handling for Double Back on Dashboard
                 if (currentView.value === 'dashboard') {
                     if (!exitAttempt.value) {
@@ -1165,6 +1171,14 @@ createApp({
                 } else if (window.location.hash) {
                     const view = window.location.hash.replace('#', '');
                     if (view) currentView.value = view;
+                }
+            });
+
+            // v37: Global Click outside for generic dropdowns (Mapel, Kelas, etc)
+            document.addEventListener('click', (e) => {
+                // Use santri.activeDropdown because it's the source of the ref
+                if (santri.activeDropdown.value) {
+                    santri.activeDropdown.value = null;
                 }
             });
 

@@ -10,9 +10,9 @@
  * Dependencies: DB (from core.js), uiData (from parent)
  */
 
-function useTarget(uiData, DB) {
+function useTarget(uiData, DB, modalState) {
     // Get Vue from global (loaded via CDN)
-    const { reactive, computed } = Vue;
+    const { reactive, computed, ref, watch, nextTick } = Vue;
 
     // ===== STATE =====
 
@@ -118,13 +118,8 @@ function useTarget(uiData, DB) {
      * @param {Object} santri - Santri object
      */
     const openTargetModal = (santri) => {
-        if (!santri) {
-            console.error('Santri is required');
-            return;
-        }
-
+        if (!santri) return;
         const defaults = getTargetDefaults(santri);
-
         targetForm.id = santri._id;
         targetForm.full_name = santri.full_name;
         targetForm.hafalan_desc = santri.hafalan_manual || '0 Juz';
@@ -133,18 +128,17 @@ function useTarget(uiData, DB) {
         targetForm.tilawah = santri.target_tilawah || 600;
         targetForm.pct = santri.target_manzil_pct || 20;
         targetForm.totalPages = defaults.totalPages;
-
-        targetModalState.isOpen = true;
+        
+        if (modalState) {
+            modalState.isOpen = true;
+            modalState.view = 'target-form';
+            modalState.title = 'Atur Target Bulanan';
+        }
     };
 
-    /**
-     * Close target modal
-     */
     const closeTargetModal = () => {
-        targetModalState.isOpen = false;
+        if (modalState) modalState.isOpen = false;
         targetForm.id = null;
-        targetForm.full_name = '';
-        targetForm.hafalan_desc = '';
     };
 
     /**
@@ -179,11 +173,15 @@ function useTarget(uiData, DB) {
             window.showAlert('Pilih minimal satu santri', 'Peringatan', 'warning');
             return;
         }
-        targetModalState.isBulkOpen = true;
+        if (modalState) {
+            modalState.isOpen = true;
+            modalState.view = 'bulk-target';
+            modalState.title = 'Set Target Massal';
+        }
     };
 
     const closeBulkTargetModal = () => {
-        targetModalState.isBulkOpen = false;
+        if (modalState) modalState.isOpen = false;
     };
 
     const applyBulkTarget = async () => {

@@ -547,31 +547,38 @@
 
 
                     <!-- MAPEL VIEW -->
-                    <div v-if="currentView === 'mapel'" class="fade-in space-y-4 pb-24">
+                    <div v-if="currentView === 'mapel'" class="fade-in space-y-6 pb-24 px-4 pt-2">
+                        <!-- Mapel Header -->
+                        <div class="flex flex-col">
+                            <h2 class="text-2xl font-black text-slate-800 tracking-tight">Mata Pelajaran</h2>
+                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Kelola kurikulum hafalan & akademik</p>
+                        </div>
+
                         <!-- Mapel List -->
                         <div class="space-y-3">
                             <div v-for="mapel in filteredMapel" :key="mapel._id"
-                                class="bg-white p-4 rounded-xl border shadow-sm flex justify-between items-center hover:shadow-md transition">
-                                <h3 class="font-bold text-slate-900">{{ mapel.name }}</h3>
+                                class="bg-white p-5 rounded-[24px] border border-slate-100 shadow-sm flex justify-between items-center group hover:border-blue-200 transition">
+                                <div class="flex items-center gap-4">
+                                    <div class="size-11 rounded-full bg-blue-50 text-blue-500 flex items-center justify-center">
+                                        <span class="material-symbols-outlined text-xl">book_2</span>
+                                    </div>
+                                    <h3 class="font-bold text-slate-800 text-sm">{{ mapel.name }}</h3>
+                                </div>
                                 <div class="relative">
                                     <button @click.stop="toggleDropdown(mapel._id)"
-                                        class="size-8 flex items-center justify-center text-slate-300 hover:text-primary hover:bg-slate-50 rounded-full transition">
-                                        <span class="material-symbols-outlined">more_vert</span>
+                                        class="size-9 flex items-center justify-center text-slate-300 hover:text-slate-600 hover:bg-slate-100 rounded-full transition">
+                                        <span class="material-symbols-outlined text-xl">more_vert</span>
                                     </button>
-
-                                    <!-- Backdrop -->
-                                    <div v-if="activeDropdown === mapel._id" class="fixed inset-0 z-10 cursor-default"
-                                        @click.stop="toggleDropdown(null)"></div>
 
                                     <!-- Dropdown Menu -->
                                     <div v-if="activeDropdown === mapel._id"
-                                        class="absolute right-9 -top-1 w-32 bg-white border border-slate-100 shadow-xl rounded-xl z-20 flex flex-col py-1 overflow-hidden animate-in fade-in zoom-in-95 duration-100 origin-top-right">
+                                        class="absolute right-0 top-10 w-32 bg-white border border-slate-100 shadow-2xl rounded-2xl z-20 flex flex-col py-1 overflow-hidden animate-scale-in origin-top-right">
                                         <button @click="openMapelModal(mapel); toggleDropdown(null)"
-                                            class="flex items-center gap-2 px-4 py-1.5 text-xs font-bold text-slate-600 hover:bg-blue-50 hover:text-blue-600 transition text-left w-full">
+                                            class="flex items-center gap-2 px-4 py-2.5 text-xs font-bold text-slate-600 hover:bg-blue-50 hover:text-blue-600 transition text-left w-full">
                                             <span class="material-symbols-outlined text-base">edit</span> Edit
                                         </button>
                                         <button @click="deleteMapel(mapel._id); toggleDropdown(null)"
-                                            class="flex items-center gap-2 px-4 py-1.5 text-xs font-bold text-slate-600 hover:bg-red-50 hover:text-red-500 transition text-left w-full">
+                                            class="flex items-center gap-2 px-4 py-2.5 text-xs font-bold text-slate-600 hover:bg-red-50 hover:text-red-500 transition text-left w-full">
                                             <span class="material-symbols-outlined text-base">delete</span> Hapus
                                         </button>
                                     </div>
@@ -580,16 +587,16 @@
 
                             <!-- Empty State -->
                             <div v-if="!filteredMapel || filteredMapel.length === 0"
-                                class="text-center py-12 text-slate-400">
-                                <span class="material-symbols-outlined text-6xl opacity-20">book_2</span>
-                                <p class="mt-2 text-sm">Belum ada mata pelajaran</p>
+                                class="text-center py-12 bg-white rounded-3xl border border-dashed border-slate-200">
+                                <span class="material-symbols-outlined text-5xl text-slate-200">book_2</span>
+                                <p class="mt-2 text-sm font-medium text-slate-400">Belum ada mata pelajaran</p>
                             </div>
                         </div>
 
                         <!-- Floating Action Button (Admin Only) -->
                         <teleport to="body">
-                            <div class="fixed bottom-24 right-4 z-[9999]"
-                                v-if="currentView === 'mapel' && !mapelModalState.isOpen">
+                            <div class="fixed bottom-24 right-4 z-[50]"
+                                v-if="currentView === 'mapel' && !modalState.isOpen">
                                 <button v-if="!isMapelFabClicked" @click="handleMapelFabClick(); openMapelModal(null)"
                                     class="size-14 rounded-full bg-primary text-white shadow-xl flex items-center justify-center transition hover:scale-110 active:scale-95 hover:bg-blue-700">
                                     <span class="material-symbols-outlined text-3xl">add</span>
@@ -599,31 +606,38 @@
                     </div>
 
                     <!-- KELAS VIEW -->
-                    <div v-if="currentView === 'kelas'" class="fade-in space-y-4 pb-24">
+                    <div v-if="currentView === 'kelas'" class="fade-in space-y-6 pb-24 px-4 pt-2">
+                        <!-- Kelas Header -->
+                        <div class="flex flex-col">
+                            <h2 class="text-2xl font-black text-slate-800 tracking-tight">Daftar Kelas</h2>
+                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Pengelompokan santri & rombel</p>
+                        </div>
+
                         <!-- Kelas List -->
-                        <div class="space-y-3 px-2">
+                        <div class="space-y-3">
                             <div v-for="kelas in filteredKelas" :key="kelas._id"
-                                class="bg-white p-4 rounded-xl border shadow-sm flex justify-between items-center hover:shadow-md transition">
-                                <h3 class="font-bold text-slate-900">{{ kelas.name }}</h3>
+                                class="bg-white p-5 rounded-[24px] border border-slate-100 shadow-sm flex justify-between items-center group hover:border-indigo-200 transition">
+                                <div class="flex items-center gap-4">
+                                    <div class="size-11 rounded-full bg-indigo-50 text-indigo-500 flex items-center justify-center">
+                                        <span class="material-symbols-outlined text-xl">meeting_room</span>
+                                    </div>
+                                    <h3 class="font-bold text-slate-800 text-sm">{{ kelas.name }}</h3>
+                                </div>
                                 <div class="relative">
                                     <button @click.stop="toggleDropdown(kelas._id)"
-                                        class="size-8 flex items-center justify-center text-slate-300 hover:text-primary hover:bg-slate-50 rounded-full transition">
-                                        <span class="material-symbols-outlined">more_vert</span>
+                                        class="size-9 flex items-center justify-center text-slate-300 hover:text-slate-600 hover:bg-slate-100 rounded-full transition">
+                                        <span class="material-symbols-outlined text-xl">more_vert</span>
                                     </button>
-
-                                    <!-- Backdrop -->
-                                    <div v-if="activeDropdown === kelas._id" class="fixed inset-0 z-10 cursor-default"
-                                        @click.stop="toggleDropdown(null)"></div>
 
                                     <!-- Dropdown Menu -->
                                     <div v-if="activeDropdown === kelas._id"
-                                        class="absolute right-9 -top-1 w-32 bg-white border border-slate-100 shadow-xl rounded-xl z-20 flex flex-col py-1 overflow-hidden animate-in fade-in zoom-in-95 duration-100 origin-top-right">
+                                        class="absolute right-0 top-10 w-32 bg-white border border-slate-100 shadow-2xl rounded-2xl z-20 flex flex-col py-1 overflow-hidden animate-scale-in origin-top-right">
                                         <button @click="openKelasModal(kelas); toggleDropdown(null)"
-                                            class="flex items-center gap-2 px-4 py-1.5 text-xs font-bold text-slate-600 hover:bg-blue-50 hover:text-blue-600 transition text-left w-full">
+                                            class="flex items-center gap-2 px-4 py-2.5 text-xs font-bold text-slate-600 hover:bg-blue-50 hover:text-blue-600 transition text-left w-full">
                                             <span class="material-symbols-outlined text-base">edit</span> Edit
                                         </button>
                                         <button @click="deleteKelas(kelas._id); toggleDropdown(null)"
-                                            class="flex items-center gap-2 px-4 py-1.5 text-xs font-bold text-slate-600 hover:bg-red-50 hover:text-red-500 transition text-left w-full">
+                                            class="flex items-center gap-2 px-4 py-2.5 text-xs font-bold text-slate-600 hover:bg-red-50 hover:text-red-500 transition text-left w-full">
                                             <span class="material-symbols-outlined text-base">delete</span> Hapus
                                         </button>
                                     </div>
@@ -632,16 +646,16 @@
 
                             <!-- Empty State -->
                             <div v-if="!filteredKelas || filteredKelas.length === 0"
-                                class="text-center py-12 text-slate-400">
-                                <span class="material-symbols-outlined text-6xl opacity-20">meeting_room</span>
-                                <p class="mt-2 text-sm">Belum ada data kelas</p>
+                                class="text-center py-12 bg-white rounded-3xl border border-dashed border-slate-200">
+                                <span class="material-symbols-outlined text-5xl text-slate-200">meeting_room</span>
+                                <p class="mt-2 text-sm font-medium text-slate-400">Belum ada data kelas</p>
                             </div>
                         </div>
 
                         <!-- Floating Action Button (Admin Only) -->
                         <teleport to="body">
-                            <div class="fixed bottom-24 right-4 z-[9999]"
-                                v-if="currentView === 'kelas' && !kelasModalState.isOpen">
+                            <div class="fixed bottom-24 right-4 z-[50]"
+                                v-if="currentView === 'kelas' && !modalState.isOpen">
                                 <button v-if="!isKelasFabClicked" @click="handleKelasFabClick(); openKelasModal(null)"
                                     class="size-14 rounded-full bg-primary text-white shadow-xl flex items-center justify-center transition hover:scale-110 active:scale-95 hover:bg-blue-700">
                                     <span class="material-symbols-outlined text-3xl">add</span>
@@ -831,248 +845,20 @@
 
         <!-- MONITORING MODAL REMOVED -->
 
-        <!-- MAPEL MODAL FORM -->
-        <div v-if="mapelModalState.isOpen" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-            @click.self="closeMapelModal">
-            <div class="bg-white rounded-2xl p-6 max-w-md w-full mx-4 space-y-4">
-                <h3 class="font-bold text-lg text-slate-900">{{ mapelModalState.title }}</h3>
-
-                <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1">Nama Mata Pelajaran</label>
-                    <input v-model="mapelForm.name" type="text" placeholder="Matematika, Bahasa Arab, dll"
-                        class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-primary bg-white"
-                        required>
-                </div>
-
-                <div class="flex gap-3 pt-4">
-                    <button type="button" @click="closeMapelModal"
-                        class="flex-1 py-3 rounded-xl border border-slate-200 font-bold text-slate-600 hover:bg-slate-50 transition">
-                        Batal
-                    </button>
-                    <button @click="saveMapel"
-                        class="flex-1 py-3 rounded-xl bg-primary text-white font-bold hover:bg-blue-800 shadow-lg shadow-blue-900/20 transition">
-                        Simpan
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- KELAS MODAL FORM -->
-        <div v-if="kelasModalState.isOpen" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-            @click.self="closeKelasModal">
-            <div class="bg-white rounded-2xl p-6 max-w-md w-full mx-4 space-y-4">
-                <h3 class="font-bold text-lg text-slate-900">{{ kelasModalState.title }}</h3>
-
-                <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1">Nama Kelas</label>
-                    <input v-model="kelasForm.name" type="text" placeholder="Kelas A, Kelas B, Ruang 1, dll"
-                        class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-primary bg-white"
-                        required>
-                </div>
-
-                <div class="flex gap-3 pt-4">
-                    <button type="button" @click="closeKelasModal"
-                        class="flex-1 py-3 rounded-xl border border-slate-200 font-bold text-slate-600 hover:bg-slate-50 transition">
-                        Batal
-                    </button>
-                    <button @click="saveKelas"
-                        class="flex-1 py-3 rounded-xl bg-primary text-white font-bold hover:bg-blue-800 shadow-lg shadow-blue-900/20 transition">
-                        Simpan
-                    </button>
-                </div>
-            </div>
-        </div>
+        <!-- MODALS (Mapel, Kelas moved to Global Modal Container) -->
 
         <!-- JADWAL MODAL FORM -->
 
 
         <!-- ABSENSI MODAL FORM (Removed duplicate) -->
 
-        <!-- TARGET MODAL -->
-        <div v-if="targetModalState.isOpen" @click.self="closeTargetModal()"
-            class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div @click.stop
-                class="bg-white rounded-3xl shadow-2xl max-w-md w-full max-h-[85vh] overflow-hidden flex flex-col">
-                <!-- Header -->
-                <div class="p-4 border-b bg-gradient-to-r from-blue-50 to-indigo-50 flex justify-between items-center">
-                    <h3 class="font-bold text-lg text-slate-900">Atur Target Bulanan</h3>
-                    <button @click="closeTargetModal()"
-                        class="size-8 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-red-500 transition"><span
-                            class="material-symbols-outlined">close</span></button>
-                </div>
+        <!-- TARGET MODALS (Moved to Global Modal Container) -->
 
-                <!-- Modal Content -->
-                <div class="p-6 overflow-y-auto flex-1">
-                    <!-- Santri Info -->
-                    <div class="flex items-center gap-3 mb-5 bg-blue-50 p-3 rounded-xl border border-blue-100">
-                        <div
-                            class="size-10 bg-white rounded-full flex items-center justify-center font-bold text-blue-600 shadow-sm">
-                            {{ targetForm.full_name.charAt(0) }}
-                        </div>
-                        <div class="min-w-0">
-                            <p class="font-bold text-slate-900 text-sm truncate">{{ targetForm.full_name }}</p>
-                            <p class="text-[10px] text-slate-500 uppercase font-bold">Total Hafalan: {{
-                                targetForm.hafalan_desc }}</p>
-                        </div>
-                    </div>
-
-                    <!-- Sabaq Input -->
-                    <div class="mb-5">
-                        <label class="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Target Sabaq (Hafalan
-                            Baru)</label>
-                        <div class="flex items-center gap-2">
-                            <input type="number" v-model.number="targetForm.sabaq"
-                                class="w-full p-3 border rounded-xl font-bold text-slate-700 text-center text-lg">
-                            <div class="text-xs font-bold text-slate-400 whitespace-nowrap">Hal/Bulan</div>
-                        </div>
-                        <p class="text-[10px] text-slate-400 mt-1">*Hafalan baru yang harus disetor setiap bulan</p>
-                    </div>
-
-                    <!-- Manzil Input -->
-                    <div class="mb-5">
-                        <label class="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Target Manzil
-                            (Murojaah)</label>
-                        <div class="grid grid-cols-3 gap-2">
-                            <div class="col-span-1">
-                                <label
-                                    class="text-[9px] font-bold text-slate-400 uppercase text-center block mb-1">Persen
-                                    %</label>
-                                <input type="number" v-model.number="targetForm.pct"
-                                    @input="recalcManzil(targetForm.pct)"
-                                    class="w-full p-3 border rounded-xl font-bold text-slate-700 text-center">
-                            </div>
-                            <div class="col-span-2">
-                                <label
-                                    class="text-[9px] font-bold text-slate-400 uppercase text-center block mb-1">Target
-                                    Halaman</label>
-                                <div class="flex items-center gap-2">
-                                    <input type="number" v-model.number="targetForm.manzil"
-                                        class="w-full p-3 border rounded-xl font-bold text-slate-700 text-center text-lg">
-                                    <div class="text-xs font-bold text-slate-400">Hal</div>
-                                </div>
-                            </div>
-                        </div>
-                        <p class="text-[10px] text-slate-400 mt-1">*Total Hafalan: {{ targetForm.totalPages }} Halaman
-                        </p>
-                    </div>
-
-                    <!-- Tilawah Input -->
-                    <div class="mb-5">
-                        <label class="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Target Tilawah (Baca
-                            Al-Quran)</label>
-                        <div class="flex items-center gap-2">
-                            <input type="number" v-model.number="targetForm.tilawah"
-                                class="w-full p-3 border rounded-xl font-bold text-slate-700 text-center text-lg">
-                            <div class="text-xs font-bold text-slate-400 whitespace-nowrap">Hal/Bulan</div>
-                        </div>
-                        <p class="text-[10px] text-slate-400 mt-1">*Target membaca Al-Quran setiap bulan</p>
-                    </div>
-
-                    <!-- Save Button -->
-                    <button @click="saveTarget()"
-                        class="w-full bg-primary text-white py-3 rounded-xl font-bold shadow-lg shadow-primary/30 hover:bg-blue-800 transition">
-                        Simpan Target
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- BULK TARGET MODAL -->
-        <div v-if="targetModalState.isBulkOpen" @click.self="closeBulkTargetModal()"
-            class="fixed inset-0 bg-black/80 backdrop-blur-md z-[110] flex items-center justify-center p-4">
-            <div @click.stop
-                class="bg-white rounded-3xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
-                <!-- Header -->
-                <div class="px-6 py-5 border-b flex justify-between items-center bg-slate-50/50">
-                    <div>
-                        <h3 class="font-bold text-slate-800">Set Target Massal</h3>
-                        <p class="text-[10px] text-slate-500 font-bold uppercase tracking-tight">Menyesuaikan {{
-                            selectedSantriIds.length }} Santri</p>
-                    </div>
-                    <button @click="closeBulkTargetModal()"
-                        class="size-8 rounded-full hover:bg-slate-200 flex items-center justify-center text-slate-400 transition">
-                        <span class="material-symbols-outlined">close</span>
-                    </button>
-                </div>
-
-                <!-- Form Body -->
-                <div class="p-6 overflow-y-auto space-y-6">
-                    <p
-                        class="text-xs text-slate-500 bg-blue-50 p-3 rounded-xl border border-blue-100 flex items-start gap-2">
-                        <span class="material-symbols-outlined text-blue-500 text-sm mt-0.5">info</span>
-                        Centang kriteria yang ingin Anda perbarui secara massal. Nilai yang tidak dicentang tidak akan
-                        diubah.
-                    </p>
-
-                    <!-- Sabaq -->
-                    <div class="space-y-2">
-                        <label class="flex items-center gap-3 cursor-pointer group">
-                            <input type="checkbox" v-model="bulkTargetForm.updateSabaq"
-                                class="size-5 rounded border-2 border-slate-300 text-primary focus:ring-primary transition cursor-pointer">
-                            <span class="text-xs font-black text-slate-700 uppercase">Target Sabaq (Halaman)</span>
-                        </label>
-                        <div v-if="bulkTargetForm.updateSabaq"
-                            class="pl-8 animate-in slide-in-from-left-2 duration-200">
-                            <div class="flex items-center gap-2">
-                                <input type="number" v-model.number="bulkTargetForm.sabaq"
-                                    class="w-full p-3 border rounded-xl font-black text-slate-700 text-center text-lg bg-slate-50 border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none">
-                                <span class="text-[10px] font-bold text-slate-400 uppercase">Hal</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Manzil -->
-                    <div class="space-y-2">
-                        <label class="flex items-center gap-3 cursor-pointer group">
-                            <input type="checkbox" v-model="bulkTargetForm.updateManzil"
-                                class="size-5 rounded border-2 border-slate-300 text-primary focus:ring-primary transition cursor-pointer">
-                            <span class="text-xs font-black text-slate-700 uppercase">Target Manzil (Halaman)</span>
-                        </label>
-                        <div v-if="bulkTargetForm.updateManzil"
-                            class="pl-8 animate-in slide-in-from-left-2 duration-200">
-                            <div class="flex items-center gap-2">
-                                <input type="number" v-model.number="bulkTargetForm.manzil"
-                                    class="w-full p-3 border rounded-xl font-black text-slate-700 text-center text-lg bg-slate-50 border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none">
-                                <span class="text-[10px] font-bold text-slate-400 uppercase">Hal</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Tilawah -->
-                    <div class="space-y-2">
-                        <label class="flex items-center gap-3 cursor-pointer group">
-                            <input type="checkbox" v-model="bulkTargetForm.updateTilawah"
-                                class="size-5 rounded border-2 border-slate-300 text-primary focus:ring-primary transition cursor-pointer">
-                            <span class="text-xs font-black text-slate-700 uppercase">Target Tilawah (Halaman)</span>
-                        </label>
-                        <div v-if="bulkTargetForm.updateTilawah"
-                            class="pl-8 animate-in slide-in-from-left-2 duration-200">
-                            <div class="flex items-center gap-2">
-                                <input type="number" v-model.number="bulkTargetForm.tilawah"
-                                    class="w-full p-3 border rounded-xl font-black text-slate-700 text-center text-lg bg-slate-50 border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none">
-                                <span class="text-[10px] font-bold text-slate-400 uppercase">Hal</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Footer -->
-                <div class="p-6 border-t bg-slate-50/50">
-                    <button @click="applyBulkTarget()"
-                        class="w-full bg-slate-900 text-white py-4 rounded-2xl font-black shadow-xl shadow-slate-900/10 hover:bg-slate-800 active:scale-[0.98] transition-all flex items-center justify-center gap-2">
-                        Terapkan ke {{ selectedSantriIds.length }} Santri
-                    </button>
-                    <p class="text-[10px] text-center text-slate-400 mt-4 font-bold uppercase tracking-tight">Tindakan
-                        ini akan menimpa target yang ada</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- MODAL OVERLAY -->
+        <!-- MODAL OVERLAY (Updated v30: Simple fade to preserve backdrop-blur) -->
         <div v-if="modalState.isOpen" @click.self="closeModal"
-            class="fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 fade-in">
+            class="fixed inset-0 z-[60] bg-black/40 backdrop-blur-md flex items-center justify-center p-4 simple-fade">
             <div @click.stop
-                class="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden max-h-[90vh] flex flex-col transform transition-all scale-100">
+                class="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden max-h-[90vh] flex flex-col animate-scale-in">
                 <!-- Modal Header -->
                 <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
                     <h3 class="font-bold text-lg text-slate-800">{{ modalState.title }}</h3>
@@ -1321,63 +1107,7 @@
                         </div>
                     </div>
 
-                    <!-- FORM TARGET -->
-                    <div v-if="modalState.view === 'target-form'" class="space-y-4">
-                        <div class="flex items-center gap-3 mb-2 bg-blue-50 p-3 rounded-xl border border-blue-100">
-                            <div
-                                class="size-10 bg-white rounded-full flex items-center justify-center font-bold text-blue-600 shadow-sm">
-                                {{ getInitials(targetForm.full_name) }}</div>
-                            <div>
-                                <p class="font-bold text-slate-900 text-sm">{{ targetForm.full_name }}</p>
-                                <p class="text-[10px] text-slate-500 uppercase font-bold">Total Hafalan: {{
-                                    targetForm.hafalan_desc }}</p>
-                            </div>
-                        </div>
 
-                        <div>
-                            <label class="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Target Sabaq
-                                (Hafalan Baru)</label>
-                            <div class="flex items-center gap-2">
-                                <input v-model.number="targetForm.sabaq" type="number"
-                                    class="w-full p-3 border rounded-xl font-bold text-slate-700 text-center text-lg">
-                                <div class="text-xs font-bold text-slate-400">Hal/Bulan</div>
-                            </div>
-                        </div>
-
-                        <div>
-                            <label class="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Target Manzil
-                                (Murojaah)</label>
-                            <div class="grid grid-cols-3 gap-2">
-                                <div class="col-span-1">
-                                    <label
-                                        class="text-[9px] font-bold text-slate-400 uppercase text-center block mb-1">Persen
-                                        %</label>
-                                    <input v-model.number="targetForm.pct" @input="recalcManzil" type="number"
-                                        class="w-full p-3 border rounded-xl font-bold text-slate-700 text-center">
-                                </div>
-                                <div class="col-span-2">
-                                    <label
-                                        class="text-[9px] font-bold text-slate-400 uppercase text-center block mb-1">Target
-                                        Halaman</label>
-                                    <div class="flex items-center gap-2">
-                                        <input v-model.number="targetForm.manzil" type="number"
-                                            class="w-full p-3 border rounded-xl font-bold text-slate-700 text-center text-lg">
-                                        <div class="text-xs font-bold text-slate-400">Hal</div>
-                                    </div>
-                                </div>
-                            </div>
-                            <p class="text-[10px] text-slate-400 mt-1">*Total Hafalan: {{ targetForm.totalPages }}
-                                Halaman</p>
-                        </div>
-
-                        <div class="pt-4 flex gap-3">
-                            <button @click="closeModal"
-                                class="flex-1 py-3 rounded-xl border border-slate-200 font-bold text-slate-600 hover:bg-slate-50 transition">Batal</button>
-                            <button @click="saveTarget"
-                                class="flex-1 py-3 rounded-xl bg-primary text-white font-bold hover:bg-blue-800 shadow-lg shadow-blue-900/20 transition">Simpan
-                                Target</button>
-                        </div>
-                    </div>
 
                     <!-- FORM MASTER PELANGGARAN -->
                     <div v-if="modalState.view === 'master_pelanggaran'" class="space-y-4">
@@ -1401,6 +1131,164 @@
                                 @click="saveMasterPelanggaran().then(res => { if(res && res.success) closeModal(); })"
                                 class="flex-1 py-3 rounded-xl bg-primary text-white font-bold hover:bg-blue-800 shadow-lg shadow-blue-900/20 transition">Simpan</button>
                         </div>
+                    </div>
+
+                    <!-- FORM MAPEL (Integrated v31) -->
+                    <form v-if="modalState.view === 'mapel'" @submit.prevent="saveMapel" class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">Nama Mata Pelajaran</label>
+                            <input v-model="mapelForm.name" type="text"
+                                class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-primary bg-white"
+                                placeholder="Contoh: Matematika, Fiqih, dll" required>
+                        </div>
+                        <div class="flex gap-3 pt-4">
+                            <button type="button" @click="closeModal"
+                                class="flex-1 py-3 rounded-xl border border-slate-200 font-bold text-slate-600 hover:bg-slate-50 transition">Batal</button>
+                            <button type="submit"
+                                class="flex-1 py-3 rounded-xl bg-primary text-white font-bold hover:bg-blue-800 shadow-lg shadow-blue-900/20 transition">Simpan</button>
+                        </div>
+                    </form>
+
+                    <!-- FORM KELAS (Integrated v31) -->
+                    <form v-if="modalState.view === 'kelas'" @submit.prevent="saveKelas" class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">Nama Kelas</label>
+                            <input v-model="kelasForm.name" type="text"
+                                class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-primary bg-white"
+                                placeholder="Contoh: Kelas A, Ruang 1, dll" required>
+                        </div>
+                        <div class="flex gap-3 pt-4">
+                            <button type="button" @click="closeModal"
+                                class="flex-1 py-3 rounded-xl border border-slate-200 font-bold text-slate-600 hover:bg-slate-50 transition">Batal</button>
+                            <button type="submit"
+                                class="flex-1 py-3 rounded-xl bg-primary text-white font-bold hover:bg-blue-800 shadow-lg shadow-blue-900/20 transition">Simpan</button>
+                        </div>
+                    </form>
+
+                    <!-- FORM TARGET (Integrated v32) -->
+                    <div v-if="modalState.view === 'target-form'" class="space-y-5">
+                        <div class="flex items-center gap-3 mb-2 bg-blue-50 p-3 rounded-xl border border-blue-100">
+                            <div
+                                class="size-10 bg-white rounded-full flex items-center justify-center font-bold text-blue-600 shadow-sm uppercase">
+                                {{ (targetForm.full_name || '').charAt(0) }}</div>
+                            <div>
+                                <p class="font-bold text-slate-900 text-sm italic">{{ targetForm.full_name }}</p>
+                                <p class="text-[10px] text-slate-500 uppercase font-bold">Total Hafalan: {{
+                                    targetForm.hafalan_desc }}</p>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Target Sabaq
+                                (Hafalan Baru)</label>
+                            <div class="flex items-center gap-2">
+                                <input v-model.number="targetForm.sabaq" type="number"
+                                    class="w-full p-3 border rounded-xl font-bold text-slate-700 text-center text-lg focus:border-primary outline-none">
+                                <div class="text-xs font-bold text-slate-400 whitespace-nowrap">Hal/Bulan</div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Target Manzil
+                                (Murojaah)</label>
+                            <div class="grid grid-cols-3 gap-2">
+                                <div class="col-span-1">
+                                    <label
+                                        class="text-[9px] font-bold text-slate-400 uppercase text-center block mb-1">Persen
+                                        %</label>
+                                    <input v-model.number="targetForm.pct" @input="recalcManzil(targetForm.pct)"
+                                        type="number"
+                                        class="w-full p-2.5 border rounded-xl font-bold text-slate-700 text-center focus:border-primary outline-none text-sm">
+                                </div>
+                                <div class="col-span-2">
+                                    <label
+                                        class="text-[9px] font-bold text-slate-400 uppercase text-center block mb-1">Target
+                                        Halaman</label>
+                                    <div class="flex items-center gap-2">
+                                        <input v-model.number="targetForm.manzil" type="number"
+                                            class="w-full p-3 border rounded-xl font-bold text-slate-700 text-center text-lg focus:border-primary outline-none">
+                                        <div class="text-xs font-bold text-slate-400">Hal</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <p class="text-[10px] text-slate-400 mt-1">*Total Hafalan: {{ targetForm.totalPages }}
+                                Halaman</p>
+                        </div>
+
+                        <div>
+                            <label class="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Target Tilawah (Baca
+                                Al-Quran)</label>
+                            <div class="flex items-center gap-2">
+                                <input v-model.number="targetForm.tilawah" type="number"
+                                    class="w-full p-3 border rounded-xl font-bold text-slate-700 text-center text-lg focus:border-primary outline-none">
+                                <div class="text-xs font-bold text-slate-400 whitespace-nowrap">Hal/Bulan</div>
+                            </div>
+                        </div>
+
+                        <div class="pt-2">
+                            <button @click="saveTarget"
+                                class="w-full py-4 rounded-2xl bg-primary text-white font-bold hover:bg-blue-800 shadow-lg shadow-blue-900/20 transition-all active:scale-[0.98]">
+                                Simpan Target
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- FORM BULK TARGET (Integrated v32) -->
+                    <div v-if="modalState.view === 'bulk-target'" class="space-y-6">
+                        <p
+                            class="text-xs text-slate-500 bg-blue-50 p-3 rounded-xl border border-blue-100 flex items-start gap-2">
+                            <span class="material-symbols-outlined text-blue-500 text-sm mt-0.5">info</span>
+                            Centang kriteria yang ingin diperbarui untuk {{ selectedSantriIds.length }} santri.
+                        </p>
+
+                        <div class="space-y-4">
+                            <!-- Sabaq -->
+                            <div class="p-3 rounded-xl border border-slate-100 bg-slate-50/50">
+                                <label class="flex items-center gap-3 cursor-pointer mb-3">
+                                    <input type="checkbox" v-model="bulkTargetForm.updateSabaq"
+                                        class="size-5 rounded border-slate-300 text-primary">
+                                    <span class="text-xs font-bold text-slate-700">TARGET SABAQ</span>
+                                </label>
+                                <div v-if="bulkTargetForm.updateSabaq" class="flex items-center gap-2">
+                                    <input type="number" v-model.number="bulkTargetForm.sabaq"
+                                        class="flex-1 p-3 border rounded-xl font-bold text-center bg-white">
+                                    <span class="text-xs font-bold text-slate-400">HAL</span>
+                                </div>
+                            </div>
+
+                            <!-- Manzil -->
+                            <div class="p-3 rounded-xl border border-slate-100 bg-slate-50/50">
+                                <label class="flex items-center gap-3 cursor-pointer mb-3">
+                                    <input type="checkbox" v-model="bulkTargetForm.updateManzil"
+                                        class="size-5 rounded border-slate-300 text-primary">
+                                    <span class="text-xs font-bold text-slate-700">TARGET MANZIL</span>
+                                </label>
+                                <div v-if="bulkTargetForm.updateManzil" class="flex items-center gap-2">
+                                    <input type="number" v-model.number="bulkTargetForm.manzil"
+                                        class="flex-1 p-3 border rounded-xl font-bold text-center bg-white">
+                                    <span class="text-xs font-bold text-slate-400">HAL</span>
+                                </div>
+                            </div>
+
+                            <!-- Tilawah -->
+                            <div class="p-3 rounded-xl border border-slate-100 bg-slate-50/50">
+                                <label class="flex items-center gap-3 cursor-pointer mb-3">
+                                    <input type="checkbox" v-model="bulkTargetForm.updateTilawah"
+                                        class="size-5 rounded border-slate-300 text-primary">
+                                    <span class="text-xs font-bold text-slate-700">TARGET TILAWAH</span>
+                                </label>
+                                <div v-if="bulkTargetForm.updateTilawah" class="flex items-center gap-2">
+                                    <input type="number" v-model.number="bulkTargetForm.tilawah"
+                                        class="flex-1 p-3 border rounded-xl font-bold text-center bg-white">
+                                    <span class="text-xs font-bold text-slate-400">HAL</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button @click="applyBulkTarget"
+                            class="w-full bg-slate-900 text-white py-4 rounded-2xl font-bold shadow-xl hover:bg-slate-800 transition-all active:scale-[0.98]">
+                            Terapkan ke {{ selectedSantriIds.length }} Santri
+                        </button>
                     </div>
 
                     <!-- GRADING MODAL -->
@@ -1688,7 +1576,7 @@
 
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js?v=2.7').then(reg => {
+                navigator.serviceWorker.register('sw.js?v=3.3').then(reg => {
                     console.log('SW Registered!', reg);
 
                     // 1. Check if update is already waiting (e.g. from previous visit)

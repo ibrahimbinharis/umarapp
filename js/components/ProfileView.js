@@ -77,10 +77,16 @@ const ProfileView = {
         const navigateToSub = (menu) => {
             activeSubMenu.value = menu;
             window.scrollTo(0, 0);
+            // v37: Push history state for sub-menu back navigation
+            window.history.pushState({ view: 'profile', sub: true }, '', '#profile-' + menu);
         };
 
         const goBack = () => {
-            activeSubMenu.value = null;
+            if (activeSubMenu.value && window.history.state && window.history.state.sub) {
+                window.history.back();
+            } else {
+                activeSubMenu.value = null;
+            }
         };
 
         const showPassword = ref(false);

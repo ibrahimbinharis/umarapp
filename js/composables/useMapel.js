@@ -9,9 +9,9 @@
  * Dependencies: DB (from core.js), uiData (from parent)
  */
 
-function useMapel(uiData, DB) {
+function useMapel(uiData, DB, modalState) {
     // Get Vue from global (loaded via CDN)
-    const { reactive, computed } = Vue;
+    const { reactive, computed, watch } = Vue;
 
     // ===== STATE =====
     const mapelForm = reactive({
@@ -42,26 +42,21 @@ function useMapel(uiData, DB) {
      */
     const openMapelModal = (mapel = null) => {
         if (mapel) {
-            // Edit mode
             mapelForm.id = mapel._id;
             mapelForm.name = mapel.name || '';
-            mapelModalState.isEdit = true;
-            mapelModalState.title = 'Edit Mapel';
-        } else {
-            // Create mode
-            mapelForm.id = null;
-            mapelForm.name = '';
-            mapelModalState.isEdit = false;
-            mapelModalState.title = 'Tambah Mapel';
         }
-        mapelModalState.isOpen = true;
+        if (modalState) {
+            modalState.isOpen = true;
+            modalState.view = 'mapel';
+            modalState.title = mapel ? 'Edit Mapel' : 'Tambah Mapel';
+        }
     };
 
     /**
      * Close mapel modal
      */
     const closeMapelModal = () => {
-        mapelModalState.isOpen = false;
+        if (modalState) modalState.isOpen = false;
         mapelForm.id = null;
         mapelForm.name = '';
     };
@@ -111,7 +106,7 @@ function useMapel(uiData, DB) {
     const isMapelFabClicked = Vue.ref(false);
 
     // Reset FAB state when modal closes
-    Vue.watch(() => mapelModalState.isOpen, (newVal) => {
+    watch(() => modalState?.isOpen, (newVal) => {
         if (!newVal) {
             isMapelFabClicked.value = false;
         }

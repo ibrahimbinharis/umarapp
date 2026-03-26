@@ -111,8 +111,13 @@ const UangSakuView = {
             santriBalances,
             
             clearActiveSantri: () => {
-                emit('update:santriSearchQuery', '');
-                emit('update:usActiveSantri', '');
+                // If we have a detail state in history, use back() to keep stack clean
+                if (window.history.state && window.history.state.detail) {
+                    window.history.back();
+                } else {
+                    emit('update:santriSearchQuery', '');
+                    emit('update:usActiveSantri', '');
+                }
             },
             
             toggleDropdown: () => {

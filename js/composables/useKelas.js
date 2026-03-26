@@ -9,9 +9,9 @@
  * Dependencies: DB (from core.js), uiData (from parent)
  */
 
-function useKelas(uiData, DB) {
+function useKelas(uiData, DB, modalState) {
     // Get Vue from global (loaded via CDN)
-    const { reactive, computed } = Vue;
+    const { reactive, computed, watch } = Vue;
 
     // ===== STATE =====
     const kelasForm = reactive({
@@ -42,26 +42,21 @@ function useKelas(uiData, DB) {
      */
     const openKelasModal = (kelas = null) => {
         if (kelas) {
-            // Edit mode
             kelasForm.id = kelas._id;
             kelasForm.name = kelas.name || '';
-            kelasModalState.isEdit = true;
-            kelasModalState.title = 'Edit Kelas';
-        } else {
-            // Create mode
-            kelasForm.id = null;
-            kelasForm.name = '';
-            kelasModalState.isEdit = false;
-            kelasModalState.title = 'Tambah Kelas';
         }
-        kelasModalState.isOpen = true;
+        if (modalState) {
+            modalState.isOpen = true;
+            modalState.view = 'kelas';
+            modalState.title = kelas ? 'Edit Kelas' : 'Tambah Kelas';
+        }
     };
 
     /**
      * Close kelas modal
      */
     const closeKelasModal = () => {
-        kelasModalState.isOpen = false;
+        if (modalState) modalState.isOpen = false;
         kelasForm.id = null;
         kelasForm.name = '';
     };
@@ -111,7 +106,7 @@ function useKelas(uiData, DB) {
     const isKelasFabClicked = Vue.ref(false);
 
     // Reset FAB state when modal closes
-    Vue.watch(() => kelasModalState.isOpen, (newVal) => {
+    watch(() => modalState?.isOpen, (newVal) => {
         if (!newVal) {
             isKelasFabClicked.value = false;
         }
