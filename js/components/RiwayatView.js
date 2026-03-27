@@ -227,6 +227,7 @@ const RiwayatView = {
                     { id: '', label: 'Semua' },
                     { id: 'today', label: 'Hari Ini' },
                     { id: 'yesterday', label: 'Kemarin' },
+                    { id: 'last7', label: '7 Hari' },
                     { id: 'month', label: 'Bulan Ini' },
                     { id: 'last30', label: '30 Hari' },
                     { id: 'custom', label: 'Custom' }

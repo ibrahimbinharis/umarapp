@@ -139,12 +139,10 @@ textarea {
 }
 
 .floating-btn {
-    width: 60px;
-    height: 46px;
+    width: 55px;
+    height: 40px;
     background: #1E40AF;
-    /* Primary Blue */
-    border-radius: 16px;
-    /* Squircle */
+    border-radius: 12px;
     color: white;
     display: flex;
     align-items: center;

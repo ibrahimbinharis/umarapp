@@ -328,8 +328,14 @@ const useRiwayat = (uiData, DB, refreshData, modules = {}, currentView, userSess
                 break;
             case 'week':
                 const weekStart = new Date(today);
-                weekStart.setDate(today.getDate() - today.getDay()); // Start of week (Sunday)
+                weekStart.setDate(today.getDate() - today.getDay()); 
                 riwayatState.startDate = formatDate(weekStart);
+                riwayatState.endDate = formatDate(today);
+                break;
+            case 'last7':
+                const d7 = new Date(today);
+                d7.setDate(today.getDate() - 7);
+                riwayatState.startDate = formatDate(d7);
                 riwayatState.endDate = formatDate(today);
                 break;
             case 'month':
