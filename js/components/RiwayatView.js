@@ -26,7 +26,8 @@ const RiwayatView = {
         deleteRiwayat: Function,
         setQuickDateFilter: Function,
         resetAllFilters: Function,
-        removeFilter: Function
+        removeFilter: Function,
+        loading: { type: Boolean, default: false }
     },
     setup(props, { emit }) {
         const { ref, reactive, computed, watch } = Vue;
@@ -455,8 +456,138 @@ const RiwayatView = {
                 </table>
             </div>
 
+        <!-- List Content (Skeleton or Data) -->
+        <div v-if="loading" class="px-2 space-y-3">
+            <div v-for="i in 5" :key="i" class="p-4 bg-white border border-slate-100 rounded-2xl flex items-center gap-3 animate-pulse">
+                <div class="skeleton size-10 rounded-xl"></div>
+                <div class="flex-1 space-y-2">
+                    <div class="skeleton-text w-3/4 h-3 bg-slate-100 rounded"></div>
+                    <div class="skeleton-text w-1/2 h-2 bg-slate-50 rounded"></div>
+                </div>
+            </div>
+        </div>
+
+        <div v-else class="space-y-4">
+            <!-- Table Container (Desktop Friendly) -->
+            <div class="px-2 overflow-x-auto custom-scrollbar">
+                <table class="w-full border-separate border-spacing-y-2">
+                    <tbody class="space-y-2">
+                        <!-- Iteration was already above in my previous attempt, but for safety I'll put the standard table structure or list here -->
+                        <div class="px-2 space-y-3">
+                            <div v-for="item in paginatedRiwayat" :key="item._id" 
+                                class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm relative overflow-hidden group hover:shadow-md transition-all active:scale-[0.98] cursor-pointer"
+                                @click="toggleSelect(item._id)">
+                                <!-- Checkbox Indicator -->
+                                <div v-if="riwayatState.selectedIds.includes(item._id)" class="absolute top-0 right-0 p-1.5 bg-blue-500 text-white rounded-bl-xl shadow-sm z-10 animate-in zoom-in duration-200">
+                                    <span class="material-symbols-outlined text-xs font-black">check</span>
+                                </div>
+
+                                <div class="flex items-center gap-4">
+                                    <!-- Category Icon -->
+                                    <div class="size-10 rounded-xl flex items-center justify-center border transition-colors shrink-0"
+                                        :class="[
+                                            item.__cat === 'pelanggaran' ? 'bg-red-50 border-red-100 text-red-500' :
+                                            item.__cat === 'ujian' ? 'bg-amber-50 border-amber-100 text-amber-500' :
+                                            'bg-blue-50 border-blue-100 text-blue-500'
+                                        ]">
+                                        <span class="material-symbols-outlined text-xl">{{
+                                            item.__cat === 'pelanggaran' ? 'warning' :
+                                            item.__cat === 'ujian' ? 'assignment' :
+                                            (item.setoran_type === 'Sabaq' ? 'menu_book' : (item.setoran_type === 'Manzil' ? 'auto_stories' : 'auto_graph'))
+                                        }}</span>
+                                    </div>
+
+                                    <div class="flex-1 min-w-0">
+                                        <div class="flex justify-between items-start mb-0.5">
+                                            <h4 class="text-sm font-black text-slate-800 truncate">{{ getSantriName(item.santri_id) }}</h4>
+                                            <span class="text-[9px] font-bold text-slate-400 whitespace-nowrap ml-2">{{ formatDateLong(item.created_at || item.timestamp) }}</span>
+                                        </div>
+                                        <div class="flex items-center gap-2 mb-1">
+                                            <span class="text-[10px] font-black uppercase tracking-wider"
+                                                :class="[
+                                                    item.__cat === 'pelanggaran' ? 'text-red-500' :
+                                                    item.__cat === 'ujian' ? 'text-amber-500' :
+                                                    'text-blue-500'
+                                                ]">
+                                                {{ item.__cat === 'pelanggaran' ? 'Pelanggaran' : (item.setoran_type || (item.type === 'hafalan_exam' ? 'Ujian H.' : 'Ujian')) }}
+                                            </span>
+                                            <span class="text-[10px] text-slate-300">•</span>
+                                            <span class="text-[10px] font-bold text-slate-500">{{ formatTime(item.created_at || item.timestamp) }}</span>
+                                        </div>
+                                        
+                                        <!-- Detail Description -->
+                                        <p class="text-[11px] text-slate-500 leading-snug line-clamp-1">
+                                            <template v-if="item.__cat === 'setoran'">
+                                                {{ item.setoran_type === 'Sabaq' ? (item.surah_from_latin ? item.surah_from_latin.replace(/^\d+\.\s*/, '') : '-') + ' / ' + item.pages + ' Hal' : (item.setoran_type === 'Manzil' ? 'Hal ' + (item.page_from || '-') + ' - ' + (item.page_to || '-') : (item.tilawah_mode === 'juz' ? 'Juz ' + item.juz_from + '-' + item.juz_to : 'Hal ' + item.page_from + '-' + item.page_to)) }}
+                                            </template>
+                                            <template v-else-if="item.__cat === 'ujian'">
+                                                {{ (item.detail || '-').replace('menyetorkan hafalan', 'selesai') }}
+                                            </template>
+                                            <template v-else-if="item.__cat === 'pelanggaran'">
+                                                {{ item.description || '-' }}
+                                            </template>
+                                        </p>
+                                    </div>
+
+                                    <!-- Score / Point -->
+                                    <div class="shrink-0 text-right ml-2 min-w-[3rem]">
+                                        <div v-if="item.__cat === 'setoran' && item.setoran_type !== 'Tilawah'" class="text-xs font-black"
+                                            :class="[
+                                                (item.grade === 'A+' || item.grade === 'A') ? 'text-blue-600' : 
+                                                (item.grade === 'B+' || item.grade === 'B') ? 'text-emerald-600' : 
+                                                (item.grade === 'B-') ? 'text-amber-500' :
+                                                (item.grade === 'C') ? 'text-red-500' : 'text-slate-500'
+                                            ]">
+                                            Grade {{ item.grade }}
+                                        </div>
+                                        <div v-else-if="item.__cat === 'ujian'" class="text-xs font-black"
+                                            :class="[
+                                                (item.score >= 80) ? 'text-blue-600' : 
+                                                (item.score >= 75) ? 'text-emerald-600' : 
+                                                (item.score >= 70) ? 'text-amber-500' : 'text-red-500'
+                                            ]">
+                                            Nilai: {{ item.score }}
+                                        </div>
+                                        <div v-else-if="item.__cat === 'pelanggaran'" class="text-xs font-black text-red-600">
+                                            -{{ item.points || 0 }} Poin
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Aksi Button -->
+                                    <button v-if="userSession.role === 'admin' || userSession.role === 'guru' || ((userSession.role === 'santri' || userSession.role === 'wali') && appConfig.isHolidayMode)" 
+                                        @click.stop="toggleActionMenu(item._id)"
+                                        class="size-8 rounded-full flex items-center justify-center text-slate-300 hover:bg-slate-50 hover:text-primary transition-all ml-1">
+                                        <span class="material-symbols-outlined text-lg">more_vert</span>
+                                    </button>
+                                </div>
+
+                                <!-- Action Popup -->
+                                <div v-if="riwayatState.activeActionId === item._id"
+                                    class="absolute right-4 top-12 bg-white rounded-2xl shadow-2xl border border-slate-100 z-50 w-36 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                                    <button @click="editRiwayat(item); closeActionMenu()"
+                                        class="px-4 py-3 hover:bg-blue-50 text-[11px] font-bold text-slate-700 flex items-center gap-2 w-full text-left transition-colors">
+                                        <span class="material-symbols-outlined text-base text-blue-500">edit</span> Edit Data
+                                    </button>
+                                    <button @click="deleteRiwayat(item); closeActionMenu()"
+                                        class="px-4 py-3 hover:bg-red-50 text-[11px] font-bold text-red-600 flex items-center gap-2 w-full text-left border-t border-slate-50 transition-colors">
+                                        <span class="material-symbols-outlined text-base text-red-400">delete</span> Hapus Data
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div v-if="paginatedRiwayat.length === 0" class="px-4 py-20 text-center">
+                            <div class="flex flex-col items-center">
+                                <span class="material-symbols-outlined text-slate-200 text-5xl mb-2">history</span>
+                                <p class="text-slate-400 font-bold text-xs italic">Belum ada riwayat data...</p>
+                            </div>
+                        </div>
+                    </tbody>
+                </table>
+            </div>
+
             <!-- Pagination -->
-            <div class="p-3 border-t border-slate-50 bg-slate-50/30 flex flex-col items-center">
+            <div class="p-4 flex flex-col items-center">
                 <div class="flex items-center gap-4">
                     <button @click="riwayatState.page--" :disabled="riwayatState.page === 1"
                         class="size-8 rounded-lg border bg-white flex items-center justify-center hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed transition shadow-sm active:scale-90">

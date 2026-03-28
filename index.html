@@ -30,18 +30,20 @@
         href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
     <link rel="stylesheet" href="style.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css" rel="stylesheet">
-    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.1/jspdf.plugin.autotable.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.1/jspdf.plugin.autotable.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
 
     <!-- PWA -->
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#1E40AF">
+    <meta name="theme-color" content="#FFFFFF">
     <link rel="icon" type="image/png" href="image/logo_new.png">
     <link rel="apple-touch-icon" href="image/logo_new.png">
+    
+
     <style>
         .toast-slide-enter-active,
         .toast-slide-leave-active {
@@ -82,14 +84,7 @@
 <body class="bg-slate-50 text-slate-800 h-screen w-full overflow-hidden">
     <div id="app" v-cloak class="w-full h-full flex flex-col relative text-sm bg-slate-50">
 
-        <!-- FLAT LOADING SCREEN -->
-        <transition name="fade">
-            <div v-if="loading"
-                class="fixed inset-0 z-[999] bg-white flex flex-col items-center justify-center transition-all duration-500">
-                <img src="image/logo_new.png" alt="Logo" class="size-24 object-contain">
-                <p class="mt-4 font-bold text-slate-800 text-lg uppercase tracking-widest">{{ appName }}</p>
-            </div>
-        </transition>
+
 
         <!-- LOGIN VIEW (Component) -->
         <login-view v-if="!loading && currentView === 'login'" :app-name="appName" :app-version="appVersion"
@@ -100,8 +95,8 @@
         <install-view v-else-if="currentView === 'install'" :app-name="appName" :app-version="appVersion"
             @nav="navigateTo"></install-view>
 
-        <!-- MAIN APP VIEW -->
-        <div v-else-if="!loading && currentView" class="flex h-full w-full animate-in fade-in duration-700">
+        <!-- MAIN APP VIEW (Shows for all other views OR during initial loading/skeleton) -->
+        <div v-else-if="currentView && (currentView !== 'login' || loading)" class="flex h-full w-full animate-in fade-in duration-700">
 
             <!-- SIDEBAR (Desktop) -->
             <aside v-if="isSidebarVisible"
@@ -134,7 +129,7 @@
                 <!-- MONITORING BELL (Desktop Sidebar) REMOVED -->
                 <!-- User Profile -->
                 <div class="p-4 border-t border-slate-100">
-                    <div @click="navigateTo('profile')"
+                    <div v-if="userSession" @click="navigateTo('profile')"
                         class="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-50 cursor-pointer transition group">
                         <div
                             class="size-8 bg-blue-100 text-primary rounded-full flex items-center justify-center font-bold text-xs group-hover:bg-primary group-hover:text-white transition">
@@ -146,6 +141,15 @@
                             <p class="text-[10px] text-slate-500 truncate">{{ userSession.role }}</p>
                         </div>
                         <span class="material-symbols-outlined text-slate-300 text-sm">settings</span>
+                    </div>
+
+                    <!-- User Skeleton during loading -->
+                    <div v-else-if="loading" class="flex items-center gap-3 p-2 animate-pulse">
+                        <div class="size-8 rounded-full skeleton"></div>
+                        <div class="flex-1 space-y-2">
+                            <div class="h-3 bg-slate-100 rounded w-3/4"></div>
+                            <div class="h-2 bg-slate-50 rounded w-1/2"></div>
+                        </div>
                     </div>
                 </div>
             </aside>
@@ -194,8 +198,8 @@
                         isHeaderVisible ? (currentView === 'quran' ? 'pt-20 md:pt-0' : 'pt-20') : ''
                     ]" @scroll="handleGlobalScroll">
 
-                    <!-- DASHBOARD SKELETON -->
-                    <div v-if="loading && currentView === 'dashboard'" class="fade-in space-y-6 animate-pulse">
+                    <!-- DASHBOARD SKELETON (Universal Placeholder for Initial Load) -->
+                    <div v-if="loading && (currentView === 'dashboard' || currentView === 'login')" class="fade-in space-y-6 animate-pulse">
                         <!-- Greeting Card Skeleton -->
                         <div
                             class="bg-white p-5 rounded-3xl border border-slate-100 card-shadow flex items-center gap-4">
@@ -251,6 +255,7 @@
                             @clear-read="clearReadNotifications" @show-confirm="showConfirm" @navigate="navigateTo"
                             @back="currentView = 'dashboard'"></notification-view>
                     </div>
+
                     <!-- SANTRI VIEW SKELETON -->
                     <div v-if="loading && currentView === 'santri'" class="animate-pulse px-4 space-y-4 pt-4">
                         <div class="h-8 bg-slate-200 rounded-lg w-full mb-4"></div>
@@ -1455,62 +1460,62 @@
 
     <!-- Core Logic -->
     <!-- IndexedDB Wrapper -->
-    <script src="https://cdn.jsdelivr.net/npm/idb-keyval@6/dist/umd.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/idb-keyval@6/dist/umd.js" defer></script>
 
-    <script src="js/core.js"></script>
-    <script src="js/utils_date.js"></script>
-    <script src="js/utils_password.js"></script>
-    <script src="js/utils_quran.js"></script>
+    <script src="js/core.js" defer></script>
+    <script src="js/utils_date.js" defer></script>
+    <script src="js/utils_password.js" defer></script>
+    <script src="js/utils_quran.js" defer></script>
 
     <!-- Composables (load before main app) -->
-    <script src="js/composables/useAuth.js"></script>
-    <script src="js/composables/usePelanggaran.js"></script>
-    <script src="js/composables/useSantri.js"></script> <!-- PDF & Excel Libs (v34) -->
+    <script src="js/composables/useAuth.js" defer></script>
+    <script src="js/composables/usePelanggaran.js" defer></script>
+    <script src="js/composables/useSantri.js" defer></script> <!-- PDF & Excel Libs (v34) -->
 
 
     <!-- Composables -->
-    <script src="js/composables/useRekap.js"></script>
-    <script src="js/composables/useGuru.js"></script>
-    <script src="js/composables/useMapel.js"></script>
-    <script src="js/composables/useKelas.js"></script>
-    <script src="js/composables/useJadwal.js"></script>
-    <script src="js/composables/useAbsensi.js"></script>
-    <script src="js/composables/useTarget.js"></script>
-    <script src="js/composables/useUjian.js"></script>
-    <script src="js/composables/useRiwayat.js"></script>
-    <script src="js/composables/useSetoran.js"></script>
-    <script src="js/composables/useQuran.js"></script>
-    <script src="js/composables/useAnalytics.js"></script>
-    <script src="js/composables/useDashboard.js"></script>
-    <script src="js/composables/useProfile.js"></script>
-    <script src="js/composables/usePengumuman.js"></script>
+    <script src="js/composables/useRekap.js" defer></script>
+    <script src="js/composables/useGuru.js" defer></script>
+    <script src="js/composables/useMapel.js" defer></script>
+    <script src="js/composables/useKelas.js" defer></script>
+    <script src="js/composables/useJadwal.js" defer></script>
+    <script src="js/composables/useAbsensi.js" defer></script>
+    <script src="js/composables/useTarget.js" defer></script>
+    <script src="js/composables/useUjian.js" defer></script>
+    <script src="js/composables/useRiwayat.js" defer></script>
+    <script src="js/composables/useSetoran.js" defer></script>
+    <script src="js/composables/useQuran.js" defer></script>
+    <script src="js/composables/useAnalytics.js" defer></script>
+    <script src="js/composables/useDashboard.js" defer></script>
+    <script src="js/composables/useProfile.js" defer></script>
+    <script src="js/composables/usePengumuman.js" defer></script>
 
     <!-- Main App -->
     <!-- Components -->
-    <script src="js/components/LoginView.js"></script>
-    <script src="js/components/PelanggaranView.js"></script>
-    <script src="js/components/DashboardView.js"></script>
-    <script src="js/components/SantriView.js"></script>
-    <script src="js/components/GuruView.js"></script>
-    <script src="js/components/UjianView.js"></script>
-    <script src="js/components/ExamCounter.js"></script> <!-- NEW -->
-    <script src="js/components/QuranView.js"></script>
-    <script src="js/components/SetoranView.js"></script>
-    <script src="js/components/TargetView.js"></script>
-    <script src="js/components/RekapView.js"></script>
-    <script src="js/components/RiwayatView.js"></script>
-    <script src="js/components/JadwalView.js"></script>
-    <script src="js/components/AbsensiView.js"></script>
-    <script src="js/components/ProfileView.js"></script>
-    <script src="js/components/NotificationView.js"></script>
-    <script src="js/components/InstallView.js"></script>
-    <script src="js/components/PengumumanView.js"></script>
-    <script src="js/services/NotificationService.js"></script>
-    <script src="js/services/PushService.js"></script>
-    <script src="js/composables/useNotifications.js"></script>
-    <script src="js/composables/useUangSaku.js"></script>
-    <script src="js/components/UangSakuView.js"></script>
-    <script src="js/app_vue.js"></script>
+    <script src="js/components/LoginView.js" defer></script>
+    <script src="js/components/PelanggaranView.js" defer></script>
+    <script src="js/components/DashboardView.js" defer></script>
+    <script src="js/components/SantriView.js" defer></script>
+    <script src="js/components/GuruView.js" defer></script>
+    <script src="js/components/UjianView.js" defer></script>
+    <script src="js/components/ExamCounter.js" defer></script> <!-- NEW -->
+    <script src="js/components/QuranView.js" defer></script>
+    <script src="js/components/SetoranView.js" defer></script>
+    <script src="js/components/TargetView.js" defer></script>
+    <script src="js/components/RekapView.js" defer></script>
+    <script src="js/components/RiwayatView.js" defer></script>
+    <script src="js/components/JadwalView.js" defer></script>
+    <script src="js/components/AbsensiView.js" defer></script>
+    <script src="js/components/ProfileView.js" defer></script>
+    <script src="js/components/NotificationView.js" defer></script>
+    <script src="js/components/InstallView.js" defer></script>
+    <script src="js/components/PengumumanView.js" defer></script>
+    <script src="js/services/NotificationService.js" defer></script>
+    <script src="js/services/PushService.js" defer></script>
+    <script src="js/composables/useNotifications.js" defer></script>
+    <script src="js/composables/useUangSaku.js" defer></script>
+    <script src="js/components/UangSakuView.js" defer></script>
+    <script src="js/app_vue.js" defer></script>
 
     <!-- Service Worker Registration -->
     <script>
@@ -1576,7 +1581,7 @@
 
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js?v=3.3').then(reg => {
+                navigator.serviceWorker.register('sw.js?v=3.9').then(reg => {
                     console.log('SW Registered!', reg);
 
                     // 1. Check if update is already waiting (e.g. from previous visit)

@@ -333,3 +333,50 @@ textarea {
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
 }
+
+/* --- SKELETON SCREENS (v37) --- */
+.skeleton {
+    background: #f1f5f9;
+    background: linear-gradient(110deg, #f1f5f9 8%, #f8fafc 18%, #f1f5f9 33%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite linear;
+    border-radius: 8px;
+}
+
+@keyframes shimmer {
+    0% {
+        background-position-x: 100%;
+    }
+    100% {
+        background-position-x: -100%;
+    }
+}
+
+.skeleton-text {
+    height: 12px;
+    width: 100%;
+    margin-bottom: 8px;
+}
+
+.skeleton-text.short {
+    width: 60%;
+}
+
+.skeleton-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+}
+
+.skeleton-card {
+    height: 100px;
+    border-radius: 20px;
+}
+
+.skeleton-chart {
+    height: 200px;
+}
+
+[v-cloak] {
+    display: none !important;
+}

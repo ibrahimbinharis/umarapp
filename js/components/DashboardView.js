@@ -656,8 +656,18 @@ const DashboardView = {
             </div>
 
 
-            <!-- Menu Grid Container -->
-            <div class="bg-white px-5 pt-5 pb-8 rounded-3xl border border-slate-100 card-shadow mb-6 relative transition-all duration-300">
+            <!-- Menu Grid Container (Skeleton Loading) -->
+            <div v-if="loading" class="bg-white px-5 pt-5 pb-8 rounded-3xl border border-slate-100 card-shadow mb-6 relative">
+                <div class="grid grid-cols-4 gap-3">
+                    <div v-for="i in 8" :key="i" class="flex flex-col items-center gap-2">
+                        <div class="skeleton w-14 h-14 rounded-2xl"></div>
+                        <div class="skeleton-text short"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Menu Grid Container (Real Data) -->
+            <div v-else class="bg-white px-5 pt-5 pb-8 rounded-3xl border border-slate-100 card-shadow mb-6 relative transition-all duration-300">
                 <div class="grid grid-cols-4 gap-3 transition-all duration-500 ease-in-out">
                     <button v-for="menu in displayedMenus" :key="menu.id"
                         @click="$emit('navigate', menu.id)" class="flex flex-col items-center gap-2 group animate-fade-in-up">
@@ -687,8 +697,20 @@ const DashboardView = {
                     </h3>
                 </div>
 
-                <!-- Gender Filter (Hidden for Santri Role as it is auto-filtered) -->
-                <div v-if="userSession.role !== 'santri'" class="flex gap-2 mb-4">
+                <!-- Leaderboard Skeleton (Show when loading) -->
+                <div v-if="loading" class="space-y-4">
+                    <div v-for="i in 5" :key="i" class="flex items-center gap-3 animate-pulse">
+                        <div class="skeleton size-8 rounded-full"></div>
+                        <div class="flex-1">
+                            <div class="skeleton-text w-3/4 h-3 bg-slate-100 rounded"></div>
+                            <div class="skeleton-text w-1/2 h-2 bg-slate-50 rounded mt-1"></div>
+                        </div>
+                        <div class="w-10 h-6 skeleton rounded-lg"></div>
+                    </div>
+                </div>
+
+                <!-- Gender Filter (Real Data) -->
+                <div v-else-if="userSession.role !== 'santri'" class="flex gap-2 mb-4">
                     <button @click="$emit('update:topSantriFilter', 'Semua')"
                         :class="topSantriFilter === 'Semua' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600'"
                         class="px-3 py-1.5 rounded-xl text-xs font-bold transition">
@@ -752,7 +774,8 @@ const DashboardView = {
                 <div class="flex justify-between items-center mb-4">
                     <h3 class="font-bold text-slate-900">Aktivitas Terbaru</h3>
                 </div>
-                <!-- Filter Pills -->
+
+                <!-- Filter Pills (Always Visible) -->
                 <div class="flex gap-2 mb-4 overflow-x-auto pb-2 scrollbar-hide">
                     <button @click="$emit('update:activityFilter', 'all')"
                         :class="activityFilter === 'all' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600'"
@@ -781,8 +804,19 @@ const DashboardView = {
                     </button>
                 </div>
 
-                <!-- List -->
-                <div class="space-y-4 max-h-60 overflow-y-auto pl-3 pr-1 custom-scrollbar">
+                <!-- Activity Skeleton (Show when loading) -->
+                <div v-if="loading" class="space-y-6">
+                    <div v-for="i in 3" :key="i" class="flex gap-4">
+                        <div class="skeleton size-4 rounded-full"></div>
+                        <div class="flex-1 space-y-2">
+                            <div class="skeleton-text w-1/4 h-2 bg-slate-100 rounded"></div>
+                            <div class="skeleton-text w-full h-3 bg-slate-50 rounded"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- List (Real Data) -->
+                <div v-else class="space-y-4 max-h-60 overflow-y-auto pl-3 pr-1 custom-scrollbar">
                     <div v-for="(act, idx) in filteredActivities" :key="idx"
                         class="flex items-start gap-3 relative pl-4 border-l-2 border-slate-100 last:border-0 pb-4 last:pb-0">
                         <!-- Timeline dot -->
@@ -959,34 +993,41 @@ const DashboardView = {
                     <div @click="$emit('navigate', 'santri')"
                         class="bg-white p-6 rounded-3xl border border-slate-100 card-shadow cursor-pointer hover:shadow-md transition-all group relative overflow-hidden">
                         
-                        <div class="flex justify-between items-center relative z-10">
-                            <div class="flex-1">
-                                <div class="flex items-center gap-2 mb-1">
-                                    <span class="material-symbols-outlined text-primary text-xs">analytics</span>
-                                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Santri</p>
+                        <!-- Skeleton for Stats -->
+                        <div v-if="loading" class="flex-1">
+                            <div class="skeleton-text w-1/2 mb-2"></div>
+                            <div class="skeleton-text w-3/4 h-8 mb-4"></div>
+                        </div>
+                        
+                        <!-- Real Data for Stats -->
+                        <div v-else class="flex-1">
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="material-symbols-outlined text-primary text-xs">analytics</span>
+                                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Santri</p>
+                            </div>
+                            <p class="text-4xl font-black text-slate-900 leading-none mb-4">{{ displayStats.totalSantri }}</p>
+                            
+                            <div class="space-y-1.5">
+                                <div class="flex items-center gap-2">
+                                    <div class="size-2 rounded-full bg-blue-600"></div>
+                                    <span class="text-[10px] font-bold text-slate-500">Putra: {{ displayStats.totalPutra }}</span>
                                 </div>
-                                <p class="text-4xl font-black text-slate-900 leading-none mb-4">{{ displayStats.totalSantri }}</p>
-                                
-                                <div class="space-y-1.5">
-                                    <div class="flex items-center gap-2">
-                                        <div class="size-2 rounded-full bg-blue-600"></div>
-                                        <span class="text-[10px] font-bold text-slate-500">Putra: {{ displayStats.totalPutra }}</span>
-                                    </div>
-                                    <div class="flex items-center gap-2">
-                                        <div class="size-2 rounded-full bg-pink-500"></div>
-                                        <span class="text-[10px] font-bold text-slate-500">Putri: {{ displayStats.totalPutri }}</span>
-                                    </div>
+                                <div class="flex items-center gap-2">
+                                    <div class="size-2 rounded-full bg-pink-500"></div>
+                                    <span class="text-[10px] font-bold text-slate-500">Putri: {{ displayStats.totalPutri }}</span>
                                 </div>
                             </div>
-                            
-                            <div class="relative size-20 flex items-center justify-center">
-                                <canvas id="genderDonutChart"></canvas>
-                                <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none leading-none">
-                                    <div class="flex flex-col items-center">
-                                        <span class="text-[10px] font-black text-blue-600">{{ displayStats.totalPutra }}</span>
-                                        <div class="w-4 h-[1px] bg-slate-200 my-0.5"></div>
-                                        <span class="text-[10px] font-black text-pink-500">{{ displayStats.totalPutri }}</span>
-                                    </div>
+                        </div>
+                        
+                        <!-- Gender Chart (Skeleton or Real) -->
+                        <div class="relative size-20 flex items-center justify-center">
+                            <div v-if="loading" class="skeleton size-full rounded-full"></div>
+                            <canvas v-show="!loading" id="genderDonutChart"></canvas>
+                            <div v-if="!loading" class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none leading-none">
+                                <div class="flex flex-col items-center">
+                                    <span class="text-[10px] font-black text-blue-600">{{ displayStats.totalPutra }}</span>
+                                    <div class="w-4 h-[1px] bg-slate-200 my-0.5"></div>
+                                    <span class="text-[10px] font-black text-pink-500">{{ displayStats.totalPutri }}</span>
                                 </div>
                             </div>
                         </div>

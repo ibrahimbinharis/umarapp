@@ -31,7 +31,9 @@ createApp({
         const isSaving = ref(false); // Global save guard - mirrors window.isSavingGlobal
         const appName = ref(APP_CONFIG.appName);
         const appVersion = ref(APP_CONFIG.version);
-        const currentView = ref('login');
+        const hasSession = localStorage.getItem('tahfidz_session');
+        const initialView = window.location.hash ? window.location.hash.replace('#', '') : (hasSession ? 'dashboard' : 'login');
+        const currentView = ref(initialView);
 
         // Sync isSaving with window.isSavingGlobal events
         window.addEventListener('saving-state-change', (e) => {
@@ -591,6 +593,12 @@ createApp({
         });
 
         const bottomMenus = computed(() => {
+            // Special Shell for loading state (logged in)
+            if (loading.value && !userSession.value) {
+                const shellOrder = ['dashboard', 'hafalan', 'input', 'quran', 'profile'];
+                return shellOrder.map(id => MENU_CONFIG.find(m => m.id === id)).filter(Boolean);
+            }
+
             if (!userSession.value) return [];
 
             // Special bottom bar for Wali: Home, Hafalan, Rekap, Al-Quran, Profile (and Input if Holiday)
@@ -607,8 +615,8 @@ createApp({
             return myMenus.value.filter(m => m.inBottom).slice(0, 5);
         });
 
-        const isSidebarVisible = computed(() => !!userSession.value && currentView.value !== 'login');
-        const isHeaderVisible = computed(() => !!userSession.value && currentView.value !== 'login');
+        const isSidebarVisible = computed(() => (!!userSession.value || loading.value) && currentView.value !== 'login' && currentView.value !== 'install');
+        const isHeaderVisible = computed(() => (!!userSession.value || loading.value) && currentView.value !== 'login' && currentView.value !== 'install');
 
         // v37: Auto-hide header on scroll logic
         const isHeaderHidden = ref(false);
@@ -1184,22 +1192,25 @@ createApp({
 
             // Ensure initial history state
             if (!window.history.state) {
-                const initialView = window.location.hash ? window.location.hash.replace('#', '') : 'login';
+                const hasSession = localStorage.getItem('tahfidz_session');
+                const initialView = window.location.hash ? window.location.hash.replace('#', '') : (hasSession ? 'dashboard' : 'login');
                 window.history.replaceState({ view: initialView }, '', '#' + initialView);
                 currentView.value = initialView;
             }
 
-            loading.value = true;
+            loading.value = true; // Shows Skeletons internally, no longer blocks the whole UI
             try {
-                // v37: Wait for IndexedDB migration and loading
+                // v37: Wait for IndexedDB migration and loading (Fast Local Read)
                 await DB.init();
-
+                loadData(); // Initial load from local data for instant UI
+                
+                // Show App Shell immediately after local data is ready
+                // but keep loading=true for Skeletons during sync
+                
                 await initSurahData();
-                // Populate Surah List after Init
                 if (window.surahList) uiData.surahList = window.surahList;
 
-                loadData();
-                await checkSession(); // Be sure session is confirmed before hiding loader
+                await checkSession(); 
 
                 // Ensure Default Admin if no users
                 // Ensure Default Admin if no users
