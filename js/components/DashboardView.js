@@ -991,7 +991,7 @@ const DashboardView = {
             <div v-if="userSession.role === 'admin' || userSession.role === 'guru'">
                 <div class="mb-6">
                     <div @click="$emit('navigate', 'santri')"
-                        class="bg-white p-6 rounded-3xl border border-slate-100 card-shadow cursor-pointer hover:shadow-md transition-all group relative overflow-hidden">
+                        class="bg-white p-6 rounded-3xl border border-slate-100 card-shadow cursor-pointer hover:shadow-md transition-all group relative overflow-hidden flex items-center justify-between">
                         
                         <!-- Skeleton for Stats -->
                         <div v-if="loading" class="flex-1">

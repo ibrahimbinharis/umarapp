@@ -162,12 +162,24 @@
                     class="md:hidden fixed top-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-100 px-4 h-16 flex items-center justify-between shadow-sm transition-all duration-300 transform-gpu"
                     :class="isHeaderHidden ? '-translate-y-full' : 'translate-y-0'">
                     <div class="flex items-center gap-3">
-                        <img src="image/logo_new.png" alt="Logo" class="w-8 h-8 object-contain">
-                        <div class="flex flex-col">
-                            <h2 class="font-bold text-slate-800 text-sm leading-none tracking-tight">E-Umar</h2>
-                            <p class="text-[9px] text-slate-500 font-medium leading-none mt-0.5">Aplikasi
-                                Akademik<br>Umar Bin Khattab</p>
-                        </div>
+                        <!-- Header Logo/Title Skeleton -->
+                        <template v-if="loading">
+                            <div class="w-8 h-8 rounded-full skeleton shrink-0"></div>
+                            <div class="flex flex-col gap-1.5">
+                                <div class="w-16 h-3 bg-slate-100 rounded animate-pulse"></div>
+                                <div class="w-24 h-2 bg-slate-50 rounded animate-pulse"></div>
+                            </div>
+                        </template>
+                        
+                        <!-- Real Logo/Title -->
+                        <template v-else>
+                            <img src="image/logo_new.png" alt="Logo" class="w-8 h-8 object-contain">
+                            <div class="flex flex-col">
+                                <h2 class="font-bold text-slate-800 text-sm leading-none tracking-tight">E-Umar</h2>
+                                <p class="text-[9px] text-slate-500 font-medium leading-none mt-0.5">Aplikasi
+                                    Akademik<br>Umar Bin Khattab</p>
+                            </div>
+                        </template>
                     </div>
                     <!-- Optional: Right Header Items (e.g. Profile) -->
                     <!-- Sync Indicator & Profile -->
@@ -179,7 +191,7 @@
                             <span class="material-symbols-outlined text-2xl">menu</span>
                         </button>
 
-                        <!-- Sync Status -->
+                        <!-- Sync Status / Header Actions -->
                         <div v-if="syncState.status === 'uploading'"
                             class="flex items-center justify-center size-8 bg-blue-50 rounded-full border border-blue-100">
                             <span
@@ -189,6 +201,7 @@
                             class="flex items-center justify-center size-8 bg-green-50 rounded-full border border-green-100 fade-in">
                             <span class="material-symbols-outlined text-[20px] text-green-600">cloud_done</span>
                         </div>
+
                     </div>
                 </header>
 
@@ -824,7 +837,16 @@
                 <nav v-if="bottomMenus.length > 0"
                     class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-[50] h-16 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] pb-safe">
                     <div class="flex h-full w-full relative">
-                        <template v-for="menu in bottomMenus" :key="menu.id">
+                        <!-- Bottom Nav Skeletons -->
+                        <template v-if="loading && bottomMenus.length > 0">
+                            <div v-for="i in 5" :key="i" class="w-1/5 flex flex-col items-center justify-center animate-pulse">
+                                <div class="size-7 rounded-full bg-slate-100 mb-1"></div>
+                                <div class="w-8 h-1.5 bg-slate-50 rounded"></div>
+                            </div>
+                        </template>
+
+                        <!-- Real Bottom Menus -->
+                        <template v-else v-for="menu in bottomMenus" :key="menu.id">
                             <!-- Highlighted Item (Center) -->
                             <div v-if="menu.highlight" class="w-1/5 flex justify-center items-center relative">
                                 <div class="floating-btn-wrapper">
@@ -1581,7 +1603,7 @@
 
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js?v=3.9').then(reg => {
+                navigator.serviceWorker.register('sw.js?v=4.1').then(reg => {
                     console.log('SW Registered!', reg);
 
                     // 1. Check if update is already waiting (e.g. from previous visit)
