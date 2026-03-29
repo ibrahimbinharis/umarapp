@@ -1,4 +1,4 @@
-const CACHE_NAME = "tahfidz-v4.9";
+const CACHE_NAME = "tahfidz-v5.0";
 const ASSETS_TO_CACHE = [
     "./",
     "./index.html",
