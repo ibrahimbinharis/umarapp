@@ -130,12 +130,11 @@ const RiwayatView = {
         });
 
         // --- Long Press / Bulk Selection Logic (Touch-friendly) ---
-        let pressTimer = null;
-        let startX = 0, startY = 0;
-        const isLongPressTriggered = ref(false);
+        const didMove = ref(false);
 
         const handleStart = (e, id) => {
             isLongPressTriggered.value = false;
+            didMove.value = false;
             
             // Koordinat awal (Deteksi scroll vs click)
             if (e.type === 'touchstart') {
@@ -158,7 +157,6 @@ const RiwayatView = {
         };
 
         const handleMove = (e) => {
-            if (!pressTimer) return;
             let currentX, currentY;
             if (e.type === 'touchmove') {
                 currentX = e.touches[0].clientX;
@@ -168,18 +166,26 @@ const RiwayatView = {
                 currentY = e.clientY;
             }
 
-            // Jika geser lebih dari 10px, anggap sedang scroll, batalkan long press
+            // Jika geser lebih dari 10px, anggap sedang scroll, batalkan long press & klik
             const dist = Math.hypot(currentX - startX, currentY - startY);
             if (dist > 10) {
-                if (pressTimer) clearTimeout(pressTimer);
+                didMove.value = true; // Mark as scroll, not click
+                if (pressTimer) {
+                    clearTimeout(pressTimer);
+                    pressTimer = null;
+                }
             }
         };
 
         const handleEnd = (id) => {
-            if (pressTimer) clearTimeout(pressTimer);
+            if (pressTimer) {
+                clearTimeout(pressTimer);
+                pressTimer = null;
+            }
             
             // Jika dalam mode bulk, klik biasa (short) akan melakukan toggle
-            if (props.riwayatState.selectedIds.length > 0) {
+            // TAPI hanya jika bukan sedang scroll (didMove === false)
+            if (props.riwayatState.selectedIds.length > 0 && !didMove.value) {
                 if (!isLongPressTriggered.value) {
                     props.toggleSelect(id);
                 }
@@ -187,7 +193,10 @@ const RiwayatView = {
         };
 
         const handleCancel = () => {
-            if (pressTimer) clearTimeout(pressTimer);
+            if (pressTimer) {
+                clearTimeout(pressTimer);
+                pressTimer = null;
+            }
         };
 
         return {
@@ -354,15 +363,24 @@ const RiwayatView = {
         <div class="bg-white rounded-xl border shadow-sm overflow-hidden mb-20 mx-2">
             <!-- Bulk Action Bar (Strictly Admin/Guru) -->
             <div v-if="userSession && riwayatState.selectedIds.length > 0 && (userSession.role === 'admin' || userSession.role === 'guru')"
-                class="p-2 pl-4 bg-red-50 border-b border-red-100 flex items-center gap-2 animate-fade-in">
-                <button @click="deleteSelected"
-                    class="text-xs bg-red-600 text-white px-3 py-1.5 rounded-lg font-bold hover:bg-red-700 transition flex items-center gap-1 shadow-sm">
-                    <span class="material-symbols-outlined text-sm">delete</span>
-                    Hapus ({{ riwayatState.selectedIds.length }})
-                </button>
-                <button @click="riwayatState.selectedIds = []"
-                    class="text-xs bg-white text-slate-600 border border-slate-200 px-3 py-1.5 rounded-lg font-bold hover:bg-slate-50 transition shadow-sm">
-                    Batal
+                class="p-2 pl-4 bg-red-50 border-b border-red-100 flex items-center justify-between gap-2 animate-fade-in">
+                <div class="flex items-center gap-2">
+                    <button @click="deleteSelected" :disabled="riwayatState.isDeleting"
+                        class="text-xs bg-red-600 text-white px-3 py-1.5 rounded-lg font-bold hover:bg-red-700 transition flex items-center gap-1 shadow-sm disabled:opacity-50 disabled:cursor-wait">
+                        <span v-if="riwayatState.isDeleting" class="size-3 border-2 border-white/20 border-t-white rounded-full animate-spin"></span>
+                        <span v-else class="material-symbols-outlined text-sm">delete</span>
+                        {{ riwayatState.isDeleting ? 'Menghapus...' : 'Hapus (' + riwayatState.selectedIds.length + ')' }}
+                    </button>
+                    <button @click="riwayatState.selectedIds = []" :disabled="riwayatState.isDeleting"
+                        class="text-xs bg-white text-slate-600 border border-slate-200 px-3 py-1.5 rounded-lg font-bold hover:bg-slate-50 transition shadow-sm disabled:opacity-50">
+                        Batal
+                    </button>
+                </div>
+
+                <!-- Select All Handler -->
+                <button v-if="!riwayatState.isDeleting" @click="toggleSelectAll(paginatedRiwayat)"
+                    class="text-xs text-blue-600 font-bold px-3 py-1.5 hover:bg-blue-50 rounded-lg transition">
+                    {{ paginatedRiwayat.every(i => riwayatState.selectedIds.includes(i._id)) ? 'Batal Semua' : 'Pilih Semua Hal.' }}
                 </button>
             </div>
         </div>

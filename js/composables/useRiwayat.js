@@ -18,7 +18,8 @@ const useRiwayat = (uiData, DB, refreshData, modules = {}, currentView, userSess
         // Filter Modal
         isFilterOpen: false,
         quickDateFilter: '', // 'today', 'week', 'month', 'custom'
-        selectedLetter: '' // Alphabet filter
+        selectedLetter: '', // Alphabet filter
+        isDeleting: false // Loading state for bulk delete
     });
 
     // --- SYNC CONTEXT (v36) ---
@@ -253,7 +254,12 @@ const useRiwayat = (uiData, DB, refreshData, modules = {}, currentView, userSess
     };
 
     const deleteSelected = async () => {
-        if (!riwayatState.selectedIds.length) return;
+        if (!riwayatState.selectedIds.length || riwayatState.isDeleting) return;
+
+        // Internal Role Protection (Guard)
+        if (userSession.value?.role !== 'admin' && userSession.value?.role !== 'guru') {
+            return window.showAlert("Anda tidak memiliki akses untuk menghapus data", "Akses Ditolak", "warning");
+        }
 
         window.showConfirm({
             title: 'Hapus Terpilih',
@@ -261,20 +267,49 @@ const useRiwayat = (uiData, DB, refreshData, modules = {}, currentView, userSess
             confirmText: 'Ya, Hapus',
             type: 'danger',
             onConfirm: async () => {
+                riwayatState.isDeleting = true;
                 try {
-                    await Promise.all(riwayatState.selectedIds.map(async id => {
-                        await DB.delete(id);
-                        if (window.NotificationService) {
-                            await window.NotificationService.removeBySource(id);
+                    const idsToDelete = [...riwayatState.selectedIds];
+                    
+                    // --- OPTIMIZATION: Atomic Update ---
+                    // Instead of calling DB.delete(id) 50 times (which saves 50 times),
+                    // we update all in-memory first, then save ONCE.
+                    
+                    const allData = DB.getAll(); // Reference
+                    
+                    for (const id of idsToDelete) {
+                        const idx = allData.findIndex(d => d._id === id);
+                        if (idx !== -1) {
+                            const item = allData[idx];
+                            // 1. Mark as Deleted in Memory
+                            item._deleted = true;
+                            item.updated_at = new Date().toISOString();
+                            allData[idx] = item;
+                            
+                            // 2. Queue for Cloud Sync Individual (Atomic queues could be better but this is simpler)
+                            await DB.addToQueue('update', item.__type, { _id: id, _deleted: true });
+                            
+                            // 3. Remove Notification
+                            if (window.NotificationService) {
+                                await window.NotificationService.removeBySource(id);
+                            }
                         }
-                    }));
+                    }
+
+                    // 4. Save entire database to disk ONLY ONCE
+                    await DB.saveAll(allData);
+                    
+                    // 5. Trigger Cloud Sync
+                    DB.triggerAutoSync();
 
                     refreshData();
                     riwayatState.selectedIds = [];
-                    window.showAlert("Data terpilih berhasil dihapus", "Sukses", "info");
+                    window.showAlert(`Berhasil menghapus ${idsToDelete.length} data`, "Sukses", "info");
                 } catch (e) {
                     console.error("Gagal hapus banyak:", e);
                     window.showAlert("Gagal menghapus sebagian data: " + e.message, "Error", "danger");
+                } finally {
+                    riwayatState.isDeleting = false;
                 }
             }
         });
