@@ -45,39 +45,22 @@
     
 
     <style>
-        .toast-slide-enter-active,
-        .toast-slide-leave-active {
+        /* CRITICAL CSS: Fix FOUC (Flash of Unstyled Content) on slow 3G */
+        [v-cloak] { display: none !important; }
+
+        /* Vue Toast & UI Animations */
+        .toast-slide-enter-active, .toast-slide-leave-active {
             transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
         }
-
-        .toast-slide-enter-from {
-            opacity: 0;
-            transform: translate(-50%, 20px);
-        }
-
-        .toast-slide-leave-to {
-            opacity: 0;
-            transform: translate(-50%, 20px) scale(0.9);
-        }
+        .toast-slide-enter-from { opacity: 0; transform: translate(-50%, 20px); }
+        .toast-slide-leave-to { opacity: 0; transform: translate(-50%, 20px) scale(0.9); }
 
         /* Modern thin horizontal scrollbar */
-        .scrollbar-custom::-webkit-scrollbar {
-            height: 3px;
-        }
-        .scrollbar-custom::-webkit-scrollbar-track {
-            background: #f1f5f9;
-            border-radius: 10px;
-        }
-        .scrollbar-custom::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 10px;
-        }
-        .scrollbar-custom::-webkit-scrollbar-thumb:hover {
-            background: #94a3b8;
-        }
-        .no-scrollbar::-webkit-scrollbar {
-            display: none;
-        }
+        .scrollbar-custom::-webkit-scrollbar { height: 3px; }
+        .scrollbar-custom::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 10px; }
+        .scrollbar-custom::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .scrollbar-custom::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
     </style>
 </head>
 
@@ -113,17 +96,27 @@
                     </div>
                 </div>
                 <div class="flex-1 p-4 space-y-1 overflow-y-auto">
-                    <button v-for="menu in myMenus" :key="menu.id" @click="navigateTo(menu.id)"
-                        class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium text-sm"
-                        :class="currentView === menu.id ? 'bg-primary text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'">
-                        <span class="material-symbols-outlined">{{ menu.icon }}</span>
-                        {{ menu.label }}
-                    </button>
-                    <!-- LOGOUT (Sidebar) -->
-                    <button @click="logout"
-                        class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-500 hover:bg-red-50 font-medium text-sm mt-4">
-                        <span class="material-symbols-outlined">logout</span> Keluar
-                    </button>
+                    <!-- Nav Menu Skeleton during boot (More Visible Shimmer) -->
+                    <template v-if="loading && myMenus.length === 0">
+                        <div v-for="i in 6" :key="i" class="flex items-center gap-3 px-4 py-3 rounded-xl">
+                            <div class="size-6 rounded-lg skeleton shrink-0"></div>
+                            <div class="h-4 skeleton rounded w-1/2"></div>
+                        </div>
+                    </template>
+
+                    <template v-else>
+                        <button v-for="menu in myMenus" :key="menu.id" @click="navigateTo(menu.id)"
+                            class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium text-sm"
+                            :class="currentView === menu.id ? 'bg-primary text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'">
+                            <span class="material-symbols-outlined">{{ menu.icon }}</span>
+                            {{ menu.label }}
+                        </button>
+                        <!-- LOGOUT (Sidebar) -->
+                        <button @click="logout"
+                            class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-500 hover:bg-red-50 font-medium text-sm mt-4">
+                            <span class="material-symbols-outlined">logout</span> Keluar
+                        </button>
+                    </template>
                 </div>
 
                 <!-- MONITORING BELL (Desktop Sidebar) REMOVED -->

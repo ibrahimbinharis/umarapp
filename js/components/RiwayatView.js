@@ -129,15 +129,26 @@ const RiwayatView = {
             }
         });
 
-        // --- Long Press / Bulk Selection Logic ---
+        // --- Long Press / Bulk Selection Logic (Touch-friendly) ---
         let pressTimer = null;
+        let startX = 0, startY = 0;
         const isLongPressTriggered = ref(false);
 
-        const handleStart = (id) => {
+        const handleStart = (e, id) => {
             isLongPressTriggered.value = false;
-            // Only start timer if not already in selection mode
-            // If already in selection mode, short click will handle it
+            
+            // Koordinat awal (Deteksi scroll vs click)
+            if (e.type === 'touchstart') {
+                startX = e.touches[0].clientX;
+                startY = e.touches[0].clientY;
+            } else {
+                startX = e.clientX;
+                startY = e.clientY;
+            }
+
+            // Mulai Timer Long Press jika belum dalam mode seleksi
             if (props.riwayatState.selectedIds.length === 0) {
+                if (pressTimer) clearTimeout(pressTimer);
                 pressTimer = setTimeout(() => {
                     isLongPressTriggered.value = true;
                     if (navigator.vibrate) navigator.vibrate(50);
@@ -146,10 +157,28 @@ const RiwayatView = {
             }
         };
 
+        const handleMove = (e) => {
+            if (!pressTimer) return;
+            let currentX, currentY;
+            if (e.type === 'touchmove') {
+                currentX = e.touches[0].clientX;
+                currentY = e.touches[0].clientY;
+            } else {
+                currentX = e.clientX;
+                currentY = e.clientY;
+            }
+
+            // Jika geser lebih dari 10px, anggap sedang scroll, batalkan long press
+            const dist = Math.hypot(currentX - startX, currentY - startY);
+            if (dist > 10) {
+                if (pressTimer) clearTimeout(pressTimer);
+            }
+        };
+
         const handleEnd = (id) => {
             if (pressTimer) clearTimeout(pressTimer);
             
-            // If selection mode is already ON, short click always toggles
+            // Jika dalam mode bulk, klik biasa (short) akan melakukan toggle
             if (props.riwayatState.selectedIds.length > 0) {
                 if (!isLongPressTriggered.value) {
                     props.toggleSelect(id);
@@ -325,11 +354,15 @@ const RiwayatView = {
         <div class="bg-white rounded-xl border shadow-sm overflow-hidden mb-20 mx-2">
             <!-- Bulk Action Bar (Strictly Admin/Guru) -->
             <div v-if="userSession && riwayatState.selectedIds.length > 0 && (userSession.role === 'admin' || userSession.role === 'guru')"
-                class="p-2 pl-4 bg-red-50 border-b border-red-100 flex items-center animate-fade-in">
+                class="p-2 pl-4 bg-red-50 border-b border-red-100 flex items-center gap-2 animate-fade-in">
                 <button @click="deleteSelected"
                     class="text-xs bg-red-600 text-white px-3 py-1.5 rounded-lg font-bold hover:bg-red-700 transition flex items-center gap-1 shadow-sm">
                     <span class="material-symbols-outlined text-sm">delete</span>
-                    {{ riwayatState.selectedIds.length }} Data
+                    Hapus ({{ riwayatState.selectedIds.length }})
+                </button>
+                <button @click="riwayatState.selectedIds = []"
+                    class="text-xs bg-white text-slate-600 border border-slate-200 px-3 py-1.5 rounded-lg font-bold hover:bg-slate-50 transition shadow-sm">
+                    Batal
                 </button>
             </div>
         </div>
@@ -350,15 +383,16 @@ const RiwayatView = {
             <div class="px-0 relative">
                 <div class="px-2 space-y-3">
                     <div v-for="item in paginatedRiwayat" :key="item._id" 
-                        class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm relative group hover:shadow-md transition-all active:scale-[0.98] cursor-pointer touch-none"
+                        class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm relative group hover:shadow-md transition-all active:scale-[0.98] cursor-pointer touch-pan-y select-none"
                         :class="{
                             'z-40': riwayatState.activeActionId === item._id, 
                             'bg-blue-50/40 border-blue-200 shadow-md': riwayatState.selectedIds.includes(item._id)
                         }"
-                        @mousedown="handleStart(item._id)"
+                        @mousedown="handleStart($event, item._id)"
                         @mouseup="handleEnd(item._id)"
                         @mouseleave="handleCancel"
-                        @touchstart="handleStart(item._id)"
+                        @touchstart="handleStart($event, item._id)"
+                        @touchmove="handleMove($event)"
                         @touchend="handleEnd(item._id)"
                         @touchcancel="handleCancel">
                         
