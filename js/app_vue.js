@@ -1107,6 +1107,29 @@ createApp({
             window.history.back();
         };
 
+        const ensureDefaultAdmin = async () => {
+            const hasAdmin = window.allData && window.allData.some(u =>
+                (u.__type === 'user' || u.__type === 'users') &&
+                (u.username === 'admin' || u._id === 'U-ADMIN-001')
+            );
+            if (hasAdmin) return;
+
+            console.log("Creating default stable admin...");
+            const newAdmin = {
+                _id: 'U-ADMIN-001',
+                __type: 'user',
+                username: 'admin',
+                password: await hashPassword('123'),
+                full_name: 'Administrator',
+                role: 'admin',
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+            };
+            window.allData.unshift(newAdmin);
+            DB.saveAll(window.allData);
+            loadData();
+        };
+
         onMounted(async () => {
             // 1. PWA History Listener
             window.addEventListener('popstate', (event) => {
@@ -1210,68 +1233,37 @@ createApp({
                 await initSurahData();
                 if (window.surahList) uiData.surahList = window.surahList;
 
+                // 2. Cek Sesi sebelum menampilkan UI (agar role benar)
+                // Ini cepat karena membaca localStorage/Session
                 await checkSession(); 
 
-                // Ensure Default Admin if no users
-                // Ensure Default Admin if no users
-                // Ensure Default Admin if no users
-                const ensureDefaultAdmin = async () => {
-                    // Check directly in memory (Source of Truth)
-                    // Checks for both legacy 'user' and table 'users' just in case
-                    const hasAdmin = window.allData.some(u =>
-                        (u.__type === 'user' || u.__type === 'users') &&
-                        (u.username === 'admin' || u._id === 'U-ADMIN-001')
-                    );
+                // 3. Tampilkan UI SEBELUM Sinkronisasi Cloud (Instant Boot)
+                // Dashboard akan muncul menggunakan data lokal terakhir
+                loading.value = false;
 
-                    if (hasAdmin) {
-                        console.log("Admin found. Skipping creation.");
-                        return;
-                    }
-
-                    console.log("No admin user found. Creating default stable admin...");
-
-                    // We use a manual object instead of DB.create to ensure ID stability across browsers
-                    const newAdmin = {
-                        _id: 'U-ADMIN-001',
-                        __type: 'user',
-                        username: 'admin',
-                        password: await hashPassword('123'),
-                        full_name: 'Administrator',
-                        role: 'admin',
-                        created_at: new Date().toISOString(),
-                        updated_at: new Date().toISOString()
-                    };
-
-                    window.allData.unshift(newAdmin);
-                    DB.saveAll(window.allData);
-                    loadData();
-                };
-
-                // v37: Supabase Init (Always connect)
+                // 4. Proses Sinkronisasi & Admin Inits (Background)
                 syncStatus.status = 'loading';
                 syncStatus.message = 'Menghubungkan ke Cloud...';
 
-                // Parallel Init: Sync & Surah
-                const p1 = DB.syncFromCloud(true).catch(e => {
+                // Sinkronisasi tetap berjalan di latar belakang (Background Sync)
+                const syncResult = await DB.syncFromCloud(true).catch(e => {
                     console.error("Sync failed", e);
                     syncStatus.status = 'error';
-                    syncStatus.message = 'Offline';
+                    syncStatus.message = 'Mode Offline';
                     return { success: false };
                 });
-                const p2 = initSurahData();
 
-                await Promise.allSettled([p1, p2]);
-
-                // Update UI
+                // Update UI Final
                 syncStatus.status = 'success';
                 syncStatus.message = 'Terhubung';
 
+                // Jika sinkronisasi dapat data baru, perbarui data reactive
                 loadData();
-                uiData.surahList = window.surahList;
                 await ensureDefaultAdmin();
             } catch (e) {
                 console.error("Init failed", e);
             } finally {
+                // Pastikan loading dimatikan jika terjadi error fatal
                 loading.value = false;
             }
         });

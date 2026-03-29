@@ -388,19 +388,25 @@ const DashboardView = {
         };
 
         // Watchers to trigger animations on data change
-        watch(() => props.dashboardStats, () => {
-            runAllAnimations();
-        }, { deep: true });
+        // Debounce: Only animate if stats actually change to prevent CPU spike
+        watch(() => JSON.stringify(props.dashboardStats), (newVal, oldVal) => {
+            if (newVal !== oldVal) {
+                runAllAnimations();
+                initCharts(); // Re-render charts as well
+            }
+        });
 
         watch(() => [props.dashboardStats.totalPutra, props.dashboardStats.totalPutri], () => {
             initGenderChart();
         });
 
+        let genderChart = null;
         const initGenderChart = () => {
             nextTick(() => {
                 const ctx = document.getElementById('genderDonutChart');
                 if (ctx) {
-                    new Chart(ctx, {
+                    if (genderChart) genderChart.destroy();
+                    genderChart = new Chart(ctx, {
                         type: 'doughnut',
                         data: {
                             labels: ['Putra', 'Putri'],

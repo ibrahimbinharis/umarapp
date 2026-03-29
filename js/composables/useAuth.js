@@ -1,7 +1,8 @@
 const useAuth = (currentView, loading) => {
     const { ref, reactive, onMounted } = Vue;
 
-    const userSession = ref(null);
+    const storedSession = localStorage.getItem('tahfidz_session');
+    const userSession = ref(storedSession ? JSON.parse(storedSession) : null);
     const isRegisterMode = ref(false); // Toggle Login/Register
     const loginForm = reactive({
         username: '',

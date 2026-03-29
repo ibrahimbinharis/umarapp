@@ -150,21 +150,51 @@ function useAnalytics(uiData, userSession) {
         const isGlobalAvg = !filteredSantriIds && allSantriCount > 1;
         const divisor = isGlobalAvg ? allSantriCount : 1;
 
-        // Helper for reliable date string YYYY-MM-DD
+        // Optimized Helper for O(1) lookup
+        const idSet = filteredSantriIds ? new Set(filteredSantriIds.map(id => String(id).toLowerCase())) : null;
+
+        // --- PRE-GROUPING (The Performance Key) ---
+        // Group data by date FIRST, so we don't loop it again for every day
+        const setoranByDate = new Map();
+        const ujianByDate = new Map();
+
         const toYMD = (d) => {
             if (!d) return null;
-            const date = new Date(d);
+            const date = (d instanceof Date) ? d : new Date(d);
             if (isNaN(date.getTime())) return null;
-            return date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0');
+            return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
         };
 
-        // Helper for ID matching (handles multiple fields and types)
-        const isMatch = (rec) => {
-            if (!filteredSantriIds) return true;
-            const recUid = String(rec.santri_id || rec.santri_nis || rec.nis || rec.username || rec.child_id || '').toLowerCase();
-            return filteredSantriIds.some(id => String(id).toLowerCase() === recUid);
-        };
+        // One pass through setoranList
+        (setoranList || []).forEach(s => {
+            // Check ID filter (Skip if not match)
+            if (idSet) {
+                const recUid = String(s.santri_id || s.santri_nis || s.nis || '').toLowerCase();
+                if (!idSet.has(recUid)) return;
+            }
 
+            const ymd = toYMD(s.setoran_date || s.created_at);
+            if (!ymd) return;
+
+            if (!setoranByDate.has(ymd)) setoranByDate.set(ymd, []);
+            setoranByDate.get(ymd).push(s);
+        });
+
+        // One pass through ujianList
+        (ujianList || []).forEach(u => {
+            if (idSet) {
+                const recUid = String(u.santri_id || u.nis || '').toLowerCase();
+                if (!idSet.has(recUid)) return;
+            }
+
+            const ymd = toYMD(u.date || u.created_at);
+            if (!ymd) return;
+
+            if (!ujianByDate.has(ymd)) ujianByDate.set(ymd, []);
+            ujianByDate.get(ymd).push(u);
+        });
+
+        // --- CALCULATION (O(daysCount)) ---
         for (let i = daysCount - 1; i >= 0; i--) {
             const date = new Date(now);
             date.setDate(date.getDate() - i);
@@ -172,15 +202,8 @@ function useAnalytics(uiData, userSession) {
 
             labels.push(dayNames[date.getDay()]);
 
-            const dailySetoran = setoranList.filter(s => {
-                if (toYMD(s.setoran_date || s.created_at) !== dateYMD) return false;
-                return isMatch(s);
-            });
-
-            const dailyUjian = ujianList.filter(u => {
-                if (toYMD(u.date || u.created_at) !== dateYMD) return false;
-                return isMatch(u);
-            });
+            const dailySetoran = setoranByDate.get(dateYMD) || [];
+            const dailyUjian = ujianByDate.get(dateYMD) || [];
 
             const daySabaq = dailySetoran.filter(s => s.setoran_type === 'Sabaq' || s.setoran_type === 'Sabqi').reduce((acc, curr) => acc + (parseFloat(curr.pages) || 0), 0);
             const dayManzil = dailySetoran.filter(s => s.setoran_type === 'Manzil').reduce((acc, curr) => acc + (parseFloat(curr.pages) || 0), 0);
