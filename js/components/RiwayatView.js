@@ -130,13 +130,15 @@ const RiwayatView = {
         });
 
         // --- Long Press / Bulk Selection Logic (Touch-friendly) ---
+        let pressTimer = null;
+        let startX = 0, startY = 0;
+        const isLongPressTriggered = ref(false);
         const didMove = ref(false);
 
         const handleStart = (e, id) => {
             isLongPressTriggered.value = false;
-            didMove.value = false;
             
-            // Koordinat awal (Deteksi scroll vs click)
+            // Koordinat awal (hanya untuk logik internal jika perlu, tapi kita percayakan pada browser click)
             if (e.type === 'touchstart') {
                 startX = e.touches[0].clientX;
                 startY = e.touches[0].clientY;
@@ -157,39 +159,39 @@ const RiwayatView = {
         };
 
         const handleMove = (e) => {
-            let currentX, currentY;
-            if (e.type === 'touchmove') {
-                currentX = e.touches[0].clientX;
-                currentY = e.touches[0].clientY;
-            } else {
-                currentX = e.clientX;
-                currentY = e.clientY;
-            }
-
-            // Jika geser lebih dari 10px, anggap sedang scroll, batalkan long press & klik
-            const dist = Math.hypot(currentX - startX, currentY - startY);
-            if (dist > 10) {
-                didMove.value = true; // Mark as scroll, not click
-                if (pressTimer) {
+            // Jika jari bergerak, batalkan long press timer (native click tetap tidak akan terpanggil jika gerakan banyak)
+            if (pressTimer) {
+                let curX, curY;
+                if (e.type === 'touchmove') { curX = e.touches[0].clientX; curY = e.touches[0].clientY; }
+                else { curX = e.clientX; curY = e.clientY; }
+                
+                const dist = Math.hypot(curX - startX, curY - startY);
+                if (dist > 10) {
                     clearTimeout(pressTimer);
                     pressTimer = null;
                 }
             }
         };
 
-        const handleEnd = (id) => {
+        const handleEnd = () => {
+            // Selesaikan timer jika jari dilepas sebelum long press terpanggil
             if (pressTimer) {
                 clearTimeout(pressTimer);
                 pressTimer = null;
             }
-            
-            // Jika dalam mode bulk, klik biasa (short) akan melakukan toggle
-            // TAPI hanya jika bukan sedang scroll (didMove === false)
-            if (props.riwayatState.selectedIds.length > 0 && !didMove.value) {
+        };
+
+        const handleCardClick = (id) => {
+            // Browser @click sudah pintar: hanya dipicu jika tapping, bukan scrolling.
+            // Gunakan ini saat mode bulk aktif.
+            if (props.riwayatState.selectedIds.length > 0) {
+                // Jangan toggle lagi jika baru saja terpilih via Long Press
                 if (!isLongPressTriggered.value) {
                     props.toggleSelect(id);
                 }
             }
+            // Reset flag untuk sentuhan berikutnya
+            isLongPressTriggered.value = false;
         };
 
         const handleCancel = () => {
@@ -212,7 +214,9 @@ const RiwayatView = {
             formatDateShort,
             // Long Press
             handleStart,
+            handleMove,
             handleEnd,
+            handleCardClick,
             handleCancel
         };
     },
@@ -406,12 +410,13 @@ const RiwayatView = {
                             'z-40': riwayatState.activeActionId === item._id, 
                             'bg-blue-50/40 border-blue-200 shadow-md': riwayatState.selectedIds.includes(item._id)
                         }"
+                        @click="handleCardClick(item._id)"
                         @mousedown="handleStart($event, item._id)"
-                        @mouseup="handleEnd(item._id)"
-                        @mouseleave="handleCancel"
+                        @mousemove="handleMove($event)"
+                        @mouseup="handleEnd"
                         @touchstart="handleStart($event, item._id)"
                         @touchmove="handleMove($event)"
-                        @touchend="handleEnd(item._id)"
+                        @touchend="handleEnd"
                         @touchcancel="handleCancel">
                         
                         <!-- Checkbox Indicator -->
@@ -435,9 +440,8 @@ const RiwayatView = {
                             </div>
 
                             <div class="flex-1 min-w-0">
-                                <div class="flex justify-between items-start mb-0.5">
+                                <div class="mb-0.5">
                                     <h4 class="text-sm font-black text-slate-800 truncate">{{ getSantriName(item.santri_id) }}</h4>
-                                    <span class="text-[9px] font-bold text-slate-400 whitespace-nowrap ml-2">{{ formatDateLong(item.created_at || item.timestamp) }}</span>
                                 </div>
                                 <div class="flex items-center gap-2 mb-1">
                                     <span class="text-[10px] font-black uppercase tracking-wider"
@@ -448,13 +452,27 @@ const RiwayatView = {
                                         ]">
                                         {{ item.__cat === 'pelanggaran' ? 'Pelanggaran' : (item.setoran_type || (item.type === 'hafalan_exam' ? 'Ujian H.' : 'Ujian')) }}
                                     </span>
-                                    <span class="text-[10px] text-slate-300">•</span>
-                                    <span class="text-[10px] font-bold text-slate-500">{{ formatTime(item.created_at || item.timestamp) }}</span>
                                 </div>
                                 
                                 <p class="text-[11px] text-slate-500 leading-snug line-clamp-1">
                                     <template v-if="item.__cat === 'setoran'">
-                                        {{ item.setoran_type === 'Sabaq' ? (item.surah_from_latin ? item.surah_from_latin.replace(/^\d+\.\s*/, '') : '-') + ' / ' + item.pages + ' Hal' : (item.setoran_type === 'Manzil' ? 'Hal ' + (item.page_from || '-') + ' - ' + (item.page_to || '-') : (item.tilawah_mode === 'juz' ? 'Juz ' + item.juz_from + '-' + item.juz_to : 'Hal ' + item.page_from + '-' + item.page_to)) }}
+                                        <!-- Smart Detail Generator (v37) -->
+                                        <template v-if="item.setoran_type === 'Sabaq'">
+                                            {{ (item.surah_from_latin ? item.surah_from_latin.replace(/^\d+\.\s*/, '') : '-') }} / {{ item.pages || 0 }} Hal
+                                        </template>
+                                        <template v-else-if="item.setoran_type === 'Manzil' || item.setoran_type === 'Tilawah'">
+                                            <span v-if="item.manzil_mode === 'juz' || item.tilawah_mode === 'juz'">
+                                                {{ item.manzil_mode === 'juz' ? 'Juz ' + (item.juz || '-') : 'Juz ' + (item.juz_from || '-') + '-' + (item.juz_to || '-') }}, 
+                                            </span>
+                                            <span v-else-if="item.page_from && item.page_to">
+                                                Hal {{ item.page_from }}-{{ item.page_to }}, 
+                                            </span>
+                                            {{ item.pages || 0 }} Hal
+                                        </template>
+                                        <template v-else>
+                                            <!-- Sabqi, Robt or others (Focus on Total Pages) -->
+                                            {{ item.pages || 0 }} Hal
+                                        </template>
                                     </template>
                                     <template v-else-if="item.__cat === 'ujian'">
                                         {{ (item.detail || '-').replace('menyetorkan hafalan', 'selesai') }}
@@ -465,7 +483,7 @@ const RiwayatView = {
                                 </p>
                             </div>
 
-                            <div class="shrink-0 text-right ml-2 min-w-[3rem]">
+                            <div class="shrink-0 text-right ml-2 min-w-[3rem] flex flex-col justify-center items-end gap-0.5">
                                 <div v-if="item.__cat === 'setoran' && item.setoran_type !== 'Tilawah'" class="text-xs font-black"
                                     :class="[
                                         (item.grade === 'A+' || item.grade === 'A') ? 'text-blue-600' : 
@@ -486,10 +504,13 @@ const RiwayatView = {
                                 <div v-else-if="item.__cat === 'pelanggaran'" class="text-xs font-black text-red-600">
                                     -{{ item.points || 0 }} Poin
                                 </div>
+                                
+                                <span class="text-[9px] font-bold text-slate-400 whitespace-nowrap block mt-0.5">{{ formatDateLong(item.created_at || item.timestamp) }}</span>
                             </div>
                             
                             <button v-if="userSession && (userSession.role === 'admin' || userSession.role === 'guru' || ((userSession.role === 'santri' || userSession.role === 'wali') && appConfig.isHolidayMode))" 
                                 @click.stop="toggleActionMenu(item._id)"
+                                @mousedown.stop @mouseup.stop @touchstart.stop @touchend.stop
                                 class="size-8 rounded-full flex items-center justify-center text-slate-300 hover:bg-slate-50 hover:text-primary transition-all ml-1">
                                 <span class="material-symbols-outlined text-lg">more_vert</span>
                             </button>
@@ -497,6 +518,7 @@ const RiwayatView = {
 
                         <!-- Action Popup -->
                         <div v-if="riwayatState.activeActionId === item._id"
+                            @mousedown.stop @mouseup.stop @touchstart.stop @touchend.stop
                             class="absolute right-4 top-12 bg-white rounded-2xl shadow-2xl border border-slate-100 z-50 w-36 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
                             <button @click="editRiwayat(item); closeActionMenu()"
                                 class="px-4 py-3 hover:bg-blue-50 text-[11px] font-bold text-slate-700 flex items-center gap-2 w-full text-left transition-colors">
