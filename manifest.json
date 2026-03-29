@@ -10,18 +10,20 @@
     {
       "src": "image/logo_new.png",
       "sizes": "150x150",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
       "src": "image/192pxlogo_new.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
       "src": "image/512pxlogo_new.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     }
   ],
   "orientation": "portrait"
