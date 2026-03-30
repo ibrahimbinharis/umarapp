@@ -6,7 +6,7 @@ const PelanggaranView = {
         'isPelanggaranSantriDropdownOpen',
         'pelanggaranSelectedSantriName',
         'uiData',
-        'editingId',
+        'pelanggaranEditingId',
         'filteredPelanggaran',
         'activeDropdown',
         'userSession'
@@ -149,11 +149,11 @@ const PelanggaranView = {
 
                 <!-- Actions -->
                 <div class="flex gap-2 pt-2">
-                    <button v-if="editingId" @click="$emit('cancel-edit')"
+                    <button v-if="pelanggaranEditingId" @click="$emit('cancel-edit')"
                         class="flex-1 py-3 bg-slate-100 text-slate-600 rounded-xl font-bold">Batal</button>
                     <button @click="$emit('submit-pelanggaran')"
                         class="flex-1 py-3 bg-red-500 text-white rounded-xl font-bold shadow-lg shadow-red-200 active:scale-95 transition">
-                        {{ editingId ? 'Update Data' : 'Simpan Data' }}
+                        {{ pelanggaranEditingId ? 'Update Data' : 'Simpan Data' }}
                     </button>
                 </div>
             </div>
@@ -162,36 +162,28 @@ const PelanggaranView = {
             <div class="px-2 space-y-3">
                 <h3 class="font-bold text-slate-800 px-1">Riwayat Terbaru</h3>
                 <div v-for="p in filteredPelanggaran" :key="p._id"
-                    class="bg-white p-4 rounded-xl border shadow-sm flex justify-between items-start relative">
-                    <div class="flex-1">
-                        <p class="text-xs text-slate-400 font-bold mb-1">{{ formatDate(p.date) }}</p>
-                        <p class="font-bold text-slate-900">{{ getSantriName(p.santri_id) }}</p>
-                        <p class="text-sm text-red-500">{{ p.description }}</p>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <span class="bg-red-50 text-red-600 px-2 py-1 rounded-lg text-xs font-black">-{{ p.points }}</span>
-
-                        <!-- 3-Dot Menu (Hide for Wali) -->
-                        <div v-if="userSession?.role !== 'wali'" class="relative">
-                            <button @click.stop="$emit('toggle-dropdown', p._id)"
-                                class="size-8 flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition">
-                                <span class="material-symbols-outlined">more_vert</span>
-                            </button>
-
-                            <!-- Backdrop -->
-                            <div v-if="activeDropdown === p._id" class="fixed inset-0 z-10 cursor-default"
-                                @click.stop="$emit('toggle-dropdown', null)"></div>
-
-                            <!-- Dropdown Menu -->
-                            <div v-if="activeDropdown === p._id"
-                                class="absolute right-9 -top-1 w-32 bg-white border border-slate-100 shadow-xl rounded-xl z-20 flex flex-col py-1 overflow-hidden animate-in fade-in zoom-in-95 duration-100 origin-top-right">
-                                <button @click="$emit('edit-pelanggaran', p); $emit('toggle-dropdown', null)"
-                                    class="flex items-center gap-2 px-4 py-1.5 text-xs font-bold text-slate-600 hover:bg-blue-50 hover:text-blue-600 transition text-left w-full">
-                                    <span class="material-symbols-outlined text-base">edit</span> Edit
+                    class="bg-white p-4 rounded-xl border shadow-sm flex justify-between items-start relative cursor-pointer active:scale-[0.98] transition"
+                    @click.stop="$emit('toggle-dropdown', p._id)">
+                    <div class="flex-1 flex justify-between items-start gap-3">
+                        <div class="min-w-0">
+                            <p class="font-bold text-slate-900 leading-tight">{{ getSantriName(p.santri_id) }}</p>
+                            <p class="text-xs text-red-500 mt-0.5">{{ p.description }}</p>
+                            <p class="text-[10px] text-slate-400 font-bold mt-2">{{ formatDate(p.date) }}</p>
+                        </div>
+                        
+                        <div class="shrink-0 flex flex-col items-end gap-2">
+                             <!-- Points -->
+                            <span class="bg-red-50 text-red-600 px-2 py-1 rounded-lg text-xs font-black shrink-0">-{{ p.points }}</span>
+                            
+                            <!-- Inline Actions (Shown on Click) -->
+                            <div v-if="activeDropdown === p._id" class="flex gap-2 animate-in slide-in-from-right-2 fade-in duration-300">
+                                <button @click.stop="$emit('edit-pelanggaran', p); $emit('toggle-dropdown', null)" 
+                                    class="size-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center hover:bg-blue-100 shadow-sm transition active:scale-90">
+                                    <span class="material-symbols-outlined text-sm">edit</span>
                                 </button>
-                                <button @click="$emit('delete-pelanggaran', p._id); $emit('toggle-dropdown', null)"
-                                    class="flex items-center gap-2 px-4 py-1.5 text-xs font-bold text-slate-600 hover:bg-red-50 hover:text-red-500 transition text-left w-full">
-                                    <span class="material-symbols-outlined text-base">delete</span> Hapus
+                                <button @click.stop="$emit('delete-pelanggaran', p._id); $emit('toggle-dropdown', null)" 
+                                    class="size-7 rounded-lg bg-red-50 text-red-600 flex items-center justify-center hover:bg-red-100 shadow-sm transition active:scale-90">
+                                    <span class="material-symbols-outlined text-sm">delete</span>
                                 </button>
                             </div>
                         </div>
@@ -229,12 +221,12 @@ const PelanggaranView = {
                         </button>
 
                         <!-- Backdrop -->
-                        <div v-if="activeDropdown === m._id" class="fixed inset-0 z-10 cursor-default"
+                        <div v-if="activeDropdown === m._id" class="fixed inset-0 z-40 cursor-default"
                             @click.stop="$emit('toggle-dropdown', null)"></div>
 
                         <!-- Dropdown Menu -->
                         <div v-if="activeDropdown === m._id"
-                            class="absolute right-9 -top-1 w-32 bg-white border border-slate-100 shadow-xl rounded-xl z-20 flex flex-col py-1 overflow-hidden animate-in fade-in zoom-in-95 duration-100 origin-top-right">
+                            class="absolute right-9 -top-1 w-32 bg-white border border-slate-100 shadow-xl rounded-xl z-50 flex flex-col py-1 overflow-hidden animate-in fade-in zoom-in-95 duration-100 origin-top-right">
                             <button @click="$emit('open-master-modal', m); $emit('toggle-dropdown', null)"
                                 class="flex items-center gap-2 px-4 py-1.5 text-xs font-bold text-slate-600 hover:bg-blue-50 hover:text-blue-600 transition text-left w-full">
                                 <span class="material-symbols-outlined text-base">edit</span> Edit

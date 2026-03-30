@@ -10,7 +10,7 @@
  */
 
 // Composable function (global, no module export needed)
-function usePelanggaran(uiData, DB, refreshData) {
+function usePelanggaran(uiData, DB, refreshData, userSession) {
     // Get Vue from global (loaded via CDN)
     const { reactive, computed } = Vue;
 
@@ -105,7 +105,7 @@ function usePelanggaran(uiData, DB, refreshData) {
      * Submit new pelanggaran record
      * Validates required fields and saves to DB
      */
-    const editingId = Vue.ref(null);
+    const pelanggaranEditingId = Vue.ref(null);
 
     /**
      * Submit new pelanggaran record
@@ -140,17 +140,17 @@ function usePelanggaran(uiData, DB, refreshData) {
                 __type: 'pelanggaran'
             };
 
-            if (editingId.value) {
-                await DB.update(editingId.value, payload);
+            if (pelanggaranEditingId.value) {
+                await DB.update(pelanggaranEditingId.value, payload);
                 window.showAlert('Pelanggaran berhasil diupdate', 'Sukses', 'info');
 
                 // --- NOTIFICATION UPDATE (v36) ---
                 const santri = uiData.santri.find(s => s._id === payload.santri_id || s.santri_id === payload.santri_id);
                 if (santri && window.NotificationService) {
-                    window.NotificationService.notifyPelanggaran(santri, payload.description, payload.points, editingId.value);
+                    window.NotificationService.notifyPelanggaran(santri, payload.description, payload.points, pelanggaranEditingId.value);
                 }
 
-                editingId.value = null; // Reset
+                pelanggaranEditingId.value = null; // Reset
             } else {
                 const res = await DB.create('pelanggaran', payload);
                 window.showAlert('Pelanggaran berhasil disimpan', 'Sukses', 'success');
@@ -182,7 +182,14 @@ function usePelanggaran(uiData, DB, refreshData) {
         if (userSession.value?.role !== 'admin' && userSession.value?.role !== 'guru') return;
 
         if (!item) return;
-        editingId.value = item._id;
+
+        // Toggle Off if clicking SAME item
+        if (pelanggaranEditingId.value === item._id) {
+            cancelPelanggaranEdit();
+            return;
+        }
+
+        pelanggaranEditingId.value = item._id;
         pelanggaranForm.santri_id = item.santri_id;
         pelanggaranForm.description = item.description;
         pelanggaranForm.points = item.points;
@@ -197,8 +204,8 @@ function usePelanggaran(uiData, DB, refreshData) {
         }, 100);
     };
 
-    const cancelEditPelanggaran = () => {
-        editingId.value = null;
+    const cancelPelanggaranEdit = () => {
+        pelanggaranEditingId.value = null;
         pelanggaranForm.santri_id = '';
         pelanggaranForm.description = '';
         pelanggaranForm.points = 10;
@@ -374,7 +381,7 @@ function usePelanggaran(uiData, DB, refreshData) {
         // State
         pelanggaranForm,
         masterPelanggaranForm,
-        editingId,
+        pelanggaranEditingId,
         menuStates,
         masterMenuStates,
         pelanggaranSantriSearch,
@@ -390,7 +397,7 @@ function usePelanggaran(uiData, DB, refreshData) {
         submitPelanggaran,
         deletePelanggaran,
         editPelanggaran,
-        cancelEditPelanggaran,
+        cancelPelanggaranEdit,
         selectPelanggaranSantri,
         openMasterPelanggaranModal,
         saveMasterPelanggaran,

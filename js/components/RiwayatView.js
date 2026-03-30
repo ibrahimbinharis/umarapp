@@ -189,6 +189,9 @@ const RiwayatView = {
                 if (!isLongPressTriggered.value) {
                     props.toggleSelect(id);
                 }
+            } else {
+                // Toggle action menu if not in bulk selection
+                props.toggleActionMenu(id);
             }
             // Reset flag untuk sentuhan berikutnya
             isLongPressTriggered.value = false;
@@ -491,7 +494,7 @@ const RiwayatView = {
                                         (item.grade === 'B-') ? 'text-amber-500' :
                                         (item.grade === 'C') ? 'text-red-500' : 'text-slate-500'
                                     ]">
-                                    Grade {{ item.grade }}
+                                    {{ item.grade }}
                                 </div>
                                 <div v-else-if="item.__cat === 'ujian'" class="text-xs font-black"
                                     :class="[

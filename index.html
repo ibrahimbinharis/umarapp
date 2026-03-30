@@ -331,11 +331,14 @@
                     <div v-if="currentView === 'ujian'" class="h-full w-full">
                         <ujian-view :user-session="userSession" :ui-data="uiData" :loading="loading"
                             :ujian-form="ujianForm" :mapel-list="mapelList"
+                            :ujian-editing-id="ujianEditingId"
                             :selected-santri-bulanan-stats="selectedSantriBulananStats"
                             :selected-santri-progress="selectedSantriProgress" :filtered-ujian="filteredUjian"
+                            :active-dropdown="activeDropdown"
                             @start-bulanan-exam="startBulananExam" @calc-bulanan-score="calcBulananScore"
                             @calc-semester-score="calcSemesterScore" @select-ujian-juz="selectUjianJuz"
-                            @submit-ujian="submitUjian"></ujian-view>
+                            @submit-ujian="submitUjian" @edit-ujian="editUjian" @delete-ujian="deleteUjian" 
+                            @toggle-dropdown="toggleDropdown" @cancel-edit="cancelUjianEdit"></ujian-view>
                     </div>
 
                     <!-- DUPLICATE PELANGGARAN VIEW REMOVED -->
@@ -382,6 +385,7 @@
                             :surah-hints="surahHints" :auto-calc-info="autoCalcInfo" :recent-setoran="recentSetoran"
                             :is-menu-open="isMenuOpen" :is-clock-running="isClockRunning"
                             :last-record-for-type="lastRecordForType" :santri-target-progress="santriTargetProgress"
+                            :setoran-editing-id="setoranEditingId"
                             :user-session="userSession" :app-config="appConfig"
                             @update:is-clock-running="isClockRunning = $event"
                             @select-setoran-santri="selectSetoranSantri" @change-setoran-type="changeSetoranType"
@@ -390,7 +394,8 @@
                             @calc-pages-from-range="calcPagesFromRange" @adjust-value="adjustValue"
                             @update-grade="updateGrade" @save-setoran="saveSetoran" @edit-setoran="editSetoran"
                             @delete-setoran="deleteSetoran" @toggle-menu="toggleMenu"
-                            @reset-setoran="resetSetoranForm"></setoran-view>
+                            @reset-setoran="resetSetoranForm"
+                            @cancel-edit="cancelSetoranEdit"></setoran-view>
                     </div>
                     <!-- TARGET VIEW SKELETON -->
                     <div v-if="loading && currentView === 'target'" class="animate-pulse px-4 space-y-4 pt-4">
@@ -805,14 +810,14 @@
                             :pelanggaran-filtered-santri-options="pelanggaranFilteredSantriOptions"
                             :is-pelanggaran-santri-dropdown-open="isPelanggaranSantriDropdownOpen"
                             :pelanggaran-selected-santri-name="pelanggaranSelectedSantriName" :ui-data="uiData"
-                            :editing-id="editingId" :filtered-pelanggaran="filteredPelanggaran"
+                            :pelanggaran-editing-id="pelanggaranEditingId" :filtered-pelanggaran="filteredPelanggaran"
                             :active-dropdown="activeDropdown" :user-session="userSession"
                             @update:pelanggaran-form="Object.assign(pelanggaranForm, $event)"
                             @update:pelanggaran-santri-search="pelanggaranSantriSearch = $event"
                             @update:is-pelanggaran-santri-dropdown-open="isPelanggaranSantriDropdownOpen = $event"
                             @select-santri="selectPelanggaranSantri" @toggle-dropdown="toggleDropdown"
                             @edit-pelanggaran="editPelanggaran" @delete-pelanggaran="deletePelanggaran"
-                            @submit-pelanggaran="submitPelanggaran" @cancel-edit="cancelEditPelanggaran"
+                            @submit-pelanggaran="submitPelanggaran" @cancel-edit="cancelPelanggaranEdit"
                             @update-points="updatePelanggaranPoints" @open-master-modal="(props) => { 
                             const p = openMasterPelanggaranModal(props); 
                             modalState.view = 'master_pelanggaran'; 
@@ -1596,7 +1601,7 @@
 
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js?v=3.1').then(reg => {
+                navigator.serviceWorker.register('sw.js?v=3.5').then(reg => {
                     console.log('SW Registered!', reg);
 
                     // 1. Check if update is already waiting (e.g. from previous visit)

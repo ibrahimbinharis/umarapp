@@ -108,12 +108,12 @@ const JadwalView = {
                     </button>
 
                     <!-- Backdrop -->
-                    <div v-if="activeDropdown === item._id" class="fixed inset-0 z-10 cursor-default"
+                    <div v-if="activeDropdown === item._id" class="fixed inset-0 z-40 cursor-default"
                         @click.stop="$emit('toggle-dropdown', null)"></div>
 
                     <!-- Dropdown Menu -->
                     <div v-if="activeDropdown === item._id"
-                        class="absolute right-9 -top-1 w-32 bg-white border border-slate-100 shadow-xl rounded-xl z-20 flex flex-col py-1 overflow-hidden animate-in fade-in zoom-in-95 duration-100 origin-top-right">
+                        class="absolute right-9 -top-1 w-32 bg-white border border-slate-100 shadow-xl rounded-xl z-50 flex flex-col py-1 overflow-hidden animate-in fade-in zoom-in-95 duration-100 origin-top-right">
                         <button @click="openJadwalModal(item); $emit('toggle-dropdown', null)"
                             class="flex items-center gap-2 px-4 py-1.5 text-xs font-bold text-slate-600 hover:bg-blue-50 hover:text-blue-600 transition text-left w-full">
                             <span class="material-symbols-outlined text-base">edit</span> Edit

@@ -140,12 +140,12 @@ const TargetView = {
                     </button>
 
                     <!-- Backdrop -->
-                    <div v-if="activeDropdown === s._id" class="fixed inset-0 z-10 cursor-default"
+                    <div v-if="activeDropdown === s._id" class="fixed inset-0 z-40 cursor-default"
                         @click.stop="$emit('toggle-dropdown', null)"></div>
 
                     <!-- Dropdown Menu -->
                     <div v-if="activeDropdown === s._id"
-                        class="absolute right-0 top-8 w-40 bg-white border border-slate-100 shadow-xl rounded-xl z-20 flex flex-col py-1 overflow-hidden animate-in fade-in zoom-in-95 duration-100 origin-top-right">
+                        class="absolute right-0 top-8 w-40 bg-white border border-slate-100 shadow-xl rounded-xl z-50 flex flex-col py-1 overflow-hidden animate-in fade-in zoom-in-95 duration-100 origin-top-right">
                         <button @click="$emit('open-target-modal', s); $emit('toggle-dropdown', null)"
                             class="flex items-center gap-2 px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50 hover:text-primary transition text-left w-full border-b border-slate-50 last:border-0">
                             <span class="material-symbols-outlined text-sm text-slate-400">edit_square</span> Edit Target

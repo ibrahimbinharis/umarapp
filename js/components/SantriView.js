@@ -263,10 +263,10 @@ const SantriView = {
                         class="size-8 flex items-center justify-center text-slate-300 hover:text-primary hover:bg-slate-50 rounded-full transition">
                         <span class="material-symbols-outlined">more_vert</span>
                     </button>
-                    <div v-if="activeDropdown === item._id" class="fixed inset-0 z-10 cursor-default"
+                    <div v-if="activeDropdown === item._id" class="fixed inset-0 z-40 cursor-default"
                         @click.stop="$emit('toggle-dropdown', null)"></div>
                     <div v-if="activeDropdown === item._id"
-                        class="absolute right-9 -top-1 w-32 bg-white border border-slate-100 shadow-xl rounded-xl z-20 flex flex-col py-1 overflow-hidden animate-in fade-in zoom-in-95 duration-100 origin-top-right">
+                        class="absolute right-9 -top-1 w-32 bg-white border border-slate-100 shadow-xl rounded-xl z-50 flex flex-col py-1 overflow-hidden animate-in fade-in zoom-in-95 duration-100 origin-top-right">
                         <template v-if="!showTrash">
                             <a v-if="item.no_hp" :href="'https://wa.me/' + formatWANumber(item.no_hp)"
                                 target="_blank"

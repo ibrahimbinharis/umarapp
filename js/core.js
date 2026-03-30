@@ -1,6 +1,6 @@
 const APP_CONFIG = {
     appName: "E-Umar",
-    version: "v3.1",
+    version: "v3.5",
     supabaseUrl: "https://fxtmilqvxomuvkxxzjli.supabase.co",
     supabaseKey: "sb_publishable_aXcK3znrtRo0d3gH-Wg1Ew_-0Z3262O"
 };
@@ -46,6 +46,7 @@ async function initSurahData() {
             ];
         }
     }
+    return window.surahList;
 }
 
 // --- 2. CRYPTO & SECURITY ---

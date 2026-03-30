@@ -312,7 +312,7 @@ function useUjian(uiData, DB, userSession, refreshData, quranControls = null, cu
     /**
      * Submit Ujian Data
      */
-    const editingId = Vue.ref(null);
+    const ujianEditingId = Vue.ref(null);
 
     /**
      * Submit Ujian Data
@@ -456,17 +456,17 @@ function useUjian(uiData, DB, userSession, refreshData, quranControls = null, cu
                 payload.grade = getSemesterGrade(payload.score);
             }
 
-            if (editingId.value) {
-                await DB.update(editingId.value, payload);
+            if (ujianEditingId.value) {
+                await DB.update(ujianEditingId.value, payload);
 
                 // --- NOTIFICATION UPDATE (v36) ---
                 const santri = uiData.santri.find(s => s.santri_id === ujianForm.santri_id || s._id === ujianForm.santri_id);
                 if (santri && window.NotificationService) {
-                    window.NotificationService.notifyUjian(santri, payload.detail || payload.type, payload.score, editingId.value);
+                    window.NotificationService.notifyUjian(santri, payload.detail || payload.type, payload.score, ujianEditingId.value);
                 }
 
                 window.showAlert("Data Ujian Berhasil Diupdate", "Sukses", "info");
-                editingId.value = null;
+                ujianEditingId.value = null;
             } else {
                 const res = await DB.create('ujian', payload);
                 window.showAlert("Nilai Ujian Berhasil Disimpan", "Sukses", "info");
@@ -493,7 +493,14 @@ function useUjian(uiData, DB, userSession, refreshData, quranControls = null, cu
 
     const editUjian = (item) => {
         if (!item) return;
-        editingId.value = item._id;
+
+        // Toggle Off if clicking SAME item
+        if (ujianEditingId.value === item._id) {
+            cancelEdit();
+            return;
+        }
+
+        ujianEditingId.value = item._id;
 
         ujianForm.santri_id = item.santri_id;
         ujianForm.date = item.date;
@@ -530,8 +537,29 @@ function useUjian(uiData, DB, userSession, refreshData, quranControls = null, cu
         }
     };
 
-    const cancelEdit = () => {
-        editingId.value = null;
+    const deleteUjian = async (item) => {
+        if (!item || !item._id) return;
+
+        window.showConfirm({
+            title: 'Hapus Data Ujian',
+            message: `Hapus riwayat ujian ${item.detail || item.type} milik ${uiData.santri.find(s => s.santri_id === item.santri_id)?.full_name || 'Santri'}?`,
+            confirmText: 'Ya, Hapus',
+            onConfirm: async () => {
+                try {
+                    await DB.delete('ujian', item._id);
+                    window.showAlert('Data ujian berhasil dihapus', 'Sukses', 'success');
+                    if (refreshData) refreshData();
+                    if (ujianEditingId.value === item._id) cancelEdit();
+                } catch (e) {
+                    console.error(e);
+                    window.showAlert('Gagal menghapus: ' + e.message, 'Error', 'danger');
+                }
+            }
+        });
+    };
+
+    const cancelUjianEdit = () => {
+        ujianEditingId.value = null;
         // Reset defaults
         ujianForm.b_score = 100;
         ujianForm.s_score = 100;
@@ -548,8 +576,9 @@ function useUjian(uiData, DB, userSession, refreshData, quranControls = null, cu
         setGrade,
         filteredUjian,
         editUjian,
-        cancelEdit,
-        editingId,
+        deleteUjian,
+        cancelUjianEdit,
+        ujianEditingId,
         selectedSantriProgress,
         selectedSantriBulananStats,
         startBulananExam

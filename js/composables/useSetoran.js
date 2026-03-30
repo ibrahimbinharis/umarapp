@@ -84,7 +84,7 @@ function useSetoran(uiData, DB, refreshData, userSession, appConfig) {
     /**
      * Track editing mode (null = create, id = edit)
      */
-    const editingId = ref(null);
+    const setoranEditingId = ref(null);
 
     // Search State for Santri Dropdown
     const setoranSantriSearch = ref('');
@@ -100,7 +100,7 @@ function useSetoran(uiData, DB, refreshData, userSession, appConfig) {
      * Get surah list from global
      */
     const surahList = computed(() => {
-        return window.surahList || [];
+        return uiData.surahList || [];
     });
 
     /**
@@ -688,7 +688,7 @@ function useSetoran(uiData, DB, refreshData, userSession, appConfig) {
 
         // Start live clock
         clockInterval = setInterval(() => {
-            if (isClockRunning.value && !editingId.value) {
+            if (isClockRunning.value && !setoranEditingId.value) {
                 setoranForm.setoran_time = window.DateUtils.getCurrentTimeString();
                 // Also update date just in case it's midnight
                 setoranForm.setoran_date = window.DateUtils.getTodayDateString();
@@ -702,7 +702,7 @@ function useSetoran(uiData, DB, refreshData, userSession, appConfig) {
     });
 
     // Stop clock if editing
-    watch(editingId, (newVal) => {
+    watch(setoranEditingId, (newVal) => {
         if (newVal) isClockRunning.value = false;
     });
 
@@ -778,7 +778,7 @@ function useSetoran(uiData, DB, refreshData, userSession, appConfig) {
             setoranForm.pages = 1;
         }
 
-        editingId.value = null;
+        setoranEditingId.value = null;
         updateGrade();
     };
 
@@ -855,14 +855,14 @@ function useSetoran(uiData, DB, refreshData, userSession, appConfig) {
                 }
 
                 // CREATE or UPDATE
-                if (editingId.value) {
+                if (setoranEditingId.value) {
                     // UPDATE mode
-                    await DB.update(editingId.value, payload);
+                    await DB.update(setoranEditingId.value, payload);
 
                     // --- NOTIFICATION UPDATE (v36) ---
                     const santri = uiData.santri.find(s => s.santri_id === setoranForm.santri_id || s._id === setoranForm.santri_id);
                     if (santri && window.NotificationService) {
-                        window.NotificationService.notifySetoran(santri, setoranForm.setoran_type, setoranForm.pages, editingId.value);
+                        window.NotificationService.notifySetoran(santri, setoranForm.setoran_type, setoranForm.pages, setoranEditingId.value);
                     }
 
                     window.showAlert('Setoran berhasil diupdate!', 'Sukses', 'info');
@@ -940,8 +940,14 @@ function useSetoran(uiData, DB, refreshData, userSession, appConfig) {
         if (!setoran) return;
 
 
+        // Toggle Off if clicking SAME item
+        if (setoranEditingId.value === setoran._id) {
+            resetSetoranForm();
+            return;
+        }
+
         // Set editing mode
-        editingId.value = setoran._id;
+        setoranEditingId.value = setoran._id;
         // Load data into form
         setoranForm.santri_id = setoran.santri_id;
         setoranForm.setoran_type = setoran.setoran_type;
@@ -978,8 +984,8 @@ function useSetoran(uiData, DB, refreshData, userSession, appConfig) {
     /**
      * Cancel edit mode
      */
-    const cancelEdit = () => {
-        editingId.value = null;
+    const cancelSetoranEdit = () => {
+        setoranEditingId.value = null;
         // Reset form to defaults
         setoranForm.pages = (setoranForm.setoran_type === 'Manzil' || setoranForm.setoran_type === 'Tilawah') ? 20 : 1;
         setoranForm.errors = 0;
@@ -1013,7 +1019,7 @@ function useSetoran(uiData, DB, refreshData, userSession, appConfig) {
         setoranForm,
         autoCalcInfo,
         surahHints,
-        editingId,
+        setoranEditingId,
 
         // Search State
         setoranSantriSearch,
@@ -1045,7 +1051,7 @@ function useSetoran(uiData, DB, refreshData, userSession, appConfig) {
         calcPagesFromRange,
 
         editSetoran,
-        cancelEdit,
+        cancelSetoranEdit,
         saveSetoran,
         deleteSetoran,
         resetSetoranForm,

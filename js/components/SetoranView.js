@@ -13,6 +13,7 @@ const SetoranView = {
         'isClockRunning',
         'lastRecordForType',
         'santriTargetProgress',
+        'setoranEditingId',
         'appConfig',
         'userSession'
     ],
@@ -34,7 +35,8 @@ const SetoranView = {
         'edit-setoran',
         'delete-setoran',
         'toggle-menu',
-        'reset-setoran'
+        'reset-setoran',
+        'cancel-edit'
     ],
     setup(props, { emit }) {
         // Helper to emit search update
@@ -413,17 +415,23 @@ const SetoranView = {
             </div>
 
             <!-- Actions (Restricted for Santri) -->
-            <template v-if="userSession.role === 'admin' || userSession.role === 'guru' || appConfig?.isHolidayMode">
-                <button @click="$emit('reset-setoran')"
-                    class="w-full bg-slate-100 text-slate-600 py-2 rounded-xl font-bold shadow-sm text-sm hover:bg-slate-200 transition">
-                    Reset Form
-                </button>
-                <button @click="$emit('save-setoran')"
-                    class="w-full bg-primary text-white py-3 rounded-xl font-bold shadow-lg text-base hover:bg-blue-800 transition">
-                    Simpan Setoran
-                </button>
+            <template v-if="userSession?.role === 'admin' || userSession?.role === 'guru' || appConfig?.isHolidayMode">
+                <div class="flex gap-2">
+                    <button v-if="setoranEditingId" @click="$emit('cancel-edit')"
+                        class="flex-1 bg-slate-100 text-slate-600 py-3 rounded-xl font-bold shadow-sm text-sm hover:bg-slate-200 transition">
+                        Batal
+                    </button>
+                    <button v-else @click="$emit('reset-setoran')"
+                        class="flex-1 bg-slate-100 text-slate-600 py-3 rounded-xl font-bold shadow-sm text-sm hover:bg-slate-200 transition">
+                        Reset
+                    </button>
+                    <button @click="$emit('save-setoran')"
+                        class="flex-[2] bg-primary text-white py-3 rounded-xl font-bold shadow-lg text-base hover:bg-blue-800 transition">
+                        {{ setoranEditingId ? 'Update Data' : 'Simpan Data' }}
+                    </button>
+                </div>
             </template>
-            <div v-else-if="userSession.role === 'santri'" class="bg-amber-50 p-4 rounded-xl border border-amber-100 flex items-center gap-3">
+            <div v-else-if="userSession?.role === 'santri'" class="bg-amber-50 p-4 rounded-xl border border-amber-100 flex items-center gap-3">
                 <span class="material-symbols-outlined text-amber-600">lock</span>
                 <p class="text-[10px] font-bold text-amber-800 leading-tight">Input mandiri hanya aktif saat Masa Liburan. Silahkan hubungi Guru untuk update hari ini.</p>
             </div>
@@ -434,34 +442,39 @@ const SetoranView = {
             <h3 class="font-bold text-slate-700 mb-2 px-1">Riwayat Setoran Terbaru</h3>
             <div class="space-y-2">
                 <!-- Recent Items -->
-                <div v-for="r in recentSetoran" :key="r._id"
-                    class="bg-white p-3 rounded-xl border shadow-sm flex justify-between items-center">
-                    <div class="overflow-hidden flex-1">
-                        <div class="text-xs text-slate-400 font-bold mb-0.5">
-                            {{ r.formatted_date || r.setoran_date }} <span v-if="r.setoran_time">&bull; {{ r.setoran_time }}</span>
+                    <div v-for="r in recentSetoran" :key="r._id"
+                        class="bg-white p-3 rounded-xl border shadow-sm flex justify-between items-center transition hover:bg-slate-50">
+                        <div class="overflow-hidden flex-1 pr-2">
+                            <div class="font-bold text-slate-800 text-sm truncate">
+                                {{ r.santri_name || 'Santri' }}
+                            </div>
+                            <div class="text-[10px] text-slate-500 font-medium truncate">
+                                {{ r.category || r.setoran_type }} &bull; {{ r.detail || '-' }}
+                            </div>
                         </div>
-                        <div class="font-bold text-slate-800 text-sm truncate">
-                            {{ r.santri_name || 'Santri' }}
-                        </div>
-                        <div class="text-xs text-slate-500 font-medium truncate">
-                            {{ r.category || r.setoran_type }} &bull; {{ r.detail || '-' }}
-                        </div>
-                    </div>
-                    <div class="flex items-center gap-2 flex-shrink-0">
-                        <div :class="{
-                                'text-blue-600': r.grade === 'A+' || r.grade === 'A',
-                                'text-emerald-600': r.grade === 'B' || r.grade === 'B+',
-                                'text-amber-500': r.grade === 'B-',
-                                'text-red-500': r.grade === 'C'
-                            }" class="font-black text-sm">
-                            {{ r.grade }}
+                        <div class="shrink-0 text-right flex flex-col items-end gap-1">
+                            <div :class="{
+                                    'text-blue-600': r.grade === 'A+' || r.grade === 'A',
+                                    'text-emerald-600': r.grade === 'B' || r.grade === 'B+',
+                                    'text-amber-500': r.grade === 'B-',
+                                    'text-red-500': r.grade === 'C'
+                                }" class="font-black text-sm">
+                                {{ r.grade }}
+                            </div>
+                            <div class="text-[8px] font-bold text-slate-400 leading-none">
+                                {{ r.formatted_date || r.setoran_date }} <span v-if="r.setoran_time" class="opacity-70">&bull; {{ r.setoran_time }}</span>
+                            </div>
                         </div>
                         <!-- 3 Dots Menu -->
-                        <div class="relative">
+                        <div class="relative ml-2">
                             <button @click.stop="$emit('toggle-menu', r._id)"
                                 class="size-8 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-600 transition">
                                 <span class="material-symbols-outlined text-lg">more_vert</span>
                             </button>
+
+                            <!-- Backdrop for Menu Click-Outside -->
+                            <div v-if="isMenuOpen(r._id)" @click="$emit('toggle-menu', r._id)" class="fixed inset-0 z-40 bg-transparent cursor-default"></div>
+
                             <!-- Dropdown (Restricted for Santri/Wali except in Holiday Mode) -->
                             <div v-if="isMenuOpen(r._id) && (userSession.role === 'admin' || userSession.role === 'guru' || ((userSession.role === 'santri' || userSession.role === 'wali') && appConfig.isHolidayMode))" @click.stop
                                 class="absolute right-0 top-10 bg-white rounded-xl shadow-lg border z-50 py-1 min-w-[120px]">
@@ -485,7 +498,6 @@ const SetoranView = {
                     class="text-center text-slate-400 text-xs py-4">
                     Belum ada data setoran {{ setoranForm.setoran_type }} terbaru
                 </p>
-            </div>
         </div>
     </div>
     `

@@ -204,7 +204,7 @@ createApp({
         });
 
         // Initialize Pelanggaran Composable
-        const pelanggaran = usePelanggaran(uiData, DB, refreshData);
+        const pelanggaran = usePelanggaran(uiData, DB, refreshData, userSession);
 
         // Initialize Santri Composable
         const santri = useSantri(uiData, DB, userSession, modalState, refreshData, searchText);
@@ -1259,6 +1259,8 @@ createApp({
 
                 // Jika sinkronisasi dapat data baru, perbarui data reactive
                 loadData();
+                const surahData = await initSurahData();
+                uiData.surahList = surahData;
                 await ensureDefaultAdmin();
             } catch (e) {
                 console.error("Init failed", e);
