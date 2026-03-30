@@ -413,7 +413,7 @@ const RiwayatView = {
                             'z-40': riwayatState.activeActionId === item._id, 
                             'bg-blue-50/40 border-blue-200 shadow-md': riwayatState.selectedIds.includes(item._id)
                         }"
-                        @click="handleCardClick(item._id)"
+                        @click.stop="handleCardClick(item._id)"
                         @mousedown="handleStart($event, item._id)"
                         @mousemove="handleMove($event)"
                         @mouseup="handleEnd"

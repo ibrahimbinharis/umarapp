@@ -268,7 +268,9 @@ const UangSakuView = {
             <!-- List Semua -->
             <div v-if="listTab === 'semua'" class="space-y-3 mt-4 fade-in">
                 <div v-for="item in listSemua" :key="item._id" 
-                    class="bg-white border text-left border-slate-100 p-4 rounded-3xl shadow-sm flex items-center justify-between group hover:border-slate-300 transition-all">
+                    @click.stop="toggleMenu(item._id)"
+                    class="bg-white border text-left border-slate-100 p-4 rounded-3xl shadow-sm flex items-center justify-between group hover:border-blue-200 transition cursor-pointer active:scale-[0.98]"
+                    :class="{ 'z-[100] border-blue-300 ring-2 ring-primary/5 shadow-2xl relative': usActiveMenuId === item._id }">
                     <div class="flex items-center gap-3">
                         <div class="size-11 rounded-2xl flex items-center justify-center font-bold"
                             :class="item.type === 'masuk' ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'">
@@ -309,7 +311,10 @@ const UangSakuView = {
 
             <!-- List Pemasukan -->
             <div v-if="listTab === 'masuk'" class="space-y-3 mt-4 fade-in">
-                <div v-for="item in listMasuk" :key="item._id" class="bg-white border text-left border-slate-100 p-4 rounded-3xl shadow-sm flex items-center justify-between group hover:border-emerald-200 transition">
+                <div v-for="item in listMasuk" :key="item._id" 
+                    @click.stop="toggleMenu(item._id)"
+                    class="bg-white border text-left border-slate-100 p-4 rounded-3xl shadow-sm flex items-center justify-between group hover:border-emerald-200 transition cursor-pointer active:scale-[0.98]"
+                    :class="{ 'z-[100] border-emerald-300 ring-2 ring-emerald-50 shadow-2xl relative': usActiveMenuId === item._id }">
                     <div class="flex items-center gap-3">
                         <div class="size-10 rounded-full bg-emerald-50 text-emerald-500 flex items-center justify-center">
                             <span class="material-symbols-outlined">south_west</span>
@@ -346,7 +351,10 @@ const UangSakuView = {
 
             <!-- List Pengeluaran -->
             <div v-if="listTab === 'keluar'" class="space-y-3 mt-4 fade-in">
-                <div v-for="item in listKeluar" :key="item._id" class="bg-white border text-left border-slate-100 p-4 rounded-3xl shadow-sm flex items-center justify-between group hover:border-red-200 transition">
+                <div v-for="item in listKeluar" :key="item._id" 
+                    @click.stop="toggleMenu(item._id)"
+                    class="bg-white border text-left border-slate-100 p-4 rounded-3xl shadow-sm flex items-center justify-between group hover:border-red-200 transition cursor-pointer active:scale-[0.98]"
+                    :class="{ 'z-[100] border-red-300 ring-2 ring-red-50 shadow-2xl relative': usActiveMenuId === item._id }">
                     <div class="flex items-center gap-3">
                         <div class="size-10 rounded-full bg-red-50 text-red-500 flex items-center justify-center">
                             <span class="material-symbols-outlined">north_east</span>

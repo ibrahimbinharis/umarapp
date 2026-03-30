@@ -244,8 +244,12 @@ const SantriView = {
         <!-- List -->
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-20">
             <div v-for="item in filteredSantri" :key="item._id"
-                class="bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex justify-between items-center hover:border-blue-100 transition group"
-                :class="{'opacity-75 border-red-100': showTrash}">
+                class="bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex justify-between items-center hover:border-blue-100 transition group cursor-pointer active:scale-[0.98]"
+                :class="{
+                    'opacity-75 border-red-100': showTrash,
+                    'z-[100] border-blue-200 ring-2 ring-primary/10 shadow-2xl relative': activeDropdown === item._id
+                }"
+                @click.stop="$emit('toggle-dropdown', item._id)">
                 <div class="flex gap-3 items-center">
                     <div class="size-10 bg-blue-50 text-primary rounded-full flex items-center justify-center font-bold text-sm"
                         :class="{'bg-red-50 text-red-500': showTrash}">

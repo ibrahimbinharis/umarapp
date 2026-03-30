@@ -70,7 +70,8 @@ const JadwalView = {
         <!-- Schedule List -->
         <div class="space-y-3 fade-in">
             <div v-for="item in filteredJadwalList" :key="item._id"
-                class="bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex justify-between items-start group hover:border-blue-200 transition">
+                class="bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex justify-between items-start group hover:border-blue-200 transition cursor-pointer active:scale-[0.98]"
+                @click.stop="userSession.role === 'admin' ? $emit('toggle-dropdown', item._id) : null">
                 
                 <div class="space-y-1">
                     <div class="flex items-center gap-2">

@@ -443,7 +443,9 @@ const SetoranView = {
             <div class="space-y-2">
                 <!-- Recent Items -->
                     <div v-for="r in recentSetoran" :key="r._id"
-                        class="bg-white p-3 rounded-xl border shadow-sm flex justify-between items-center transition hover:bg-slate-50">
+                        class="bg-white p-3 rounded-xl border shadow-sm flex justify-between items-center transition hover:bg-slate-50 cursor-pointer active:scale-[0.98]"
+                        :class="{ 'z-[100] border-blue-200 ring-2 ring-primary/10 shadow-2xl relative': isMenuOpen(r._id) }"
+                        @click.stop="$emit('toggle-menu', r._id)">
                         <div class="overflow-hidden flex-1 pr-2">
                             <div class="font-bold text-slate-800 text-sm truncate">
                                 {{ r.santri_name || 'Santri' }}
@@ -473,7 +475,7 @@ const SetoranView = {
                             </button>
 
                             <!-- Backdrop for Menu Click-Outside -->
-                            <div v-if="isMenuOpen(r._id)" @click="$emit('toggle-menu', r._id)" class="fixed inset-0 z-40 bg-transparent cursor-default"></div>
+                            <div v-if="isMenuOpen(r._id)" @click.stop="$emit('toggle-menu', r._id)" class="fixed inset-0 z-40 bg-transparent cursor-default"></div>
 
                             <!-- Dropdown (Restricted for Santri/Wali except in Holiday Mode) -->
                             <div v-if="isMenuOpen(r._id) && (userSession.role === 'admin' || userSession.role === 'guru' || ((userSession.role === 'santri' || userSession.role === 'wali') && appConfig.isHolidayMode))" @click.stop

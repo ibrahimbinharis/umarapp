@@ -5,20 +5,16 @@ const MENU_CONFIG = [
     { id: 'quran', label: "Al-Quran", icon: "auto_stories", roles: ['admin', 'guru', 'wali', 'santri'], inBottom: true },
     { id: 'input', label: "Input", icon: "add", roles: ['admin', 'guru'], inBottom: true, highlight: true },
     { id: 'riwayat', label: "Riwayat", icon: "history", roles: ['admin', 'guru', 'wali', 'santri'], inBottom: true },
+    { id: 'master_data', label: "Master Data", icon: "database", roles: ['admin', 'guru'], inBottom: false },
     { id: 'pengumuman', label: "Pengumuman", icon: "campaign", roles: ['admin', 'guru', 'wali', 'santri'], inBottom: false },
     { id: 'absensi', label: "Absensi", icon: "event_available", roles: ['admin', 'guru'], inBottom: true },
-    { id: 'santri', label: "Santri", icon: "group", roles: ['admin', 'guru'], inBottom: false },
     { id: 'hafalan', label: "Hafalan", icon: "menu_book", roles: ['admin', 'guru', 'wali', 'santri'], inBottom: false },
     { id: 'ujian', label: "Ujian", icon: "assignment_turned_in", roles: ['admin', 'guru'], inBottom: false },
-    { id: 'target', label: "Target", icon: "track_changes", roles: ['admin'], inBottom: false },
-    { id: 'guru', label: "Guru", icon: "supervisor_account", roles: ['admin'], inBottom: false },
-    { id: 'mapel', label: "Mapel", icon: "book_2", roles: ['admin'], inBottom: false },
-    { id: 'kelas', label: "Kelas", icon: "meeting_room", roles: ['admin'], inBottom: false },
     { id: 'jadwal', label: "Jadwal", icon: "calendar_month", roles: ['admin', 'guru', 'wali', 'santri'], inBottom: false },
     { id: 'pelanggaran', label: "Pelanggaran", icon: "warning", roles: ['admin', 'guru'], inBottom: false },
-    { id: 'profile', label: "Pengaturan", icon: "settings", roles: ['admin', 'guru', 'wali', 'santri'], inBottom: false },
     { id: 'rekap', label: "Rekap", icon: "analytics", roles: ['admin', 'guru', 'wali', 'santri'], inBottom: false },
     { id: 'uang_saku', label: "Uang Saku", icon: "account_balance_wallet", roles: ['admin', 'guru', 'wali', 'santri'], inBottom: false },
+    { id: 'profile', label: "Pengaturan", icon: "settings", roles: ['admin', 'guru', 'wali', 'santri'], inBottom: false },
     { id: 'connect_santri', label: "Sambungkan Santri", icon: "family_restroom", roles: ['wali'], inBottom: false },
 ];
 
@@ -1345,6 +1341,7 @@ createApp({
         QuranView,
         PengumumanView,
         UangSakuView,
+        MasterDataHubView,
         InstallView
     }
 }).mount('#app');

@@ -41,7 +41,9 @@ const GuruView = {
         <!-- Guru List -->
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 px-2">
             <div v-for="user in filteredGuru" :key="user._id"
-                class="bg-white p-4 rounded-xl border shadow-sm flex justify-between items-start group hover:border-blue-100 transition">
+                class="bg-white p-4 rounded-xl border shadow-sm flex justify-between items-start group hover:border-blue-100 transition cursor-pointer active:scale-[0.98]"
+                :class="{ 'z-[100] border-blue-200 ring-2 ring-primary/10 shadow-2xl relative': activeDropdown === user._id }"
+                @click.stop="$emit('toggle-dropdown', user._id)">
                 <div>
                     <p class="font-bold text-slate-900">{{ user.full_name }}</p>
                     <p class="text-[10px] text-slate-500 uppercase font-mono tracking-wider">

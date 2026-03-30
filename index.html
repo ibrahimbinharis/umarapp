@@ -152,7 +152,7 @@
 
                 <!-- MOBILE HEADER -->
                 <header v-if="isHeaderVisible"
-                    class="md:hidden fixed top-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-100 px-4 h-16 flex items-center justify-between shadow-sm transition-all duration-300 transform-gpu"
+                    class="md:hidden fixed top-0 left-0 right-0 z-[200] bg-white/95 backdrop-blur-md border-b border-slate-100 px-4 h-16 flex items-center justify-between shadow-sm transition-all duration-300 transform-gpu"
                     :class="isHeaderHidden ? '-translate-y-full' : 'translate-y-0'">
                     <div class="flex items-center gap-3">
                         <!-- Header Logo/Title Skeleton -->
@@ -548,6 +548,15 @@
                             @update:gender-filter="genderFilter = $event" :user-session="userSession"></absensi-view>
                     </div>
 
+                    <!-- MASTER DATA HUB VIEW -->
+                    <div v-if="currentView === 'master_data'" class="h-full w-full">
+                        <master-data-hub-view 
+                            :user-session="userSession" 
+                            :ui-data="uiData"
+                            @navigate="navigateTo($event)">
+                        </master-data-hub-view>
+                    </div>
+
                     <!-- PROFILE VIEW (Component) -->
                     <div v-if="currentView === 'profile'">
                         <profile-view :user-session="userSession" :profile-form="profileForm"
@@ -573,7 +582,9 @@
                         <!-- Mapel List -->
                         <div class="space-y-3">
                             <div v-for="mapel in filteredMapel" :key="mapel._id"
-                                class="bg-white p-5 rounded-[24px] border border-slate-100 shadow-sm flex justify-between items-center group hover:border-blue-200 transition">
+                                @click.stop="toggleDropdown(mapel._id)"
+                                class="bg-white p-5 rounded-[24px] border border-slate-100 shadow-sm flex justify-between items-center group hover:border-blue-200 transition cursor-pointer active:scale-[0.98]"
+                                :class="{ 'z-[100] border-blue-200 ring-2 ring-primary/5 shadow-2xl relative': activeDropdown === mapel._id }">
                                 <div class="flex items-center gap-4">
                                     <div class="size-11 rounded-full bg-blue-50 text-blue-500 flex items-center justify-center">
                                         <span class="material-symbols-outlined text-xl">book_2</span>
@@ -585,6 +596,10 @@
                                         class="size-9 flex items-center justify-center text-slate-300 hover:text-slate-600 hover:bg-slate-100 rounded-full transition">
                                         <span class="material-symbols-outlined text-xl">more_vert</span>
                                     </button>
+                                    
+                                    <!-- Backdrop -->
+                                    <div v-if="activeDropdown === mapel._id" class="fixed inset-0 z-40 cursor-default"
+                                        @click.stop="toggleDropdown(null)"></div>
 
                                     <!-- Dropdown Menu -->
                                     <div v-if="activeDropdown === mapel._id"
@@ -632,7 +647,9 @@
                         <!-- Kelas List -->
                         <div class="space-y-3">
                             <div v-for="kelas in filteredKelas" :key="kelas._id"
-                                class="bg-white p-5 rounded-[24px] border border-slate-100 shadow-sm flex justify-between items-center group hover:border-indigo-200 transition">
+                                @click.stop="toggleDropdown(kelas._id)"
+                                class="bg-white p-5 rounded-[24px] border border-slate-100 shadow-sm flex justify-between items-center group hover:border-indigo-200 transition cursor-pointer active:scale-[0.98]"
+                                :class="{ 'z-[100] border-blue-200 ring-2 ring-primary/5 shadow-2xl relative': activeDropdown === kelas._id }">
                                 <div class="flex items-center gap-4">
                                     <div class="size-11 rounded-full bg-indigo-50 text-indigo-500 flex items-center justify-center">
                                         <span class="material-symbols-outlined text-xl">meeting_room</span>
@@ -644,6 +661,10 @@
                                         class="size-9 flex items-center justify-center text-slate-300 hover:text-slate-600 hover:bg-slate-100 rounded-full transition">
                                         <span class="material-symbols-outlined text-xl">more_vert</span>
                                     </button>
+                                    
+                                    <!-- Backdrop -->
+                                    <div v-if="activeDropdown === kelas._id" class="fixed inset-0 z-40 cursor-default"
+                                        @click.stop="toggleDropdown(null)"></div>
 
                                     <!-- Dropdown Menu -->
                                     <div v-if="activeDropdown === kelas._id"
@@ -833,7 +854,7 @@
 
                 <!-- BOTTOM NAV (Mobile) -->
                 <nav v-if="bottomMenus.length > 0"
-                    class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-[50] h-16 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] pb-safe">
+                    class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-[200] h-16 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] pb-safe">
                     <div class="flex h-full w-full relative">
                         <!-- Bottom Nav Skeletons -->
                         <template v-if="loading && bottomMenus.length > 0">
@@ -1489,6 +1510,7 @@
 
     <!-- Composables (load before main app) -->
     <script src="js/composables/useAuth.js" defer></script>
+    <script src="js/components/MasterDataHubView.js" defer></script>
     <script src="js/composables/usePelanggaran.js" defer></script>
     <script src="js/composables/useSantri.js" defer></script> <!-- PDF & Excel Libs (v34) -->
 
@@ -1601,7 +1623,7 @@
 
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js?v=3.5').then(reg => {
+                navigator.serviceWorker.register('sw.js?v=3.6').then(reg => {
                     console.log('SW Registered!', reg);
 
                     // 1. Check if update is already waiting (e.g. from previous visit)

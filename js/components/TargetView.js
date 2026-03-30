@@ -86,11 +86,12 @@ const TargetView = {
         <div class="space-y-3 pb-32">
             <!-- List -->
             <div v-for="s in filteredSantri" :key="s._id"
-                @click="selectionMode ? $emit('toggle-santri-selection', s._id) : null"
-                class="bg-white p-3 rounded-xl border shadow-sm flex items-center justify-between group transition"
+                @click.stop="selectionMode ? $emit('toggle-santri-selection', s._id) : ((userSession.role === 'admin' || userSession.role === 'guru') ? $emit('toggle-dropdown', s._id) : null)"
+                class="bg-white p-3 rounded-xl border shadow-sm flex items-center justify-between group transition active:scale-[0.98] cursor-pointer"
                 :class="[
-                    selectionMode ? 'cursor-pointer hover:bg-slate-50' : 'hover:border-blue-100',
-                    selectedSantriIds.includes(s._id) ? 'border-primary ring-1 ring-primary/10 bg-blue-50/10' : ''
+                    selectionMode ? 'hover:bg-slate-50' : 'hover:border-blue-100',
+                    selectedSantriIds.includes(s._id) ? 'border-primary ring-1 ring-primary/10 bg-blue-50/10' : '',
+                    activeDropdown === s._id ? 'z-[100] border-blue-200 ring-2 ring-primary/10 shadow-2xl relative' : ''
                 ]">
                 
                 <div class="flex items-center gap-3 overflow-hidden">
