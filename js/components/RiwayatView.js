@@ -234,70 +234,19 @@ const RiwayatView = {
         </div>
 
         <!-- Santri Search Dropdown (Like Setoran/Input) -->
-        <div class="px-2">
-            <div class="relative">
-                <label class="text-[10px] font-bold text-slate-400 mb-1 block px-1 uppercase tracking-widest">Santri</label>
+        <!-- Search Bar (Replaced Dropdown v37) -->
+        <div class="px-2" v-if="!(userSession.role === 'santri' || userSession.role === 'wali')">
+            <div class="bg-white p-2 rounded-xl border border-slate-200 mb-2 flex items-center gap-2 transition focus-within:ring-2 focus-within:ring-primary/20 shadow-sm">
+                <span class="material-symbols-outlined text-slate-400 ml-2">search</span>
+                <input v-model="riwayatState.search" type="text" placeholder="Cari berdasarkan nama atau NIS..."
+                    class="w-full bg-transparent outline-none text-sm placeholder:text-slate-400 font-bold">
                 
-                <!-- Trigger Button -->
-                <button @click="riwayatState.isSantriDropdownOpen = !riwayatState.isSantriDropdownOpen"
-                    class="w-full p-3 border rounded-xl text-sm font-bold bg-white text-left flex justify-between items-center transition shadow-sm active:scale-[0.99]"
-                    :class="riwayatState.isSantriDropdownOpen ? 'ring-2 ring-primary/20 border-primary' : 'border-slate-200'">
-                    <span :class="riwayatState.santriId ? 'text-slate-900' : 'text-slate-400'">
-                        {{ riwayatState.santriId ? riwayatSelectedSantriName : '-- Pilih Santri (Semua) --' }}
-                    </span>
-                    <span class="material-symbols-outlined text-slate-400 transition-transform" :class="{ 'rotate-180': riwayatState.isSantriDropdownOpen }">expand_more</span>
+                <!-- Clear Button -->
+                <button v-if="riwayatState.search" 
+                    @click="riwayatState.search = ''"
+                    class="size-6 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center hover:bg-red-50 hover:text-red-500 transition mr-1">
+                    <span class="material-symbols-outlined text-xs">close</span>
                 </button>
-
-                <!-- Dropdown Content -->
-                <div v-if="riwayatState.isSantriDropdownOpen"
-                    class="absolute left-0 right-0 top-full mt-2 bg-white border border-slate-100 rounded-xl shadow-xl z-[100] overflow-hidden animate-in fade-in zoom-in-95 duration-100">
-                    
-                    <!-- Search Input Inside Dropdown -->
-                    <div class="p-2 border-b border-slate-50 bg-slate-50/50">
-                        <div class="flex items-center gap-2 p-2 rounded-xl border border-slate-200 shadow-sm bg-white focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary transition-all">
-                            <span class="material-symbols-outlined text-slate-400 ml-2">person_search</span>
-                            <input type="text" 
-                                v-model="riwayatState.santriSearch"
-                                placeholder="Cari nama santri..." 
-                                class="bg-transparent w-full text-sm font-bold outline-none placeholder:text-slate-400"
-                                @click.stop>
-                            
-                            <!-- Clear Filter Inside Search -->
-                            <button v-if="riwayatState.santriId" 
-                                @click.stop="selectRiwayatSantri({ santri_id: '' })"
-                                class="size-6 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center hover:bg-red-50 hover:text-red-500 transition mr-1">
-                                <span class="material-symbols-outlined text-xs">close</span>
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Live Results List -->
-                    <div class="max-h-60 overflow-y-auto custom-scrollbar">
-                        <!-- All Santri Option -->
-                        <div v-if="!riwayatState.santriSearch" @click="selectRiwayatSantri({ santri_id: '' })"
-                            class="px-4 py-3 hover:bg-blue-50 cursor-pointer border-b border-slate-50 last:border-0 transition-colors group">
-                            <p class="text-sm font-bold text-slate-400 group-hover:text-primary">-- Semua Santri --</p>
-                        </div>
-
-                        <div v-for="s in riwayatFilteredSantriOptions" :key="s._id"
-                            @click="selectRiwayatSantri(s)"
-                            class="px-4 py-3 hover:bg-blue-50 cursor-pointer border-b border-slate-50 last:border-0 transition-colors group">
-                            <p class="text-sm font-bold text-slate-800 group-hover:text-primary">{{ s.full_name }}</p>
-                            <p class="text-[10px] text-slate-500">{{ s.santri_id }} &bull; {{ s.kelas || '-' }}</p>
-                        </div>
-                        
-                        <!-- Empty State -->
-                        <div v-if="riwayatFilteredSantriOptions.length === 0"
-                            class="p-4 text-center text-slate-400 text-xs italic">
-                            Santri tidak ditemukan...
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Backdrop to Close -->
-                <div v-if="riwayatState.isSantriDropdownOpen" 
-                    @click="riwayatState.isSantriDropdownOpen = false" 
-                    class="fixed inset-0 z-[90] cursor-default"></div>
             </div>
         </div>
         
@@ -362,6 +311,9 @@ const RiwayatView = {
             </span>
             <span v-if="riwayatState.santriId" class="max-w-[120px] truncate">
                 • {{ riwayatSelectedSantriName }}
+            </span>
+            <span v-if="riwayatState.search" class="max-w-[120px] truncate italic text-slate-500">
+                • "{{ riwayatState.search }}"
             </span>
         </div>
 

@@ -141,6 +141,7 @@ function useDashboard(uiData, userSession, activeChildId, appConfig) {
 
         // --- PREPARE LAST MONTH CONTEXT ---
         const lastMonthDate = new Date(now);
+        lastMonthDate.setDate(1); // v37 Fix: Avoid overflow when today is 31st (e.g. March 31 -> Feb 31 -> March 3)
         lastMonthDate.setMonth(now.getMonth() - 1);
         const lastMonth = lastMonthDate.getMonth();
         const lastMonthYear = lastMonthDate.getFullYear();

@@ -89,6 +89,19 @@ const useRiwayat = (uiData, DB, refreshData, modules = {}, currentView, userSess
             merged = merged.filter(i => i.santri_id === riwayatState.santriId);
         }
 
+        if (riwayatState.search) {
+            const q = riwayatState.search.toLowerCase();
+            // Cache matching IDs for performance
+            const matchingSantriIds = new Set((uiData.santri || [])
+                .filter(s => 
+                    (s.full_name || '').toLowerCase().includes(q) || 
+                    String(s.santri_id || '').toLowerCase().includes(q)
+                )
+                .map(s => String(s.santri_id || s._id)));
+
+            merged = merged.filter(item => matchingSantriIds.has(String(item.santri_id)));
+        }
+
         // Filter / Search (Optional future implementation, currently just sort)
         merged.sort((a, b) => {
             // Sort by Date (Descending)
@@ -216,7 +229,7 @@ const useRiwayat = (uiData, DB, refreshData, modules = {}, currentView, userSess
         let count = 0;
         if (riwayatState.startDate || riwayatState.endDate || riwayatState.quickDateFilter) count++;
         if (riwayatState.category) count++;
-        if (riwayatState.santriId) count++;
+        if (riwayatState.santriId || riwayatState.search) count++;
         return count;
     });
 
@@ -402,6 +415,7 @@ const useRiwayat = (uiData, DB, refreshData, modules = {}, currentView, userSess
         riwayatState.endDate = '';
         riwayatState.category = '';
         riwayatState.santriId = '';
+        riwayatState.search = '';
         riwayatState.quickDateFilter = '';
         riwayatState.page = 1;
     };

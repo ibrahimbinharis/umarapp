@@ -239,7 +239,11 @@ function useAnalytics(uiData, userSession) {
      * Calculate Month-over-Month Comparison
      */
     const calculateComparison = (current, previous) => {
-        if (!previous || previous === 0) return { diff: 0, percent: 0, status: 'stable' };
+        if (!previous || previous === 0) {
+            if (current > 0) return { diff: current, percent: 100, status: 'up' };
+            if (current < 0) return { diff: current, percent: -100, status: 'down' };
+            return { diff: 0, percent: 0, status: 'stable' };
+        }
         const diff = current - previous;
         const percent = (diff / previous) * 100;
         return {
