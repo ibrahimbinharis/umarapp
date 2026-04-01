@@ -413,7 +413,12 @@ const RiwayatView = {
                                     <template v-if="item.__cat === 'setoran'">
                                         <!-- Smart Detail Generator (v37) -->
                                         <template v-if="item.setoran_type === 'Sabaq'">
-                                            {{ (item.surah_from_latin ? item.surah_from_latin.replace(/^\d+\.\s*/, '') : '-') }} / {{ item.pages || 0 }} Hal
+                                            <template v-if="item.surah_from === item.surah_to">
+                                                {{ (item.surah_from_latin || '-').replace(/^\d+\.\s*/, '') }}: {{ item.ayat_from }}-{{ item.ayat_to }} / {{ item.pages || 0 }} Hal
+                                            </template>
+                                            <template v-else>
+                                                {{ (item.surah_from_latin || '-').replace(/^\d+\.\s*/, '') }} ({{ item.ayat_from }}) - {{ (item.surah_to_latin || '-').replace(/^\d+\.\s*/, '') }} ({{ item.ayat_to }}) / {{ item.pages || 0 }} Hal
+                                            </template>
                                         </template>
                                         <template v-else-if="item.setoran_type === 'Manzil' || item.setoran_type === 'Tilawah'">
                                             <span v-if="item.manzil_mode === 'juz' || item.tilawah_mode === 'juz'">
@@ -446,7 +451,7 @@ const RiwayatView = {
                                         (item.grade === 'B-') ? 'text-amber-500' :
                                         (item.grade === 'C') ? 'text-red-500' : 'text-slate-500'
                                     ]">
-                                    {{ item.grade }}
+                                    {{ item.grade }}/{{ item.score }}
                                 </div>
                                 <div v-else-if="item.__cat === 'ujian'" class="text-xs font-black"
                                     :class="[
@@ -454,7 +459,7 @@ const RiwayatView = {
                                         (item.score >= 75) ? 'text-emerald-600' : 
                                         (item.score >= 70) ? 'text-amber-500' : 'text-red-500'
                                     ]">
-                                    Nilai: {{ item.score }}
+                                    {{ item.grade || '-' }}/{{ item.score }}
                                 </div>
                                 <div v-else-if="item.__cat === 'pelanggaran'" class="text-xs font-black text-red-600">
                                     -{{ item.points || 0 }} Poin

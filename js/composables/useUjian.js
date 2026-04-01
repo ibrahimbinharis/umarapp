@@ -76,7 +76,7 @@ function useUjian(uiData, DB, userSession, refreshData, quranControls = null, cu
             return dateB - dateA;
         });
 
-        return list.slice(0, 20); // Limit 20
+        return list.slice(0, 10); // Limit 10
     });
 
     const selectedSantriProgress = computed(() => {

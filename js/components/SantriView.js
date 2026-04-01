@@ -138,7 +138,7 @@ const SantriView = {
         };
     },
     template: `
-    <div class="fade-in">
+    <div class="fade-in pb-40">
 
         <!-- Floating Action Buttons -->
         <teleport to="body">

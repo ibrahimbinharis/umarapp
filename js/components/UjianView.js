@@ -76,7 +76,7 @@ const UjianView = {
         };
     },
     template: `
-    <div class="fade-in">
+    <div class="fade-in pb-32">
         <!-- Header Removed -->
 
         <!-- Tabs -->
@@ -388,58 +388,58 @@ const UjianView = {
                     Riwayat {{
                     ujianForm.tab === 'bulanan' ? 'Bulanan' : 'Semester' }}
                 </h3>
-                <div class="space-y-2 max-h-[500px] overflow-y-auto pr-1 pb-[50px] custom-scrollbar">
+                <div class="space-y-2 max-h-[480px] overflow-y-auto pr-1 pb-4 custom-scrollbar">
                     <div v-for="u in filteredUjian" :key="u._id"
-                        class="bg-white p-3 rounded-xl border border-slate-100 shadow-sm relative hover:bg-slate-50 transition group cursor-pointer"
+                        class="bg-white p-3 rounded-xl border border-slate-100 shadow-sm flex justify-between items-center transition hover:bg-slate-50 cursor-pointer active:scale-[0.98]"
                         @click.stop="$emit('toggle-dropdown', u._id)"
-                        :class="{ 'z-50 border-blue-200 ring-4 ring-blue-50': activeDropdown === u._id }">
-                        <div class="flex items-center gap-4">
-                            <div class="flex-1 min-w-0">
-                                <div class="mb-0.5">
-                                    <p class="font-bold text-slate-800 text-xs truncate">{{ getSantriName(u.santri_id) }}</p>
-                                    <p class="text-[9px] text-slate-500 truncate leading-tight">{{ u.detail || u.type }}</p>
-                                </div>
-                                <div class="text-[9px] font-bold text-slate-400 mt-2">
-                                    {{ formatDate(u.date) }}
-                                </div>
+                        :class="{ 'z-50 border-blue-200 ring-2 ring-blue-50 relative': activeDropdown === u._id }">
+                        
+                        <div class="overflow-hidden flex-1 pr-2">
+                            <div class="font-bold text-slate-800 text-xs truncate">
+                                {{ getSantriName(u.santri_id) }}
                             </div>
-                            
-                            <!-- Values & Actions Group -->
-                            <div class="shrink-0 flex flex-col items-end gap-1.5 transition-all duration-300">
-                                <!-- Grade & Score -->
-                                <div class="flex items-center gap-1.5">
-                                    <div class="font-black text-sm"
-                                        :class="{
-                                            'text-blue-600': u.score >= 80,
-                                            'text-emerald-600': u.score >= 75 && u.score < 80,
-                                            'text-amber-500': u.score >= 70 && u.score < 75,
-                                            'text-red-500': u.score < 70
-                                        }">
-                                        {{ u.score }}
-                                    </div>
-                                    <div v-if="u.grade"
-                                        class="text-[10px] font-bold bg-slate-100 px-1.5 py-0.5 rounded text-slate-600">
-                                        {{ u.grade }}
-                                    </div>
-                                </div>
+                            <div class="text-[9px] text-slate-500 font-medium truncate">
+                                {{ u.detail || u.type }}
+                            </div>
+                        </div>
 
-                                <!-- Inline Actions (Shown on Click) -->
-                                <div v-if="activeDropdown === u._id" 
-                                    class="flex gap-2 animate-in slide-in-from-right-2 fade-in duration-300">
-                                    <button @click.stop="$emit('edit-ujian', u); $emit('toggle-dropdown', null)" 
-                                        class="size-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center hover:bg-blue-100 shadow-sm transition active:scale-90">
-                                        <span class="material-symbols-outlined text-sm">edit</span>
-                                    </button>
-                                    <button @click.stop="$emit('delete-ujian', u); $emit('toggle-dropdown', null)" 
-                                        class="size-7 rounded-lg bg-red-50 text-red-600 flex items-center justify-center hover:bg-red-100 shadow-sm transition active:scale-90">
-                                        <span class="material-symbols-outlined text-sm">delete</span>
-                                    </button>
-                                </div>
-                                
-                                <!-- Placeholder to maintain height -->
-                                <div v-else class="h-7 w-7 flex items-center justify-center opacity-0 group-hover:opacity-20 transition-opacity">
-                                    <span class="material-symbols-outlined text-xs">touch_app</span>
-                                </div>
+                        <div class="shrink-0 text-right flex flex-col items-end gap-1 pr-2">
+                            <div :class="{
+                                    'text-blue-600': u.score >= 80,
+                                    'text-emerald-600': u.score >= 75 && u.score < 80,
+                                    'text-amber-500': u.score >= 70 && u.score < 75,
+                                    'text-red-500': u.score < 70
+                                }" class="font-black text-sm">
+                                <span v-if="u.grade">{{ u.grade }}/</span>{{ u.score }}
+                            </div>
+                            <div class="text-[8px] font-bold text-slate-400 leading-none">
+                                {{ formatDate(u.date) }}
+                            </div>
+                        </div>
+
+                        <!-- 3 Dots Menu -->
+                        <div class="relative">
+                            <button @click.stop="$emit('toggle-dropdown', u._id)"
+                                class="size-7 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-600 transition">
+                                <span class="material-symbols-outlined text-base">more_vert</span>
+                            </button>
+
+                            <!-- Backdrop for Menu Click-Outside -->
+                            <div v-if="activeDropdown === u._id" @click.stop="$emit('toggle-dropdown', null)" class="fixed inset-0 z-40 bg-transparent cursor-default"></div>
+
+                            <!-- Dropdown -->
+                            <div v-if="activeDropdown === u._id" @click.stop
+                                class="absolute right-0 top-8 bg-white rounded-xl shadow-lg border z-50 py-1 w-28 overflow-hidden animate-in fade-in zoom-in-95 duration-100 origin-top-right">
+                                <button @click="$emit('edit-ujian', u); $emit('toggle-dropdown', null)"
+                                    class="w-full px-3 py-2 text-left text-[10px] font-bold hover:bg-blue-50 text-slate-700 flex items-center gap-2 transition-colors">
+                                    <span class="material-symbols-outlined text-sm text-blue-500">edit</span>
+                                    Edit
+                                </button>
+                                <button @click="$emit('delete-ujian', u); $emit('toggle-dropdown', null)"
+                                    class="w-full px-3 py-2 text-left text-[10px] font-bold hover:bg-red-50 text-red-600 flex items-center gap-2 border-t border-slate-50 transition-colors">
+                                    <span class="material-symbols-outlined text-sm text-red-400">delete</span>
+                                    Hapus
+                                </button>
                             </div>
                         </div>
                     </div>

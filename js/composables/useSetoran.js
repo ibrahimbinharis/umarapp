@@ -115,15 +115,21 @@ function useSetoran(uiData, DB, refreshData, userSession, appConfig) {
         if (setoran.setoran_type === 'Sabaq') {
             const sFrom = (setoran.surah_from_latin || '').replace(/^\d+\.\s*/, '');
             const sTo = (setoran.surah_to_latin || '').replace(/^\d+\.\s*/, '');
-            return `${sFrom}${sTo && sTo !== sFrom ? ' - ' + sTo : ''} (A. ${setoran.ayat_from}-${setoran.ayat_to})`;
+            const pages = setoran.pages || 0;
+            
+            if (setoran.surah_from === setoran.surah_to) {
+                return `${sFrom}: ${setoran.ayat_from}-${setoran.ayat_to} / ${pages} Hal`;
+            } else {
+                return `${sFrom} (${setoran.ayat_from}) - ${sTo} (${setoran.ayat_to}) / ${pages} Hal`;
+            }
         } else if (setoran.setoran_type === 'Manzil') {
             return setoran.manzil_mode === 'juz'
-                ? `Juz ${setoran.juz}`
-                : `Hal ${setoran.page_from}-${setoran.page_to}`;
+                ? `Juz ${setoran.juz} / ${setoran.pages || 0} Hal`
+                : `Hal ${setoran.page_from}-${setoran.page_to} / ${setoran.pages || 0} Hal`;
         } else if (setoran.setoran_type === 'Tilawah') {
             return setoran.tilawah_mode === 'juz'
-                ? `Juz ${setoran.juz_from}-${setoran.juz_to}`
-                : `Hal ${setoran.page_from}-${setoran.page_to}`;
+                ? `Juz ${setoran.juz_from}-${setoran.juz_to} / ${setoran.pages || 0} Hal`
+                : `Hal ${setoran.page_from}-${setoran.page_to} / ${setoran.pages || 0} Hal`;
         } else {
             return `${setoran.pages} Halaman`;
         }
@@ -142,7 +148,7 @@ function useSetoran(uiData, DB, refreshData, userSession, appConfig) {
             })
             .slice()
             .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-            .slice(0, 5);
+            .slice(0, 10);
 
         return records.map(r => {
             const s = (uiData.santri || []).find(santri => santri.santri_id === r.santri_id);
@@ -818,7 +824,8 @@ function useSetoran(uiData, DB, refreshData, userSession, appConfig) {
                     counted: setoranForm.counted,
                     // Holiday Mode Flag & Category (v36)
                     is_holiday: appConfig?.value?.isHolidayMode || false,
-                    category: (appConfig?.value?.isHolidayMode)
+                    input_by: role,
+                    category: (appConfig?.value?.isHolidayMode && (role === 'santri' || role === 'wali'))
                         ? `${setoranForm.setoran_type} (Mandiri)`
                         : setoranForm.setoran_type
                 };

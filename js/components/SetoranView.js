@@ -438,9 +438,9 @@ const SetoranView = {
         </div>
 
         <!-- Recent History -->
-        <div class="mt-6 mx-2">
+        <div class="mt-6 mx-2 mb-20">
             <h3 class="font-bold text-slate-700 mb-2 px-1">Riwayat Setoran Terbaru</h3>
-            <div class="space-y-2">
+            <div class="max-h-[400px] overflow-y-auto pr-1 custom-scrollbar space-y-2">
                 <!-- Recent Items -->
                     <div v-for="r in recentSetoran" :key="r._id"
                         class="bg-white p-3 rounded-xl border shadow-sm flex justify-between items-center transition hover:bg-slate-50 cursor-pointer active:scale-[0.98]"
@@ -461,7 +461,7 @@ const SetoranView = {
                                     'text-amber-500': r.grade === 'B-',
                                     'text-red-500': r.grade === 'C'
                                 }" class="font-black text-sm">
-                                {{ r.grade }}
+                                <span v-if="r.grade && r.grade !== '-'">{{ r.grade }}/</span>{{ r.score }}
                             </div>
                             <div class="text-[8px] font-bold text-slate-400 leading-none">
                                 {{ r.formatted_date || r.setoran_date }} <span v-if="r.setoran_time" class="opacity-70">&bull; {{ r.setoran_time }}</span>
@@ -479,15 +479,15 @@ const SetoranView = {
 
                             <!-- Dropdown (Restricted for Santri/Wali except in Holiday Mode) -->
                             <div v-if="isMenuOpen(r._id) && (userSession.role === 'admin' || userSession.role === 'guru' || ((userSession.role === 'santri' || userSession.role === 'wali') && appConfig.isHolidayMode))" @click.stop
-                                class="absolute right-0 top-10 bg-white rounded-xl shadow-lg border z-50 py-1 min-w-[120px]">
+                                class="absolute right-0 top-10 bg-white rounded-xl shadow-lg border z-50 py-1 w-28 overflow-hidden animate-in fade-in zoom-in-95 duration-100 origin-top-right">
                                 <button @click="$emit('edit-setoran', r); $emit('toggle-menu', r._id)"
-                                    class="w-full px-4 py-2 text-left text-sm hover:bg-blue-50 text-blue-600 flex items-center gap-2">
-                                    <span class="material-symbols-outlined text-lg">edit</span>
+                                    class="w-full px-3 py-2 text-left text-xs font-bold hover:bg-blue-50 text-slate-700 flex items-center gap-2 transition-colors">
+                                    <span class="material-symbols-outlined text-base text-blue-500">edit</span>
                                     Edit
                                 </button>
                                 <button @click="$emit('delete-setoran', r._id); $emit('toggle-menu', r._id)"
-                                    class="w-full px-4 py-2 text-left text-sm hover:bg-red-50 text-red-500 flex items-center gap-2">
-                                    <span class="material-symbols-outlined text-lg">delete</span>
+                                    class="w-full px-3 py-2 text-left text-xs font-bold hover:bg-red-50 text-red-600 flex items-center gap-2 border-t border-slate-50 transition-colors">
+                                    <span class="material-symbols-outlined text-base text-red-400">delete</span>
                                     Hapus
                                 </button>
                             </div>
