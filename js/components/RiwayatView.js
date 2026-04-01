@@ -405,7 +405,7 @@ const RiwayatView = {
                                             item.__cat === 'ujian' ? 'text-amber-500' :
                                             'text-blue-500'
                                         ]">
-                                        {{ item.__cat === 'pelanggaran' ? 'Pelanggaran' : (item.setoran_type || (item.type === 'hafalan_exam' ? 'Ujian H.' : 'Ujian')) }}
+                                        {{ item.__cat === 'pelanggaran' ? 'Pelanggaran' : (item.category || item.setoran_type || (item.type === 'hafalan_exam' ? 'Ujian H.' : 'Ujian')) }}
                                     </span>
                                 </div>
                                 
