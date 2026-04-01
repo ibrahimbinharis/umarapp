@@ -274,16 +274,16 @@ const SantriView = {
                         <template v-if="!showTrash">
                             <a v-if="item.no_hp" :href="'https://wa.me/' + formatWANumber(item.no_hp)"
                                 target="_blank"
-                                class="flex items-center gap-2 px-4 py-1.5 text-xs font-bold text-slate-600 hover:bg-green-50 hover:text-green-600 transition text-left">
+                                class="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-green-50 hover:text-green-600 transition text-left">
                                 <span class="material-symbols-outlined text-base">chat</span> WhatsApp
                             </a>
                             <template v-if="userSession.role === 'admin' || userSession.role === 'guru'">
                                 <button @click="$emit('open-modal', item); $emit('toggle-dropdown', null)"
-                                    class="flex items-center gap-2 px-4 py-1.5 text-xs font-bold text-slate-600 hover:bg-blue-50 hover:text-blue-600 transition text-left w-full">
+                                    class="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-blue-50 hover:text-blue-600 transition text-left w-full">
                                     <span class="material-symbols-outlined text-base">edit</span> Edit
                                 </button>
                                 <button @click="$emit('delete', item); $emit('toggle-dropdown', null)"
-                                    class="flex items-center gap-2 px-4 py-1.5 text-xs font-bold text-slate-600 hover:bg-red-50 hover:text-red-500 transition text-left w-full">
+                                    class="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-red-50 hover:text-red-500 transition text-left w-full">
                                     <span class="material-symbols-outlined text-base">delete</span> Hapus
                                 </button>
                             </template>

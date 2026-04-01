@@ -22,6 +22,7 @@ function useGuru(uiData, DB, modalState) {
         username: '',        // Auto-generated Guru ID
         custom_username: '', // Custom username for login
         full_name: '',
+        no_hp: '',           // New: Direct WA support
         password: '',
         role: 'guru'         // Always guru (admin created in DB)
     });
@@ -62,6 +63,7 @@ function useGuru(uiData, DB, modalState) {
             guruForm.username = guru.username;               // Primary ID (NIG)
             guruForm.custom_username = guru.custom_username || ''; // Alias
             guruForm.full_name = guru.full_name;
+            guruForm.no_hp = guru.no_hp || guru.phone || ''; // Load no_hp (master) or phone (profile)
             guruForm.password = '';
             guruForm.role = 'guru';
             modalState.title = 'Edit Guru';
@@ -72,6 +74,7 @@ function useGuru(uiData, DB, modalState) {
             guruForm.username = generateGuruID(); // Always generate NIG
             guruForm.custom_username = '';        // Admin fills friendly login name here
             guruForm.full_name = '';
+            guruForm.no_hp = '';                  // Reset no_hp
             guruForm.password = '';
             guruForm.role = 'guru';
             modalState.title = 'Tambah Guru';
@@ -94,6 +97,8 @@ function useGuru(uiData, DB, modalState) {
                     full_name: guruForm.full_name,
                     username: guruForm.username,
                     custom_username: guruForm.custom_username.trim(),
+                    no_hp: window.formatWANumber(guruForm.no_hp), // Sync Master Data
+                    phone: window.formatWANumber(guruForm.no_hp), // Sync Profile Data
                     role: 'guru'
                 };
                 if (guruForm.password) payload.password = guruForm.password;

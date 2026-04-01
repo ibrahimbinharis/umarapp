@@ -5,13 +5,20 @@ const MasterDataHubView = {
     },
     emits: ['navigate'],
     setup(props) {
-        const masterMenus = [
-            { id: 'santri', name: 'Data Santri', icon: 'groups', desc: 'Kelola data seluruh santri' },
-            { id: 'guru', name: 'Data Guru', icon: 'badge', desc: 'Kelola data pengajar' },
-            { id: 'kelas', name: 'Data Kelas', icon: 'meeting_room', desc: 'Pengaturan rombel & wali' },
-            { id: 'mapel', name: 'Mata Pelajaran', icon: 'book_5', desc: 'Daftar kurikulum akademik' },
-            { id: 'target', name: 'Target Hafalan', icon: 'track_changes', desc: 'Setting pencapaian juz' }
+        const { computed } = Vue;
+
+        const allMenus = [
+            { id: 'santri', name: 'Data Santri', icon: 'groups', desc: 'Kelola data seluruh santri', roles: ['admin', 'guru'] },
+            { id: 'guru', name: 'Data Guru', icon: 'badge', desc: 'Kelola data pengajar', roles: ['admin'] },
+            { id: 'kelas', name: 'Data Kelas', icon: 'meeting_room', desc: 'Pengaturan rombel & wali', roles: ['admin', 'guru'] },
+            { id: 'mapel', name: 'Mata Pelajaran', icon: 'book_2', desc: 'Daftar kurikulum akademik', roles: ['admin', 'guru'] },
+            { id: 'target', name: 'Target Hafalan', icon: 'track_changes', desc: 'Setting pencapaian juz', roles: ['admin', 'guru'] }
         ];
+
+        const masterMenus = computed(() => {
+            const role = props.userSession?.role || 'santri';
+            return allMenus.filter(m => m.roles.includes(role));
+        });
 
         return { masterMenus };
     },

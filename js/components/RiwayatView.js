@@ -474,14 +474,14 @@ const RiwayatView = {
                         <!-- Action Popup -->
                         <div v-if="riwayatState.activeActionId === item._id"
                             @mousedown.stop @mouseup.stop @touchstart.stop @touchend.stop
-                            class="absolute right-4 top-12 bg-white rounded-2xl shadow-2xl border border-slate-100 z-50 w-36 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                            class="absolute right-4 top-12 bg-white rounded-2xl shadow-2xl border border-slate-100 z-50 w-28 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
                             <button @click="editRiwayat(item); closeActionMenu()"
-                                class="px-4 py-3 hover:bg-blue-50 text-[11px] font-bold text-slate-700 flex items-center gap-2 w-full text-left transition-colors">
-                                <span class="material-symbols-outlined text-base text-blue-500">edit</span> Edit Data
+                                class="px-4 py-3 hover:bg-blue-50 text-[11px] font-bold text-slate-700 flex items-center gap-2 w-full text-left transition-colors font-jakarta">
+                                <span class="material-symbols-outlined text-base text-blue-500">edit</span> Edit
                             </button>
                             <button @click="deleteRiwayat(item); closeActionMenu()"
-                                class="px-4 py-3 hover:bg-red-50 text-[11px] font-bold text-red-600 flex items-center gap-2 w-full text-left border-t border-slate-50 transition-colors">
-                                <span class="material-symbols-outlined text-base text-red-400">delete</span> Hapus Data
+                                class="px-4 py-2.5 hover:bg-red-50 text-[11px] font-bold text-red-600 flex items-center gap-2 w-full text-left border-t border-slate-50 transition-colors font-jakarta">
+                                <span class="material-symbols-outlined text-base text-red-400">delete</span> Hapus
                             </button>
                         </div>
                     </div>

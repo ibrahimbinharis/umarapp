@@ -146,14 +146,14 @@ const TargetView = {
 
                     <!-- Dropdown Menu -->
                     <div v-if="activeDropdown === s._id"
-                        class="absolute right-0 top-8 w-40 bg-white border border-slate-100 shadow-xl rounded-xl z-50 flex flex-col py-1 overflow-hidden animate-in fade-in zoom-in-95 duration-100 origin-top-right">
+                        class="absolute right-0 top-8 w-28 bg-white border border-slate-100 shadow-xl rounded-xl z-50 flex flex-col py-1 overflow-hidden animate-in fade-in zoom-in-95 duration-100 origin-top-right">
                         <button @click="$emit('open-target-modal', s); $emit('toggle-dropdown', null)"
                             class="flex items-center gap-2 px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50 hover:text-primary transition text-left w-full border-b border-slate-50 last:border-0">
-                            <span class="material-symbols-outlined text-sm text-slate-400">edit_square</span> Edit Target
+                            <span class="material-symbols-outlined text-sm text-slate-400">edit_square</span> Edit
                         </button>
                         <button @click="$emit('reset-target', s._id); $emit('toggle-dropdown', null)"
                             class="flex items-center gap-2 px-3 py-2 text-xs font-bold text-slate-600 hover:bg-red-50 hover:text-red-500 transition text-left w-full">
-                            <span class="material-symbols-outlined text-sm text-slate-400">restart_alt</span> Reset Default
+                            <span class="material-symbols-outlined text-sm text-slate-400">restart_alt</span> Reset
                         </button>
                     </div>
                 </div>

@@ -36,7 +36,7 @@ function useProfile(uiData, DB, userSession, refreshData) {
             profileForm.phone = s ? (s.parent_phone || s.no_hp || '') : '';
         } else {
             profileForm.full_name = userSession.value.full_name || '';
-            profileForm.phone = userSession.value.phone || '';
+            profileForm.phone = userSession.value.no_hp || userSession.value.phone || '';
         }
 
         profileForm.gender = userSession.value.gender || '';
@@ -91,7 +91,8 @@ function useProfile(uiData, DB, userSession, refreshData) {
 
             try {
                 const updates = {
-                    phone: profileForm.phone,
+                    phone: window.formatWANumber(profileForm.phone),
+                    no_hp: window.formatWANumber(profileForm.phone), // Sync with Master Data Guru
                     gender: profileForm.gender,
                     custom_username: profileForm.username
                 };
@@ -125,6 +126,7 @@ function useProfile(uiData, DB, userSession, refreshData) {
                             username: userSession.value.username || profileForm.username,
                             full_name: updates.full_name,
                             phone: updates.phone,
+                            no_hp: updates.no_hp,
                             gender: updates.gender,
                             custom_username: updates.custom_username,
                             role: userSession.value.role || 'wali',
@@ -171,6 +173,7 @@ function useProfile(uiData, DB, userSession, refreshData) {
                     userSession.value.full_name = profileForm.full_name;
                 }
                 userSession.value.phone = updates.phone;
+                userSession.value.no_hp = updates.no_hp;
                 userSession.value.gender = updates.gender;
                 userSession.value.custom_username = updates.custom_username;
 

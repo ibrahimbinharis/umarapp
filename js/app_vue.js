@@ -1008,6 +1008,12 @@ createApp({
         window.formatDate = formatDate;
         window.getSantriName = getSantriName;
         window.getInitials = getInitials;
+        window.formatWANumber = (phone) => {
+            if (!phone) return '';
+            let p = String(phone).replace(/\D/g, '');
+            if (p.startsWith('0')) p = '62' + p.slice(1);
+            return p;
+        };
 
         // --- WATCHERS ---
         const openMonitoringModal = () => {
