@@ -546,10 +546,10 @@ function useUjian(uiData, DB, userSession, refreshData, quranControls = null, cu
             confirmText: 'Ya, Hapus',
             onConfirm: async () => {
                 try {
-                    await DB.delete('ujian', item._id);
+                    await DB.delete(item._id);
                     window.showAlert('Data ujian berhasil dihapus', 'Sukses', 'success');
                     if (refreshData) refreshData();
-                    if (ujianEditingId.value === item._id) cancelEdit();
+                    if (ujianEditingId.value === item._id) cancelUjianEdit();
                 } catch (e) {
                     console.error(e);
                     window.showAlert('Gagal menghapus: ' + e.message, 'Error', 'danger');
@@ -560,10 +560,21 @@ function useUjian(uiData, DB, userSession, refreshData, quranControls = null, cu
 
     const cancelUjianEdit = () => {
         ujianEditingId.value = null;
-        // Reset defaults
+        // Reset SEMUA field form agar tidak tersisa dari data yang diedit
+        ujianForm.santri_id = '';
+        ujianForm.date = window.DateUtils.getTodayDateString();
+        // Bulanan
+        ujianForm.b_soal = 5;
+        ujianForm.b_salah = 0;
         ujianForm.b_score = 100;
-        ujianForm.s_score = 100;
+        ujianForm.b_mapel = 'Fiqih';
+        // Semester
         ujianForm.s_juz = null;
+        ujianForm.s_salah = 0;
+        ujianForm.s_score = 100;
+        ujianForm.s_score_manual = 100;
+        ujianForm.s_grade = null;
+        ujianForm.s_mapel = 'Fiqih';
     };
 
     return {

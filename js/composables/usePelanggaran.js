@@ -108,6 +108,21 @@ function usePelanggaran(uiData, DB, refreshData, userSession) {
     const pelanggaranEditingId = Vue.ref(null);
 
     /**
+     * Reset form pelanggaran ke kondisi awal (terpusat)
+     * Termasuk reset date ke hari ini agar tidak tertinggal tanggal lama
+     * dan reset dropdown santri agar tidak menampilkan nama lama
+     */
+    const resetPelanggaranForm = () => {
+        pelanggaranForm.santri_id = '';
+        pelanggaranForm.description = '';
+        pelanggaranForm.points = 10;
+        pelanggaranForm.date = window.DateUtils.getTodayDateString();
+        // Reset dropdown santri
+        pelanggaranSantriSearch.value = '';
+        isPelanggaranSantriDropdownOpen.value = false;
+    };
+
+    /**
      * Submit new pelanggaran record
      * Validates required fields and saves to DB
      */
@@ -150,7 +165,7 @@ function usePelanggaran(uiData, DB, refreshData, userSession) {
                     window.NotificationService.notifyPelanggaran(santri, payload.description, payload.points, pelanggaranEditingId.value);
                 }
 
-                pelanggaranEditingId.value = null; // Reset
+                pelanggaranEditingId.value = null;
             } else {
                 const res = await DB.create('pelanggaran', payload);
                 window.showAlert('Pelanggaran berhasil disimpan', 'Sukses', 'success');
@@ -162,10 +177,8 @@ function usePelanggaran(uiData, DB, refreshData, userSession) {
                 }
             }
 
-            // Reset form
-            pelanggaranForm.santri_id = '';
-            pelanggaranForm.description = '';
-            pelanggaranForm.points = 10;
+            // Reset semua field form via helper terpusat (inkl. date)
+            resetPelanggaranForm();
 
             // Trigger refresh if available
             if (refreshData) {
@@ -195,20 +208,21 @@ function usePelanggaran(uiData, DB, refreshData, userSession) {
         pelanggaranForm.points = item.points;
         pelanggaranForm.date = item.date;
 
-        // Scroll to form
+        // Scroll to form (cari container yang aktif)
         setTimeout(() => {
-            const pelanggaranView = document.querySelector('[v-if="currentView === \'pelanggaran\'"]');
-            if (pelanggaranView) {
-                pelanggaranView.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            const formEl = document.querySelector('.pelanggaran-form, [data-view="pelanggaran"]');
+            if (formEl) {
+                formEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } else {
+                // Fallback: scroll ke atas
+                window.scrollTo({ top: 0, behavior: 'smooth' });
             }
         }, 100);
     };
 
     const cancelPelanggaranEdit = () => {
         pelanggaranEditingId.value = null;
-        pelanggaranForm.santri_id = '';
-        pelanggaranForm.description = '';
-        pelanggaranForm.points = 10;
+        resetPelanggaranForm(); // Reset semua field inkl. date
     };
 
     // ... (rest of methods)
@@ -288,7 +302,8 @@ function usePelanggaran(uiData, DB, refreshData, userSession) {
                 masterPelanggaranForm.name = '';
                 masterPelanggaranForm.points = 10;
                 window.showAlert('Data berhasil disimpan', 'Sukses', 'info');
-                if (window.refreshData) window.refreshData();
+                // Fix: gunakan refreshData parameter (bukan window.refreshData)
+                if (refreshData) refreshData();
                 return { success: true };
             } catch (error) {
                 window.showAlert('Gagal menyimpan data: ' + error.message, 'Error', 'danger');
@@ -317,7 +332,8 @@ function usePelanggaran(uiData, DB, refreshData, userSession) {
                 try {
                     await DB.delete(id);
                     window.showAlert('Jenis pelanggaran berhasil dihapus', 'Sukses', 'info');
-                    if (window.refreshData) window.refreshData();
+                    // Fix: gunakan refreshData parameter (bukan window.refreshData)
+                    if (refreshData) refreshData();
                 } catch (error) {
                     console.error('Error deleting master pelanggaran:', error);
                     window.showAlert('Gagal menghapus data: ' + error.message, 'Error', 'danger');

@@ -1,6 +1,6 @@
 const APP_CONFIG = {
     appName: "E-Umar",
-    version: "v3.10",
+    version: "v3.11",
     supabaseUrl: "https://fxtmilqvxomuvkxxzjli.supabase.co",
     supabaseKey: "sb_publishable_aXcK3znrtRo0d3gH-Wg1Ew_-0Z3262O"
 };
@@ -61,7 +61,11 @@ async function hashPassword(plainPassword) {
             return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
         } catch (e) { console.error("Crypto Error", e); }
     }
-    return "F_" + btoa(plainPassword).split('').reverse().join('');
+    // Fix: Fallback Base64-reversed sebelumnya tidak aman (mudah di-decode).
+    // Jika WebCrypto tidak tersedia, kembalikan string kosong dan log warning
+    // agar password lama (plaintext/legacy) di DB tidak tertimpa dengan 'hash' palsu.
+    console.error('[Security] WebCrypto API tidak tersedia. Password tidak di-hash!');
+    return "";
 }
 
 // --- 3. DATABASE ENGINE (Supabase Adapter) ---

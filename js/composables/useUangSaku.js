@@ -199,7 +199,13 @@ function useUangSaku(uiData, DB, refreshUI, userSession) {
     // Auto-select santri if role is 'santri'
     const checkRoleAndAutoSelect = () => {
         if (userSession && userSession.value && userSession.value.role === 'santri') {
-            activeSantriId.value = userSession.value.username;
+            // Fix: cari _id santri dari uiData berdasarkan username (NIS)
+            // agar activeSantriObj bisa match via _id (konsisten)
+            const username = userSession.value.username;
+            const foundSantri = (uiData.santri || []).find(s =>
+                s.santri_id === username || s.nis === username || s._id === username
+            );
+            activeSantriId.value = foundSantri ? foundSantri._id : username;
         }
     };
 

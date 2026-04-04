@@ -65,6 +65,12 @@ const UjianView = {
             return iso.split('T')[0];
         });
 
+        const clearSantri = () => {
+            props.ujianForm.santri_id = '';
+            isDropdownOpen.value = false;
+            searchQuery.value = '';
+        };
+
         return {
             getSantriName,
             formatDate,
@@ -72,7 +78,8 @@ const UjianView = {
             isDropdownOpen,
             filteredSantriList,
             selectedSantriLabel,
-            selectSantri
+            selectSantri,
+            clearSantri
         };
     },
     template: `
@@ -121,11 +128,18 @@ const UjianView = {
                                          isDropdownOpen ? 'ring-2 ring-primary/20 border-primary' : 'border-slate-200',
                                          userSession.role === 'santri' ? 'bg-slate-50 cursor-default' : ''
                                       ]">
-                                     <span :class="!ujianForm.santri_id ? 'text-slate-400' : 'text-slate-900'">
+                                     <span :class="!ujianForm.santri_id ? 'text-slate-400' : 'text-slate-900'" class="truncate flex-1">
                                          {{ selectedSantriLabel }}
                                      </span>
-                                     <span v-if="userSession.role !== 'santri'" class="material-symbols-outlined text-slate-400">expand_more</span>
-                                     <span v-else class="material-symbols-outlined text-slate-300 text-sm">lock</span>
+                                     <!-- Tombol X: muncul saat santri sudah dipilih -->
+                                     <button v-if="ujianForm.santri_id && userSession.role !== 'santri'"
+                                         @click.stop="clearSantri()"
+                                         class="ml-1 size-5 rounded-full bg-slate-200 hover:bg-red-100 hover:text-red-500 flex items-center justify-center transition flex-shrink-0"
+                                         title="Hapus pilihan">
+                                         <span class="material-symbols-outlined text-[14px]">close</span>
+                                     </button>
+                                     <span v-if="!ujianForm.santri_id && userSession.role !== 'santri'" class="material-symbols-outlined text-slate-400 flex-shrink-0">expand_more</span>
+                                     <span v-if="userSession.role === 'santri'" class="material-symbols-outlined text-slate-300 text-sm flex-shrink-0">lock</span>
                                  </button>
 
                                 <!-- Backdrop (Click Outside) -->
