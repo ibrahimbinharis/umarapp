@@ -156,10 +156,15 @@ const SantriView = {
         </teleport>
 
         <!-- Search -->
-        <div class="bg-white p-2 rounded-xl border border-slate-200 mb-2 flex items-center gap-2 transition focus-within:ring-2 focus-within:ring-primary/20 shadow-sm">
+        <div class="bg-white p-2 rounded-xl border border-slate-200 mb-2 flex items-center gap-2 transition focus-within:ring-2 focus-within:ring-primary/20 shadow-sm pr-1">
             <span class="material-symbols-outlined text-slate-400 ml-2">search</span>
             <input :value="searchText" @input="$emit('update:searchText', $event.target.value)" type="text" placeholder="Cari berdasarkan nama atau NIS..."
-                class="w-full bg-transparent outline-none text-sm placeholder:text-slate-400">
+                class="w-full bg-transparent outline-none text-sm placeholder:text-slate-400 font-bold">
+            <!-- Search Clear Button -->
+            <button v-if="searchText" @click.stop="$emit('update:searchText', '')"
+                class="size-8 flex items-center justify-center text-slate-300 hover:text-red-500 transition-colors">
+                <span class="material-symbols-outlined text-lg">close</span>
+            </button>
         </div>
 
         <!-- Gender Filter Tabs -->

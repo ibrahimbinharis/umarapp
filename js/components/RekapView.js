@@ -478,7 +478,15 @@ const RekapView = {
                     <span :class="rekapSantriId ? 'text-slate-900' : 'text-slate-400'">
                         {{ rekapSelectedSantriName }}
                     </span>
-                    <span class="material-symbols-outlined text-slate-400 transition-transform" :class="{ 'rotate-180': isRekapSantriDropdownOpen }">expand_more</span>
+                    <div class="flex items-center gap-1">
+                        <!-- Clear Selection Button -->
+                        <span v-if="rekapSantriId" @click.stop="selectRekapSantri({ santri_id: '' })" 
+                            class="material-symbols-outlined text-slate-300 hover:text-red-500 transition-colors p-1.5 -mr-1.5 text-lg"
+                            title="Tampilkan Semua">
+                            cancel
+                        </span>
+                        <span class="material-symbols-outlined text-slate-400 transition-transform duration-200" :class="{ 'rotate-180': isRekapSantriDropdownOpen }">expand_more</span>
+                    </div>
                 </button>
 
                 <!-- Dropdown Content -->
@@ -496,11 +504,11 @@ const RekapView = {
                                 class="bg-transparent w-full text-sm font-bold outline-none placeholder:text-slate-400"
                                 @click.stop>
                             
-                            <!-- Clear Filter Inside Search -->
-                            <button v-if="rekapSantriId" 
-                                @click.stop="selectRekapSantri({ santri_id: '' })"
-                                class="size-6 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center hover:bg-red-50 hover:text-red-500 transition mr-1">
-                                <span class="material-symbols-outlined text-xs">close</span>
+                            <!-- Clear Search Query -->
+                            <button v-if="rekapSearch" 
+                                @click.stop="$emit('update:rekapSearch', '')"
+                                class="size-8 flex items-center justify-center text-slate-300 hover:text-red-500 transition-colors mr-1">
+                                <span class="material-symbols-outlined text-lg">close</span>
                             </button>
                         </div>
                     </div>

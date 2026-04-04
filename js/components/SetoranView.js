@@ -81,8 +81,19 @@ const SetoranView = {
                     <span :class="setoranForm.santri_id ? 'text-slate-900' : 'text-slate-400'">
                         {{ setoranForm.santri_id ? setoranSelectedSantriName : '-- Pilih Santri --' }}
                     </span>
-                    <span v-if="userSession.role !== 'santri'" class="material-symbols-outlined text-slate-400">expand_more</span>
-                    <span v-else class="material-symbols-outlined text-slate-300 text-sm">lock</span>
+                    <div class="flex items-center gap-1">
+                        <template v-if="userSession.role !== 'santri'">
+                            <!-- Clear Selection Button -->
+                            <span v-if="setoranForm.santri_id" @click.stop="$emit('reset-setoran')" 
+                                class="material-symbols-outlined text-slate-300 hover:text-red-500 transition-colors p-1.5 -mr-1.5 text-lg"
+                                title="Batal pilih santri">
+                                cancel
+                            </span>
+                            <span class="material-symbols-outlined text-slate-400 transition-transform duration-200" 
+                                :class="{ 'rotate-180': isSetoranSantriDropdownOpen }">expand_more</span>
+                        </template>
+                        <span v-else class="material-symbols-outlined text-slate-300 text-sm">lock</span>
+                    </div>
                 </button>
 
                 <!-- Dropdown Content -->
@@ -97,6 +108,11 @@ const SetoranView = {
                                 type="text" placeholder="Cari berdasarkan nama atau NIS..."
                                 class="bg-transparent w-full text-sm font-bold outline-none placeholder:text-slate-400"
                                 @click.stop>
+                            <!-- Search Clear Button -->
+                            <button v-if="setoranSantriSearch" @click.stop="$emit('update:setoranSantriSearch', '')"
+                                class="size-8 flex items-center justify-center text-slate-300 hover:text-red-500 transition-colors mr-1">
+                                <span class="material-symbols-outlined text-lg">close</span>
+                            </button>
                         </div>
                     </div>
 

@@ -452,7 +452,7 @@ const UangSakuView = {
                     <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" @click="closeModal"></div>
                     <div class="bg-white w-full max-w-sm rounded-[24px] shadow-2xl relative z-10 overflow-hidden text-left flex flex-col max-h-[90vh] animate-scale-in">
                         
-                        <div class="px-6 py-5 border-b border-slate-100 flex justify-between items-center transition-colors duration-300" :class="isEditMode ? 'bg-slate-800 text-white' : (txForm.type === 'masuk' ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white')">
+                        <div class="px-6 py-5 border-b border-slate-100 flex justify-between items-center transition-colors duration-300" :class="txForm.type === 'masuk' ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'">
                             <h3 class="font-bold text-lg leading-none">
                                 {{ isEditMode ? 'Edit Transaksi' : 'Input Transaksi' }}
                             </h3>
@@ -506,7 +506,7 @@ const UangSakuView = {
                         </div>
 
                         <div class="p-6 border-t border-slate-100 bg-slate-50/50">
-                            <button @click="saveTx" class="w-full py-3 rounded-xl text-white font-bold tracking-wide shadow-md transition transform active:scale-[0.98] flex items-center justify-center gap-2" :class="isEditMode ? 'bg-slate-800 hover:bg-slate-900 shadow-slate-900/30' : (txForm.type === 'masuk' ? 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/30' : 'bg-red-500 hover:bg-red-600 shadow-red-500/30')">
+                            <button @click="saveTx" class="w-full py-3 rounded-xl text-white font-bold tracking-wide shadow-md transition transform active:scale-[0.98] flex items-center justify-center gap-2" :class="txForm.type === 'masuk' ? 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/30' : 'bg-red-500 hover:bg-red-600 shadow-red-500/30'">
                                 {{ isEditMode ? 'Simpan Perubahan' : 'Simpan Transaksi' }}
                             </button>
                         </div>

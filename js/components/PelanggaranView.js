@@ -72,7 +72,16 @@ const PelanggaranView = {
                             :class="pelanggaranForm.santri_id ? 'text-slate-900' : 'text-slate-400'">
                             {{ pelanggaranForm.santri_id ? pelanggaranSelectedSantriName : '-- Pilih Santri --' }}
                         </span>
-                        <span class="material-symbols-outlined text-slate-400">expand_more</span>
+                        <div class="flex items-center gap-1">
+                            <!-- Clear Selection Button -->
+                            <span v-if="pelanggaranForm.santri_id" @click.stop="$emit('update:pelanggaranForm', { ...pelanggaranForm, santri_id: '' })" 
+                                class="material-symbols-outlined text-slate-300 hover:text-red-500 transition-colors p-1.5 -mr-1.5 text-lg"
+                                title="Batal pilih santri">
+                                cancel
+                            </span>
+                            <span class="material-symbols-outlined text-slate-400 transition-transform duration-200" 
+                                :class="{ 'rotate-180': isPelanggaranSantriDropdownOpen }">expand_more</span>
+                        </div>
                     </button>
 
                     <!-- Dropdown Content -->
@@ -81,16 +90,21 @@ const PelanggaranView = {
 
                         <!-- Search Input -->
                         <div class="p-2 border-b border-slate-50">
-                            <div class="flex items-center gap-2 bg-slate-50 px-3 py-2 rounded-lg border border-slate-100">
-                                <span class="material-symbols-outlined text-slate-400 text-lg">search</span>
-                                <input 
-                                    :value="pelanggaranSantriSearch"
-                                    @input="$emit('update:pelanggaranSantriSearch', $event.target.value)"
-                                    type="text"
-                                    placeholder="Cari nama..."
-                                    class="bg-transparent w-full text-sm font-bold outline-none placeholder:font-normal text-slate-700"
-                                    @click.stop>
-                            </div>
+                        <div class="flex items-center gap-2 bg-slate-50 pl-3 pr-1 py-1 rounded-lg border border-slate-100 shadow-inner">
+                            <span class="material-symbols-outlined text-slate-400 text-lg">search</span>
+                            <input 
+                                :value="pelanggaranSantriSearch"
+                                @input="$emit('update:pelanggaranSantriSearch', $event.target.value)"
+                                type="text"
+                                placeholder="Cari nama..."
+                                class="bg-transparent w-full py-1 text-sm font-bold outline-none placeholder:font-normal text-slate-700"
+                                @click.stop>
+                            <!-- Search Clear Button -->
+                            <button v-if="pelanggaranSantriSearch" @click.stop="$emit('update:pelanggaranSantriSearch', '')"
+                                class="size-8 flex items-center justify-center text-slate-300 hover:text-red-500 transition-colors">
+                                <span class="material-symbols-outlined text-lg">close</span>
+                            </button>
+                        </div>
                         </div>
 
                         <!-- Lists -->

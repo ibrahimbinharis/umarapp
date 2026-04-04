@@ -151,13 +151,18 @@ const UjianView = {
                                     
                                     <!-- Search Input -->
                                     <div class="p-2 border-b border-slate-50">
-                                        <div class="flex items-center gap-2 bg-slate-50 px-3 py-2 rounded-lg border border-slate-100">
+                                        <div class="flex items-center gap-2 bg-slate-50 pl-3 pr-1 py-1 rounded-lg border border-slate-100">
                                             <span class="material-symbols-outlined text-slate-400 text-lg">search</span>
                                             <input v-model="searchQuery" 
                                                    autofocus
                                                    placeholder="Cari nama..." 
-                                                   class="bg-transparent w-full text-sm font-bold outline-none placeholder:font-normal text-slate-700"
+                                                   class="bg-transparent w-full py-1 text-sm font-bold outline-none placeholder:font-normal text-slate-700"
                                                    @click.stop>
+                                            <!-- Search Clear Button -->
+                                            <button v-if="searchQuery" @click.stop="searchQuery = ''"
+                                                class="size-8 flex items-center justify-center text-slate-300 hover:text-red-500 transition-colors">
+                                                <span class="material-symbols-outlined text-lg">close</span>
+                                            </button>
                                         </div>
                                     </div>
 
