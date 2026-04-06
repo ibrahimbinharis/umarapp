@@ -28,7 +28,9 @@ createApp({
         const appName = ref(APP_CONFIG.appName);
         const appVersion = ref(APP_CONFIG.version);
         const hasSession = localStorage.getItem('tahfidz_session');
-        const initialView = window.location.hash ? window.location.hash.replace('#', '') : (hasSession ? 'dashboard' : 'login');
+        // v37: Filter hash to get base view only (e.g. #uang_saku-detail -> uang_saku)
+        const getBaseView = (h) => h ? h.replace('#', '').split('-')[0] : null;
+        const initialView = getBaseView(window.location.hash) || (hasSession ? 'dashboard' : 'login');
         const currentView = ref(initialView);
 
         // Sync isSaving with window.isSavingGlobal events
@@ -243,8 +245,8 @@ createApp({
         // Initialize Riwayat Composable
         const riwayat = useRiwayat(uiData, DB, refreshData, { setoran, ujian, pelanggaran }, currentView, userSession);
 
-        // Initialize Uang Saku Composable
-        const uang_saku = useUangSaku(uiData, DB, refreshData, userSession);
+        // Initialize Uang Saku Composable (Pass currentView to handle navigation guard)
+        const uang_saku = useUangSaku(uiData, DB, refreshData, userSession, currentView);
 
 
         // Initialize Active Child State (Move up for dashboard dependency)
@@ -1202,7 +1204,7 @@ createApp({
                 if (event.state && event.state.view) {
                     currentView.value = event.state.view;
                 } else if (window.location.hash) {
-                    const view = window.location.hash.replace('#', '');
+                    const view = window.location.hash.replace('#', '').split('-')[0];
                     if (view) currentView.value = view;
                 }
             });
@@ -1218,7 +1220,7 @@ createApp({
             // Ensure initial history state
             if (!window.history.state) {
                 const hasSession = localStorage.getItem('tahfidz_session');
-                const initialView = window.location.hash ? window.location.hash.replace('#', '') : (hasSession ? 'dashboard' : 'login');
+                const initialView = getBaseView(window.location.hash) || (hasSession ? 'dashboard' : 'login');
                 window.history.replaceState({ view: initialView }, '', '#' + initialView);
                 currentView.value = initialView;
             }

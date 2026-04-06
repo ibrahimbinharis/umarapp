@@ -9,7 +9,7 @@
  * Dependencies: DB (from core.js), uiData (from parent)
  */
 
-function useUangSaku(uiData, DB, refreshUI, userSession) {
+function useUangSaku(uiData, DB, refreshUI, userSession, currentView) {
     const { ref, reactive, computed, onMounted, watch } = Vue;
 
     // State
@@ -213,7 +213,8 @@ function useUangSaku(uiData, DB, refreshUI, userSession) {
     watch(activeSantriId, (newVal) => {
         // Only push state if we are moving TO a detail view (newVal is truthy)
         // and we are NOT already in a detail history state
-        if (newVal && (!window.history.state || !window.history.state.detail)) {
+        // and we are actually on the uang_saku view (prevent auto-select hijack)
+        if (newVal && currentView?.value === 'uang_saku' && (!window.history.state || !window.history.state.detail)) {
             window.history.pushState({ view: 'uang_saku', detail: true }, '', '#uang_saku-detail');
         }
     });

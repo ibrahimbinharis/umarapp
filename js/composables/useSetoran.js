@@ -112,26 +112,37 @@ function useSetoran(uiData, DB, refreshData, userSession, appConfig) {
      * Format setoran detail for display
      */
     const formatSetoranDetail = (setoran) => {
+        const pages = setoran.pages || 0;
+        
         if (setoran.setoran_type === 'Sabaq') {
             const sFrom = (setoran.surah_from_latin || '').replace(/^\d+\.\s*/, '');
             const sTo = (setoran.surah_to_latin || '').replace(/^\d+\.\s*/, '');
-            const pages = setoran.pages || 0;
             
             if (setoran.surah_from === setoran.surah_to) {
-                return `${sFrom}: ${setoran.ayat_from}-${setoran.ayat_to} / ${pages} Hal`;
+                return `${sFrom}: ${setoran.ayat_from}-${setoran.ayat_to}, ${pages} Hal`;
             } else {
-                return `${sFrom} (${setoran.ayat_from}) - ${sTo} (${setoran.ayat_to}) / ${pages} Hal`;
+                return `${sFrom} (${setoran.ayat_from}) - ${sTo} (${setoran.ayat_to}), ${pages} Hal`;
             }
+        } else if (setoran.setoran_type === 'Sabqi' || setoran.setoran_type === 'Robt') {
+            if (setoran.surah_from_latin) {
+                const sFrom = (setoran.surah_from_latin || '').replace(/^\d+\.\s*/, '');
+                const sTo = (setoran.surah_to_latin || '').replace(/^\d+\.\s*/, '');
+                const range = (setoran.surah_from === setoran.surah_to)
+                    ? `${sFrom}: ${setoran.ayat_from}-${setoran.ayat_to}`
+                    : `${sFrom} ${setoran.ayat_from} - ${sTo} ${setoran.ayat_to}`;
+                return `${range}, ${pages} Hal`;
+            }
+            return `${pages} Hal`;
         } else if (setoran.setoran_type === 'Manzil') {
             return setoran.manzil_mode === 'juz'
-                ? `Juz ${setoran.juz} / ${setoran.pages || 0} Hal`
-                : `Hal ${setoran.page_from}-${setoran.page_to} / ${setoran.pages || 0} Hal`;
+                ? `Juz ${setoran.juz}, ${pages} Hal`
+                : `Hal ${setoran.page_from}-${setoran.page_to}, ${pages} Hal`;
         } else if (setoran.setoran_type === 'Tilawah') {
             return setoran.tilawah_mode === 'juz'
-                ? `Juz ${setoran.juz_from}-${setoran.juz_to} / ${setoran.pages || 0} Hal`
-                : `Hal ${setoran.page_from}-${setoran.page_to} / ${setoran.pages || 0} Hal`;
+                ? `Juz ${setoran.juz_from}-${setoran.juz_to}, ${pages} Hal`
+                : `Hal ${setoran.page_from}-${setoran.page_to}, ${pages} Hal`;
         } else {
-            return `${setoran.pages} Halaman`;
+            return `${pages} Hal`;
         }
     };
 
@@ -184,7 +195,8 @@ function useSetoran(uiData, DB, refreshData, userSession, appConfig) {
         if (!setoranForm.santri_id) return null;
 
         const type = setoranForm.setoran_type;
-        const records = (uiData.setoran || [])
+        const allRecords = (uiData.setoran || []);
+        const records = allRecords
             .filter(d => d.santri_id === setoranForm.santri_id && d.setoran_type === type)
             .sort((a, b) => {
                 const da = new Date((a.setoran_date || '2000-01-01') + 'T' + (a.setoran_time || '00:00'));
@@ -192,11 +204,46 @@ function useSetoran(uiData, DB, refreshData, userSession, appConfig) {
                 return db - da; // Newest first
             });
 
-        return records[0] ? {
-            ...records[0],
-            detail: formatSetoranDetail(records[0]),
-            friendly_date: window.DateUtils.formatDateFriendly(records[0].setoran_date)
-        } : null;
+        const last = records[0];
+        if (!last) return null;
+
+        // v37: Smart Detail Inference (For Sabqi/Robt without range info)
+        let detail = formatSetoranDetail(last);
+        if ((type === 'Sabqi' || type === 'Robt') && !last.surah_from_latin) {
+            // Try to infer from Sabaq history relative to this record
+            const limit = type === 'Sabqi' ? 2 : 4;
+            const refDate = new Date((last.setoran_date || '2000-01-01') + 'T' + (last.setoran_time || '00:00'));
+            
+            const sabaqHistory = allRecords
+                .filter(d => 
+                    d.santri_id === last.santri_id && 
+                    d.setoran_type === 'Sabaq' &&
+                    new Date((d.setoran_date || '2000-01-01') + 'T' + (d.setoran_time || '00:00')) < refDate
+                )
+                .sort((a, b) => {
+                    const da = new Date((a.setoran_date || '2000-01-01') + 'T' + (a.setoran_time || '00:00'));
+                    const db = new Date((b.setoran_date || '2000-01-01') + 'T' + (b.setoran_time || '00:00'));
+                    return db - da;
+                })
+                .slice(0, limit);
+
+            if (sabaqHistory.length > 0) {
+                const newest = sabaqHistory[0];
+                const oldest = sabaqHistory[sabaqHistory.length - 1];
+                const sNameStart = (oldest.surah_from_latin || 'Surat').replace(/^\d+\.\s*/, '');
+                const sNameEnd = (newest.surah_to_latin || 'Surat').replace(/^\d+\.\s*/, '');
+                const range = (oldest.surah_from === newest.surah_to)
+                    ? `${sNameStart}: ${oldest.ayat_from}-${newest.ayat_to}`
+                    : `${sNameStart} ${oldest.ayat_from} - ${sNameEnd} ${newest.ayat_to}`;
+                detail = `${range}, ${last.pages} Hal`;
+            }
+        }
+
+        return {
+            ...last,
+            detail: detail,
+            friendly_date: window.DateUtils.formatDateFriendly(last.setoran_date)
+        };
     });
 
     /**
@@ -386,6 +433,26 @@ function useSetoran(uiData, DB, refreshData, userSession, appConfig) {
     };
 
     /**
+     * Get actual page count for a specific Juz (Standard Madinah Mushaf 604 Pages)
+     */
+    const getJuzPageCount = (juz) => {
+        const j = parseInt(juz);
+        if (j === 1) return 21;
+        if (j === 30) return 23;
+        return 20;
+    };
+
+    const getJuzRangePageCount = (from, to) => {
+        const start = Math.min(parseInt(from), parseInt(to));
+        const end = Math.max(parseInt(from), parseInt(to));
+        let total = 0;
+        for (let i = start; i <= end; i++) {
+            total += getJuzPageCount(i);
+        }
+        return total;
+    };
+
+    /**
      * Adjust value (for +/- buttons)
      */
     const adjustValue = (field, delta) => {
@@ -403,7 +470,7 @@ function useSetoran(uiData, DB, refreshData, userSession, appConfig) {
      */
     const toggleManzilMode = () => {
         if (setoranForm.manzil_mode === 'juz') {
-            setoranForm.pages = 20; // 1 Juz = 20 pages
+            setoranForm.pages = getJuzPageCount(setoranForm.juz);
         } else {
             // Calculate from page range
             calcPagesFromRange();
@@ -427,14 +494,7 @@ function useSetoran(uiData, DB, refreshData, userSession, appConfig) {
      * Calculate pages from juz range
      */
     const calcPagesFromJuzRange = () => {
-        let from = parseInt(setoranForm.juz_from) || 1;
-        let to = parseInt(setoranForm.juz_to) || 1;
-
-        // Normalize range
-        const start = Math.min(from, to);
-        const end = Math.max(from, to);
-
-        setoranForm.pages = (end - start + 1) * 20;
+        setoranForm.pages = getJuzRangePageCount(setoranForm.juz_from, setoranForm.juz_to);
         updateGrade();
     };
 
@@ -644,10 +704,12 @@ function useSetoran(uiData, DB, refreshData, userSession, appConfig) {
 
         if (type !== 'Sabqi' && type !== 'Robt') return;
 
-        // Determine source type (Previous level)
-        const sourceType = type === 'Sabqi' ? 'Sabaq' : 'Sabqi';
+        // v37: Both Sabqi and Robt now reference 'Sabaq' as primary source
+        // Sabqi = 2 Sabaq, Robt = 4 Sabaq (2 Sabqi)
+        const sourceType = 'Sabaq';
+        const limitCount = type === 'Sabqi' ? 2 : 4;
 
-        // Get history for this santri & source type
+        // Get history for this santri & Sabaq type
         const history = (uiData.setoran || [])
             .filter(s => s.santri_id === setoranForm.santri_id && s.setoran_type === sourceType)
             .sort((a, b) => {
@@ -656,23 +718,38 @@ function useSetoran(uiData, DB, refreshData, userSession, appConfig) {
                 return db - da; // Newest first
             });
 
-        // Take last 2 records
-        const lastTwo = history.slice(0, 2);
+        // Take the required records
+        const records = history.slice(0, limitCount);
 
         // Sum pages
-        const sumPages = lastTwo.reduce((acc, curr) => acc + (parseFloat(curr.pages) || 0), 0);
+        const sumPages = records.reduce((acc, curr) => acc + (parseFloat(curr.pages) || 0), 0);
 
         // Default to 1 if no history, otherwise use sum
         let finalPages = sumPages > 0 ? sumPages : 1;
 
-        // Construct info message
+        // Construct info message and range detail
         let infoText = '';
-        if (lastTwo.length === 2) {
-            infoText = `Otomatis: ${finalPages} Hal (Gabungan 2 ${sourceType} terakhir)`;
-        } else if (lastTwo.length === 1) {
-            infoText = `Otomatis: ${finalPages} Hal (Dari 1 ${sourceType} terakhir)`;
+        if (records.length > 0) {
+            const newest = records[0];
+            const oldest = records[records.length - 1];
+
+            // Set Form Data for persistence
+            setoranForm.surah_from = oldest.surah_from || 1;
+            setoranForm.ayat_from = oldest.ayat_from || 1;
+            setoranForm.surah_to = newest.surah_to || 1;
+            setoranForm.ayat_to = newest.ayat_to || 1;
+
+            const sNameStart = (oldest.surah_from_latin || 'Surat').replace(/^\d+\.\s*/, '');
+            const sNameEnd = (newest.surah_to_latin || 'Surat').replace(/^\d+\.\s*/, '');
+
+            const rangeText = (setoranForm.surah_from === setoranForm.surah_to)
+                ? `${sNameStart}: ${setoranForm.ayat_from}-${setoranForm.ayat_to}`
+                : `${sNameStart} ${setoranForm.ayat_from} - ${sNameEnd} ${setoranForm.ayat_to}`;
+
+            infoText = `Otomatis: <b>${rangeText}, ${finalPages.toFixed(1)} H</b> (Gabungan ${records.length} Sabaq)`;
         } else {
             infoText = `Otomatis: 1 Hal (Data ${sourceType} tidak ditemukan)`;
+            setoranForm.pages = 1;
         }
 
         setoranForm.pages = parseFloat(finalPages.toFixed(1));
@@ -685,7 +762,7 @@ function useSetoran(uiData, DB, refreshData, userSession, appConfig) {
         if (window._infoTimer) clearTimeout(window._infoTimer);
         window._infoTimer = setTimeout(() => {
             autoCalcInfo.value.visible = false;
-        }, 5000);
+        }, 8000);
     };
 
 
@@ -730,6 +807,23 @@ function useSetoran(uiData, DB, refreshData, userSession, appConfig) {
     watch(() => setoranForm.juz_from, (newVal) => {
         if (newVal !== '' && (setoranForm.juz_to === '' || Number(setoranForm.juz_to) < Number(newVal))) {
             setoranForm.juz_to = newVal;
+        }
+        if (setoranForm.setoran_type === 'Tilawah' && setoranForm.tilawah_mode === 'juz') {
+            calcPagesFromJuzRange();
+        }
+    });
+
+    watch(() => setoranForm.juz_to, () => {
+        if (setoranForm.setoran_type === 'Tilawah' && setoranForm.tilawah_mode === 'juz') {
+            calcPagesFromJuzRange();
+        }
+    });
+
+    // Watch Manzil Juz Change
+    watch(() => setoranForm.juz, (newVal) => {
+        if (setoranForm.setoran_type === 'Manzil' && setoranForm.manzil_mode === 'juz') {
+            setoranForm.pages = getJuzPageCount(newVal);
+            updateGrade();
         }
     });
 
@@ -831,7 +925,7 @@ function useSetoran(uiData, DB, refreshData, userSession, appConfig) {
                 };
 
                 // Add type-specific fields
-                if (setoranForm.setoran_type === 'Sabaq') {
+                if (['Sabaq', 'Sabqi', 'Robt'].includes(setoranForm.setoran_type)) {
                     // Get surah latin names
                     const surahFrom = surahList.value.find(s => s.no === parseInt(setoranForm.surah_from));
                     const surahTo = surahList.value.find(s => s.no === parseInt(setoranForm.surah_to));
@@ -964,7 +1058,7 @@ function useSetoran(uiData, DB, refreshData, userSession, appConfig) {
         setoranForm.errors = setoran.errors || 0;
 
         // Type-specific fields
-        if (setoran.setoran_type === 'Sabaq') {
+        if (['Sabaq', 'Sabqi', 'Robt'].includes(setoran.setoran_type)) {
             setoranForm.surah_from = setoran.surah_from || 1;
             setoranForm.surah_to = setoran.surah_to || 1;
             setoranForm.ayat_from = setoran.ayat_from || 1;
@@ -1075,6 +1169,7 @@ function useSetoran(uiData, DB, refreshData, userSession, appConfig) {
         formatTime: window.DateUtils.formatTime,
 
         lastRecordForType,
-        santriTargetProgress
+        santriTargetProgress,
+        getJuzPageCount
     };
 }

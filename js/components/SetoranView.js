@@ -167,7 +167,9 @@ const SetoranView = {
                         <span class="material-symbols-outlined text-primary text-xl">history</span>
                     </div>
                     <div class="flex-grow">
-                        <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Riwayat {{ setoranForm.setoran_type }} Terakhir</p>
+                        <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                            {{ setoranForm.setoran_type === 'Sabqi' ? 'Riwayat Sabaq terakhir' : (setoranForm.setoran_type === 'Robt' ? 'Riwayat Sabqi terakhir' : 'Riwayat ' + setoranForm.setoran_type + ' Terakhir') }}
+                        </p>
                         <p class="text-xs font-bold text-slate-800 leading-tight mt-0.5">
                             {{ lastRecordForType.detail }}
                         </p>
@@ -260,7 +262,6 @@ const SetoranView = {
                 <div v-if="setoranForm.manzil_mode === 'juz'">
                     <label class="text-xs font-bold text-slate-400">Juz</label>
                     <select v-model.number="setoranForm.juz"
-                        @change="setoranForm.pages = 20; $emit('update-grade')"
                         class="w-full p-2 border rounded-xl font-bold">
                         <option v-for="i in 30" :key="i" :value="i">Juz {{ i }}</option>
                     </select>
@@ -390,8 +391,8 @@ const SetoranView = {
                     </div>
                 </div>
 
-                <!-- PREVIEW GRADE -->
-                <div class="flex justify-between items-center pt-2 border-t">
+                <!-- PREVIEW GRADE (Hidden for Tilawah) -->
+                <div v-if="setoranForm.setoran_type !== 'Tilawah'" class="flex justify-between items-center pt-2 border-t">
                     <span class="text-xs font-bold text-slate-400">Nilai & Grade</span>
                     <div class="text-right">
                         <span :class="{
@@ -471,7 +472,7 @@ const SetoranView = {
                             </div>
                         </div>
                         <div class="shrink-0 text-right flex flex-col items-end gap-1">
-                            <div :class="{
+                            <div v-if="r.setoran_type !== 'Tilawah'" :class="{
                                     'text-blue-600': r.grade === 'A+' || r.grade === 'A',
                                     'text-emerald-600': r.grade === 'B' || r.grade === 'B+',
                                     'text-amber-500': r.grade === 'B-',
