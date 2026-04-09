@@ -25,7 +25,7 @@ const UangSakuView = {
     },
     emits: [
         'update:usActiveSantri', 'update:isSantriDropdownOpen', 'update:santriSearchQuery',
-        'update:listTab', 'select-santri', 'open-modal', 'edit-modal', 'close-modal',
+        'update:listTab', 'open-modal', 'edit-modal', 'close-modal',
         'save-tx', 'delete-tx', 'toggle-menu', 'close-menus',
         // v37 bulk
         'bulk-toggle', 'bulk-toggle-all', 'bulk-cancel', 'bulk-save'
@@ -100,7 +100,7 @@ const UangSakuView = {
                 }
             } else {
                 // Normal mode: navigate into detail
-                emit('select-santri', santriId);
+                emit('update:usActiveSantri', santriId);
             }
             isLongPressTriggered.value = false;
         };
@@ -488,12 +488,9 @@ const UangSakuView = {
                 <!-- Bulk Select All Button (only in bulk mode) -->
                 <button v-if="isBulkMode && (userSession.role === 'admin' || userSession.role === 'guru')"
                     @click="$emit('bulk-toggle-all', santriBalances)"
-                    class="shrink-0 flex items-center gap-1.5 px-3 py-2 text-primary hover:bg-blue-50 rounded-xl transition-all active:scale-95">
-                    <span class="material-symbols-outlined text-xl">
-                        {{ santriBalances.every(s => bulkSelectedIds.includes(s._id)) ? 'deselect' : 'fact_check' }}
-                    </span>
-                    <span class="text-[11px] font-black uppercase tracking-tight">
-                        {{ santriBalances.every(s => bulkSelectedIds.includes(s._id)) ? 'Batal' : 'Semua' }}
+                    class="shrink-0 flex items-center justify-center size-[42px] text-primary hover:bg-blue-50 rounded-xl transition-all active:scale-95">
+                    <span class="material-symbols-outlined text-[22px]">
+                        {{ santriBalances.length > 0 && santriBalances.every(s => bulkSelectedIds.includes(s._id)) ? 'done_all' : 'check_box_outline_blank' }}
                     </span>
                 </button>
             </div>
@@ -572,10 +569,6 @@ const UangSakuView = {
 
                         <!-- Header row: count badge + type toggle + close -->
                         <div class="flex items-center gap-2">
-                            <!-- Count badge -->
-                            <div class="shrink-0 bg-slate-800 text-white rounded-full size-7 flex items-center justify-center text-xs font-black">
-                                {{ bulkSelectedIds.length }}
-                            </div>
 
                             <!-- Type toggle -->
                             <div class="flex-1 bg-slate-100 p-0.5 rounded-xl flex shadow-inner">
@@ -627,9 +620,6 @@ const UangSakuView = {
                                 ? 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/20'
                                 : 'bg-red-500 hover:bg-red-600 shadow-red-500/20'">
                             <span v-if="isBulkSaving" class="size-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-                            <span v-else class="material-symbols-outlined text-base">
-                                {{ (bulkForm.activeType || 'masuk') === 'masuk' ? 'add_circle' : 'remove_circle' }}
-                            </span>
                             {{ isBulkSaving ? 'Menyimpan...' : ((bulkForm.activeType || 'masuk') === 'masuk' ? 'Simpan Pemasukan' : 'Simpan Pengeluaran') }}
                             <span v-if="!isBulkSaving" class="bg-white/25 rounded-full px-1.5 text-[10px] font-black">{{ bulkSelectedIds.length }}</span>
                         </button>
