@@ -14,6 +14,7 @@ function usePengumuman(uiData, DB, userSession, refreshData) {
     const PAGE_SIZE = 10;
 
     const pengumumanList = ref([]);
+    const searchQuery = ref('');
     const currentPage = ref(1);
     const isLoading = ref(false);
     const showFormModal = ref(false);
@@ -36,17 +37,32 @@ function usePengumuman(uiData, DB, userSession, refreshData) {
         file: null,
         preview: null,
         isUploading: false,
+        isInlineUploading: false,
         error: null
     });
 
     // ===== COMPUTED =====
     const filteredList = computed(() => {
         const role = userSession.value?.role;
-        if (!role || role === 'admin') return pengumumanList.value;
+        let list = pengumumanList.value;
 
-        return pengumumanList.value.filter(item =>
-            item.target === 'semua' || item.target === role
-        );
+        // Filter by role
+        if (role && role !== 'admin') {
+            list = list.filter(item =>
+                item.target === 'semua' || item.target === role
+            );
+        }
+
+        // Filter by search query
+        if (searchQuery.value.trim()) {
+            const query = searchQuery.value.toLowerCase();
+            list = list.filter(item =>
+                item.judul.toLowerCase().includes(query) ||
+                item.isi.toLowerCase().includes(query)
+            );
+        }
+
+        return list;
     });
 
     const totalPages = computed(() =>
@@ -98,6 +114,7 @@ function usePengumuman(uiData, DB, userSession, refreshData) {
         fileUpload.file = null;
         fileUpload.preview = null;
         fileUpload.isUploading = false;
+        fileUpload.isInlineUploading = false;
         fileUpload.error = null;
 
         showFormModal.value = true;
@@ -118,6 +135,7 @@ function usePengumuman(uiData, DB, userSession, refreshData) {
         fileUpload.file = null;
         fileUpload.preview = item.file_url || null; // Jika ada URL, tampilkan sebagai preview
         fileUpload.isUploading = false;
+        fileUpload.isInlineUploading = false;
         fileUpload.error = null;
 
         showFormModal.value = true;
@@ -260,6 +278,7 @@ function usePengumuman(uiData, DB, userSession, refreshData) {
 
     /** Upload gambar untuk disematkan di dalam teks pengumuman */
     const uploadInlineImage = async ({ file, callback }) => {
+        fileUpload.isInlineUploading = true;
         try {
             const fileExt = file.name.split('.').pop();
             const fileName = `inline_${Date.now()}_${Math.random().toString(36).slice(-4)}.${fileExt}`;
@@ -282,15 +301,35 @@ function usePengumuman(uiData, DB, userSession, refreshData) {
         } catch (err) {
             console.error('[Pengumuman] Gagal upload inline image:', err.message);
             window.showAlert('Gagal mengunggah gambar ke dalam teks', 'Error', 'danger');
+        } finally {
+            fileUpload.isInlineUploading = false;
         }
     };
 
     const removeFile = () => {
+        // Hapus file dari storage jika ada (Opsional, tapi bagus untuk hemat kuota)
+        if (form.file_url) {
+            deleteFileFromStorage(form.file_url);
+        }
         form.file_url = null;
         form.file_name = null;
         form.file_type = null;
         fileUpload.file = null;
         fileUpload.preview = null;
+    };
+
+    /** Fungsi pembantu untuk menghapus file dari storage berdasarkan URL */
+    const deleteFileFromStorage = async (url) => {
+        try {
+            if (!url || !url.includes('/storage/v1/object/public/announcements/')) return;
+            const path = url.split('/announcements/')[1];
+            if (path) {
+                await sb.storage.from('announcements').remove([path]);
+                console.log('[Pengumuman] File dihapus dari storage:', path);
+            }
+        } catch (err) {
+            console.warn('[Pengumuman] Gagal hapus file dari storage:', err.message);
+        }
     };
 
     /**
@@ -332,7 +371,7 @@ function usePengumuman(uiData, DB, userSession, refreshData) {
             // Insert notifikasi untuk tiap user
             const now = new Date().toISOString();
             const notifRows = users.map(u => ({
-                _id: `notif_ann_${annId}_${u._id.slice(-6)}`,
+                _id: `notif_ann_${annId}_${u._id.slice(-6)}_${Math.random().toString(36).slice(-2)}`, // Lebih unik
                 user_id: u._id,
                 title: `📢 ${judul}`,
                 message: preview,
@@ -369,7 +408,16 @@ function usePengumuman(uiData, DB, userSession, refreshData) {
             type: 'danger',
             onConfirm: async () => {
                 try {
-                    // 1. Soft delete pengumuman
+                    // Cari item untuk hapus file storage jika ada
+                    const item = pengumumanList.value.find(p => p._id === id);
+                    if (item && item.file_url) {
+                        await deleteFileFromStorage(item.file_url);
+                    }
+                    
+                    // Cek juga isi pengumuman untuk mencari inline images (Opsional: Butuh regex rumit)
+                    // Untuk saat ini hapus lampiran utama saja.
+
+                    // 1. Soft delete pengumuman (atau hard delete jika ingin benar-benar bersih)
                     const { error: annErr } = await sb
                         .from('pengumuman')
                         .update({ _deleted: true })
@@ -415,11 +463,15 @@ function usePengumuman(uiData, DB, userSession, refreshData) {
         darurat: 'bg-red-100 text-red-700'
     }[k] || 'bg-slate-100 text-slate-600');
 
-    const formatDate = window.formatDate || ((d) => d ? d.split('T')[0] : '-');
+    const formatDate = (d) => {
+        if (window.formatDateLong) return window.formatDateLong(d);
+        return d ? d.split('T')[0] : '-';
+    };
 
     return {
         // State
         pengumumanList,
+        searchQuery,
         paginatedList,
         currentPage,
         totalPages,

@@ -378,10 +378,13 @@
                     <div v-if="currentView === 'input'" class="h-full w-full">
                         <setoran-view :setoran-form="setoranForm" :setoran-santri-search="setoranSantriSearch"
                             @update:setoran-santri-search="setoranSantriSearch = $event"
+                            :surah-search="surahSearch"
+                            @update:surah-search="surahSearch = $event"
                             :is-setoran-santri-dropdown-open="isSetoranSantriDropdownOpen"
                             @update:is-setoran-santri-dropdown-open="isSetoranSantriDropdownOpen = $event"
                             :setoran-filtered-santri-options="setoranFilteredSantriOptions"
                             :setoran-selected-santri-name="setoranSelectedSantriName" :surah-list="surahList"
+                            :filtered-surah-list="filteredSurahList"
                             :surah-hints="surahHints" :auto-calc-info="autoCalcInfo" :recent-setoran="recentSetoran"
                             :is-menu-open="isMenuOpen" :is-clock-running="isClockRunning"
                             :last-record-for-type="lastRecordForType" :santri-target-progress="santriTargetProgress"
@@ -395,7 +398,8 @@
                             @update-grade="updateGrade" @save-setoran="saveSetoran" @edit-setoran="editSetoran"
                             @delete-setoran="deleteSetoran" @toggle-menu="toggleMenu"
                             @reset-setoran="resetSetoranForm"
-                            @cancel-edit="cancelSetoranEdit"></setoran-view>
+                            @cancel-edit="cancelSetoranEdit"
+                            @apply-last-record="applyLastRecord"></setoran-view>
                     </div>
                     <!-- TARGET VIEW SKELETON -->
                     <div v-if="loading && currentView === 'target'" class="animate-pulse px-4 space-y-4 pt-4">
@@ -500,13 +504,21 @@
                             :list-keluar="listKeluar"
                             :saldo="saldo"
                             :format-rp="formatRp"
+                            :bulk-selected-ids="bulkSelectedIds"
+                            :bulk-form="bulkForm"
+                            :is-bulk-mode="isBulkMode"
+                            :is-bulk-saving="isBulkSaving"
                             @open-modal="openTxModal"
                             @edit-modal="openEditModal"
                             @close-modal="closeTxModal"
                             @save-tx="saveTransaction"
                             @delete-tx="deleteTransaction"
                             @toggle-menu="toggleUsMenu"
-                            @close-menus="closeUsMenus">
+                            @close-menus="closeUsMenus"
+                            @bulk-toggle="toggleBulkSelect"
+                            @bulk-toggle-all="toggleBulkSelectAll"
+                            @bulk-cancel="cancelBulkMode"
+                            @bulk-save="saveBulkTransaction">
                         </uang-saku-view>
                     </div>
 
@@ -516,12 +528,15 @@
                             :paginated-list="paginatedList" :current-page="currentPage" :total-pages="totalPages"
                             :is-loading="isLoading" :show-form-modal="showFormModal"
                             :show-detail-modal="showDetailModal" :detail-item="detailItem" :form="form"
-                            :page-size="PAGE_SIZE" :file-upload="fileUpload" @load="loadPengumuman"
+                            :page-size="PAGE_SIZE" :file-upload="fileUpload" :search-query="searchQuery"
+                            :current-view="currentView"
+                            @load="loadPengumuman"
                             @open-add="openAddForm" @open-edit="openEditForm" @save="savePengumuman"
                             @delete="deletePengumuman" @open-detail="openDetail" @go-page="goToPage"
                             @close-form="showFormModal = false" @close-detail="showDetailModal = false"
                             @update:form-judul="form.judul = $event" @update:form-isi="form.isi = $event"
                             @update:form-kategori="form.kategori = $event" @update:form-target="form.target = $event"
+                            @update:search-query="searchQuery = $event"
                             @handle-file="handleFileChange" @remove-file="removeFile"
                             @upload-inline-image="uploadInlineImage"></pengumuman-view>
                     </div>
@@ -902,7 +917,7 @@
 
         <!-- MODAL OVERLAY (Updated v30: Simple fade to preserve backdrop-blur) -->
         <div v-if="modalState.isOpen" @click.self="closeModal"
-            class="fixed inset-0 z-[60] bg-black/40 backdrop-blur-md flex items-center justify-center p-4 simple-fade">
+            class="fixed inset-0 z-[10000] bg-black/40 backdrop-blur-md flex items-center justify-center p-4 simple-fade">
             <div @click.stop
                 class="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden max-h-[90vh] flex flex-col animate-scale-in">
                 <!-- Modal Header -->
@@ -1410,7 +1425,7 @@
 
         <!-- CROP MODAL -->
         <div v-if="cropModal.isOpen" @click.self="cancelCrop"
-            class="fixed inset-0 z-[70] bg-black/90 flex items-center justify-center p-4 fade-in">
+            class="fixed inset-0 z-[11000] bg-black/90 flex items-center justify-center p-4 fade-in">
             <div @click.stop
                 class="bg-white rounded-2xl overflow-hidden shadow-2xl w-full max-w-lg flex flex-col max-h-[90vh]">
                 <div class="p-4 bg-white flex justify-between items-center border-b z-10">
@@ -1436,7 +1451,7 @@
         <!-- GLOBAL CONFIRM MODAL (Premium) -->
         <transition name="modal-fade">
             <div v-if="confirmState.isOpen" @click.self="closeConfirm(false)"
-                class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in px-6">
+                class="fixed inset-0 z-[20000] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in px-6">
                 <div
                     class="bg-white rounded-3xl overflow-hidden shadow-2xl w-full max-w-sm animate-scale-in border border-slate-100">
                     <!-- Icon & Header -->
@@ -1478,7 +1493,7 @@
         <!-- GLOBAL TOAST NOTIFICATION (Premium) -->
         <transition name="toast-slide">
             <div v-if="toastState.isOpen"
-                class="fixed bottom-24 left-1/2 -translate-x-1/2 z-[200] flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-2xl backdrop-blur-md border animate-in slide-in-from-bottom-4 duration-300 min-w-[280px] max-w-[90vw]"
+                class="fixed bottom-24 left-1/2 -translate-x-1/2 z-[30000] flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-2xl backdrop-blur-md border animate-in slide-in-from-bottom-4 duration-300 min-w-[280px] max-w-[90vw]"
                 :class="{
                     'bg-slate-900/90 text-white border-slate-700': toastState.type === 'info',
                     'bg-green-600/90 text-white border-green-500': toastState.type === 'success',
@@ -1629,7 +1644,7 @@
 
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js?v=3.13').then(reg => {
+                navigator.serviceWorker.register('sw.js?v=3.14').then(reg => {
                     console.log('SW Registered!', reg);
 
                     // 1. Check if update is already waiting (e.g. from previous visit)

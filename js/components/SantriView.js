@@ -277,7 +277,7 @@ const SantriView = {
                     <div v-if="activeDropdown === item._id"
                         class="absolute right-9 -top-1 w-32 bg-white border border-slate-100 shadow-xl rounded-xl z-50 flex flex-col py-1 overflow-hidden animate-in fade-in zoom-in-95 duration-100 origin-top-right">
                         <template v-if="!showTrash">
-                            <a v-if="item.no_hp" :href="'https://wa.me/' + formatWANumber(item.no_hp)"
+                            <a v-if="item.phone" :href="'https://wa.me/' + formatWANumber(item.phone)"
                                 target="_blank"
                                 class="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-green-50 hover:text-green-600 transition text-left">
                                 <span class="material-symbols-outlined text-base">chat</span> WhatsApp

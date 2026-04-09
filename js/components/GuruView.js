@@ -55,9 +55,9 @@ const GuruView = {
                             user.custom_username }}</span>
                         &bull; {{ user.role }}
                     </p>
-                    <p v-if="user.no_hp || user.phone" class="text-[10px] text-slate-400 mt-0.5 flex items-center gap-1">
+                    <p v-if="user.phone" class="text-[10px] text-slate-400 mt-0.5 flex items-center gap-1">
                         <span class="material-symbols-outlined text-[10px]">call</span>
-                        {{ user.no_hp || user.phone }}
+                        {{ user.phone }}
                     </p>
                 </div>
                 <div class="relative">
@@ -73,7 +73,7 @@ const GuruView = {
                     <!-- Dropdown Menu -->
                     <div v-if="activeDropdown === user._id"
                         class="absolute right-9 -top-1 w-32 bg-white border border-slate-100 shadow-xl rounded-xl z-50 flex flex-col py-1 overflow-hidden animate-in fade-in zoom-in-95 duration-100 origin-top-right">
-                        <a v-if="user.no_hp || user.phone" :href="'https://wa.me/' + formatWANumber(user.no_hp || user.phone)"
+                        <a v-if="user.phone" :href="'https://wa.me/' + formatWANumber(user.phone)"
                             target="_blank"
                             class="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-green-50 hover:text-green-600 transition text-left">
                             <span class="material-symbols-outlined text-base">chat</span> WhatsApp

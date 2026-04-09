@@ -30,7 +30,7 @@ function useSantri(uiData, DB, userSession, modalState, refreshData, searchText)
         gender: 'L',
         class_id: '',
         parent_name: '',
-        parent_phone: '',
+        phone: '',
         password: '',
         target_sabaq: 20,
         target_manzil_pct: 20
@@ -137,7 +137,7 @@ function useSantri(uiData, DB, userSession, modalState, refreshData, searchText)
 
             // v36: Pull real-time data from linked Wali if exists
             let pName = item.parent_name || '';
-            let pPhone = item.parent_phone || item.no_hp || '';
+            let pPhone = item.phone || '';
 
             if (item.wali_id) {
                 const allData = DB.getAll();
@@ -149,7 +149,7 @@ function useSantri(uiData, DB, userSession, modalState, refreshData, searchText)
             }
 
             santriForm.parent_name = pName;
-            santriForm.parent_phone = pPhone;
+            santriForm.phone = pPhone;
             santriForm.password = ''; // Don't show existing password
             santriForm.target_sabaq = item.target_sabaq || 20;
             santriForm.target_manzil_pct = item.target_manzil_pct || 20;
@@ -166,7 +166,7 @@ function useSantri(uiData, DB, userSession, modalState, refreshData, searchText)
             santriForm.gender = 'L';
             santriForm.class_id = '';
             santriForm.parent_name = '';
-            santriForm.parent_phone = '';
+            santriForm.phone = '';
             santriForm.password = '';
             santriForm.target_sabaq = 20;
             santriForm.target_manzil_pct = 20;
@@ -191,7 +191,7 @@ function useSantri(uiData, DB, userSession, modalState, refreshData, searchText)
             if (!santriForm.class_id) return window.showAlert("Kelas wajib dipilih", "Peringatan", "warning");
 
             // Format Phone (62xxx)
-            let phone = String(santriForm.parent_phone || '').replace(/\D/g, '');
+            let phone = String(santriForm.phone || '').replace(/\D/g, '');
             if (phone.startsWith('0')) phone = '62' + phone.slice(1);
 
             const payload = {
@@ -203,8 +203,7 @@ function useSantri(uiData, DB, userSession, modalState, refreshData, searchText)
                 class_id: santriForm.class_id,
                 kelas: santriForm.class_id, // Sync both
                 parent_name: santriForm.parent_name,
-                parent_phone: phone,
-                no_hp: phone, // Sync both
+                phone: phone,
                 target_sabaq: parseInt(santriForm.target_sabaq),
                 target_manzil_pct: parseInt(santriForm.target_manzil_pct)
             };

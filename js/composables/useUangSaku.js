@@ -5,6 +5,7 @@
  * - Tracks Income (Pemasukan) from parents/admin
  * - Tracks Expenses (Pengeluaran) for students
  * - Calculates Balance (Saldo)
+ * - v37: Bulk action support (deposit/withdrawal for multiple santri at once)
  * 
  * Dependencies: DB (from core.js), uiData (from parent)
  */
@@ -30,6 +31,91 @@ function useUangSaku(uiData, DB, refreshUI, userSession, currentView) {
         keterangan: '',
         tanggal: window.DateUtils.getTodayDateString()
     });
+
+    // --- v37: BULK ACTION STATE ---
+    const bulkSelectedIds = ref([]); // Array of santri _id
+    const bulkForm = reactive({
+        activeType: 'masuk',   // 'masuk' | 'keluar' — controlled by bottom sheet toggle
+        jumlah: '',
+        keterangan: '',
+        tanggal: window.DateUtils.getTodayDateString()
+    });
+    const isBulkSaving = ref(false);
+
+    const isBulkMode = computed(() => bulkSelectedIds.value.length > 0);
+
+    const toggleBulkSelect = (santriId) => {
+        const idx = bulkSelectedIds.value.indexOf(santriId);
+        if (idx === -1) {
+            bulkSelectedIds.value.push(santriId);
+        } else {
+            bulkSelectedIds.value.splice(idx, 1);
+        }
+    };
+
+    const toggleBulkSelectAll = (santriList) => {
+        const allIds = santriList.map(s => s._id);
+        const allSelected = allIds.every(id => bulkSelectedIds.value.includes(id));
+        if (allSelected) {
+            bulkSelectedIds.value = [];
+        } else {
+            bulkSelectedIds.value = [...allIds];
+        }
+    };
+
+    const cancelBulkMode = () => {
+        bulkSelectedIds.value = [];
+        bulkForm.activeType = 'masuk';
+        bulkForm.jumlah = '';
+        bulkForm.keterangan = '';
+        bulkForm.tanggal = window.DateUtils.getTodayDateString();
+    };
+
+    const saveBulkTransaction = async (type) => {
+        if (!bulkSelectedIds.value.length) return window.showAlert('Pilih minimal satu santri', 'Perhatian', 'warning');
+        const jumlah = parseInt(String(bulkForm.jumlah).replace(/[^0-9]/g, ''));
+        if (!jumlah || jumlah <= 0) return window.showAlert('Masukkan nominal yang valid', 'Perhatian', 'warning');
+
+        const defaultKet = type === 'masuk' ? 'Pemasukan Uang Saku (Masal)' : 'Pengeluaran Uang Saku (Masal)';
+        const keterangan = bulkForm.keterangan.trim() || defaultKet;
+        const tanggal = bulkForm.tanggal || window.DateUtils.getTodayDateString();
+        const count = bulkSelectedIds.value.length;
+
+        window.showConfirm({
+            title: type === 'masuk' ? `Pemasukan Masal` : `Pengeluaran Masal`,
+            message: `${type === 'masuk' ? 'Tambah' : 'Kurangi'} Rp ${jumlah.toLocaleString('id-ID')} untuk ${count} santri terpilih?\n\nKeterangan: ${keterangan}`,
+            confirmText: type === 'masuk' ? 'Ya, Masukkan' : 'Ya, Kurangi',
+            cancelText: 'Batal',
+            type: type === 'masuk' ? 'info' : 'danger',
+            onConfirm: async () => {
+                isBulkSaving.value = true;
+                let successCount = 0;
+                try {
+                    for (const santriId of bulkSelectedIds.value) {
+                        const payload = {
+                            santri_id: santriId,
+                            type: type,
+                            jumlah: jumlah,
+                            keterangan: keterangan,
+                            tanggal: tanggal,
+                            created_by: window.currentUser ? window.currentUser._id : 'system',
+                            is_bulk: true
+                        };
+                        await DB.create('uang_saku', payload);
+                        successCount++;
+                    }
+                    if (refreshUI) await refreshUI();
+                    window.showToast(`${successCount} transaksi berhasil disimpan`, 'success');
+                    cancelBulkMode();
+                } catch (error) {
+                    console.error('Bulk save error:', error);
+                    window.showAlert('Gagal menyimpan: ' + error.message, 'Error', 'danger');
+                } finally {
+                    isBulkSaving.value = false;
+                }
+            }
+        });
+    };
 
     // Reset Form
     const resetForm = (type = 'masuk') => {
@@ -245,6 +331,15 @@ function useUangSaku(uiData, DB, refreshUI, userSession, currentView) {
         deleteTransaction,
         toggleUsMenu,
         closeUsMenus,
-        formatRp
+        formatRp,
+        // v37: Bulk Action
+        bulkSelectedIds,
+        bulkForm,
+        isBulkMode,
+        isBulkSaving,
+        toggleBulkSelect,
+        toggleBulkSelectAll,
+        cancelBulkMode,
+        saveBulkTransaction
     };
 }

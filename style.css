@@ -220,12 +220,12 @@ textarea {
 /* ===== Modal Transition (Vue <Transition name="modal-fade">) ===== */
 .modal-fade-enter-active,
 .modal-fade-leave-active {
-    transition: opacity 0.25s ease;
+    transition: opacity 0.2s ease;
 }
 
 .modal-fade-enter-active .animate-scale-in,
 .modal-fade-leave-active .animate-scale-in {
-    transition: opacity 0.25s ease, transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: opacity 0.2s ease, transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .modal-fade-enter-from,
@@ -379,4 +379,25 @@ textarea {
 
 [v-cloak] {
     display: none !important;
+}
+
+/* ===== Bottom Sheet (Bulk Action, etc.) ===== */
+.slide-up-enter-active {
+    transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.slide-up-leave-active {
+    transition: transform 0.22s cubic-bezier(0.4, 0, 1, 1);
+}
+.slide-up-enter-from,
+.slide-up-leave-to {
+    transform: translateY(100%);
+}
+
+.backdrop-fade-enter-active,
+.backdrop-fade-leave-active {
+    transition: opacity 0.25s ease;
+}
+.backdrop-fade-enter-from,
+.backdrop-fade-leave-to {
+    opacity: 0;
 }

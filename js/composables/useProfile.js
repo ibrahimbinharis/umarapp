@@ -33,10 +33,10 @@ function useProfile(uiData, DB, userSession, refreshData) {
         if (userSession.value.role === 'santri') {
             const s = (uiData.santri || []).find(x => x.santri_id === userSession.value.username || x.nis === userSession.value.username);
             profileForm.full_name = s ? s.full_name : (userSession.value.full_name || '');
-            profileForm.phone = s ? (s.parent_phone || s.no_hp || '') : '';
+            profileForm.phone = s ? (s.phone || '') : '';
         } else {
             profileForm.full_name = userSession.value.full_name || '';
-            profileForm.phone = userSession.value.no_hp || userSession.value.phone || '';
+            profileForm.phone = userSession.value.phone || '';
         }
 
         profileForm.gender = userSession.value.gender || '';
@@ -92,7 +92,6 @@ function useProfile(uiData, DB, userSession, refreshData) {
             try {
                 const updates = {
                     phone: window.formatWANumber(profileForm.phone),
-                    no_hp: window.formatWANumber(profileForm.phone), // Sync with Master Data Guru
                     gender: profileForm.gender,
                     custom_username: profileForm.username
                 };
@@ -126,7 +125,6 @@ function useProfile(uiData, DB, userSession, refreshData) {
                             username: userSession.value.username || profileForm.username,
                             full_name: updates.full_name,
                             phone: updates.phone,
-                            no_hp: updates.no_hp,
                             gender: updates.gender,
                             custom_username: updates.custom_username,
                             role: userSession.value.role || 'wali',
@@ -145,8 +143,7 @@ function useProfile(uiData, DB, userSession, refreshData) {
                         // Update Cloud
                         await sb.from('santri')
                             .update({
-                                parent_phone: updates.phone,
-                                no_hp: updates.phone,
+                                phone: updates.phone,
                                 parent_name: updates.full_name
                             })
                             .eq('wali_id', userSession.value._id);
@@ -156,8 +153,7 @@ function useProfile(uiData, DB, userSession, refreshData) {
                         let changed = false;
                         allData.forEach(d => {
                             if (d.__type === 'santri' && d.wali_id === userSession.value._id) {
-                                d.parent_phone = updates.phone;
-                                d.no_hp = updates.phone;
+                                d.phone = updates.phone;
                                 d.parent_name = updates.full_name;
                                 changed = true;
                             }
@@ -173,7 +169,6 @@ function useProfile(uiData, DB, userSession, refreshData) {
                     userSession.value.full_name = profileForm.full_name;
                 }
                 userSession.value.phone = updates.phone;
-                userSession.value.no_hp = updates.no_hp;
                 userSession.value.gender = updates.gender;
                 userSession.value.custom_username = updates.custom_username;
 
@@ -379,8 +374,7 @@ function useProfile(uiData, DB, userSession, refreshData) {
             const { error: updateError } = await sb.from('santri')
                 .update({
                     wali_id: userSession.value._id,
-                    parent_phone: waliPhone,
-                    no_hp: waliPhone
+                    phone: waliPhone
                 })
                 .eq('_id', santri._id);
 
@@ -388,15 +382,13 @@ function useProfile(uiData, DB, userSession, refreshData) {
 
             await DB.update(santri._id, {
                 wali_id: userSession.value._id,
-                parent_phone: waliPhone,
-                no_hp: waliPhone
+                phone: waliPhone
             });
 
             const linked = {
                 ...santri,
                 wali_id: userSession.value._id,
-                parent_phone: waliPhone,
-                no_hp: waliPhone
+                phone: waliPhone
             };
             linkedSantri.value = linkedSantri.value.filter(s => s._id !== linked._id);
             linkedSantri.value.push(linked);
@@ -432,11 +424,11 @@ function useProfile(uiData, DB, userSession, refreshData) {
                     linkedSantri.value = linkedSantri.value.filter(s => s._id !== santriId);
 
                     const { error } = await sb.from('santri')
-                        .update({ wali_id: null, parent_phone: null, no_hp: null })
+                        .update({ wali_id: null, phone: null })
                         .eq('_id', santriId);
                     if (error) throw error;
 
-                    await DB.update(santriId, { wali_id: null, parent_phone: null, no_hp: null });
+                    await DB.update(santriId, { wali_id: null, phone: null });
 
                     window.showAlert('Hubungan berhasil diputuskan', 'Sukses', 'info');
 

@@ -88,6 +88,7 @@ function useSetoran(uiData, DB, refreshData, userSession, appConfig) {
 
     // Search State for Santri Dropdown
     const setoranSantriSearch = ref('');
+    const surahSearch = ref('');
     const isSetoranSantriDropdownOpen = ref(false);
 
     // Caches for page calculation
@@ -101,6 +102,19 @@ function useSetoran(uiData, DB, refreshData, userSession, appConfig) {
      */
     const surahList = computed(() => {
         return uiData.surahList || [];
+    });
+
+    /**
+     * Filtered surah list based on search text (v37)
+     */
+    const filteredSurahList = computed(() => {
+        const q = surahSearch.value.toLowerCase().trim();
+        if (!q) return surahList.value;
+
+        return surahList.value.filter(s => 
+            s.latin.toLowerCase().includes(q) || 
+            String(s.no).includes(q)
+        );
     });
 
     /**
@@ -245,6 +259,61 @@ function useSetoran(uiData, DB, refreshData, userSession, appConfig) {
             friendly_date: window.DateUtils.formatDateFriendly(last.setoran_date)
         };
     });
+
+    /**
+     * Apply the values from the last record to the form (v37)
+     * For Sabaq: resume from last Surah/Ayat
+     * For Manzil: resume from last Page/Juz
+     */
+    const applyLastRecord = () => {
+        const last = lastRecordForType.value;
+        if (!last) return;
+
+        const type = setoranForm.setoran_type;
+
+        if (type === 'Sabaq') {
+            // Logic: Start from NEXT Ayat (+1)
+            let nextSurah = parseInt(last.surah_to || 1);
+            let nextAyat = parseInt(last.ayat_to || 0) + 1;
+            
+            const currentSurah = surahList.value.find(s => s.no === nextSurah);
+            if (currentSurah && nextAyat > currentSurah.ayat) {
+                // If end of surah, move to next surah
+                if (nextSurah < 114) {
+                    nextSurah++;
+                    nextAyat = 1;
+                } else {
+                    // Already at An-Nas end
+                    nextAyat = currentSurah.ayat;
+                }
+            }
+
+            setoranForm.surah_from = nextSurah;
+            setoranForm.ayat_from = nextAyat;
+            setoranForm.surah_to = nextSurah;
+            setoranForm.ayat_to = nextAyat;
+            
+            // Sync names and validation
+            syncSurah();
+            validateAyat('from');
+            validateAyat('to');
+        } else if (type === 'Manzil') {
+            setoranForm.manzil_mode = last.manzil_mode || 'page';
+            if (setoranForm.manzil_mode === 'page') {
+                const nextPage = Math.min(604, parseInt(last.page_to || 0) + 1);
+                setoranForm.page_from = nextPage;
+                setoranForm.page_to = nextPage;
+                calcPagesFromRange();
+            } else {
+                const nextJuz = Math.min(30, parseInt(last.juz || 0) + 1);
+                setoranForm.juz = nextJuz;
+                toggleManzilMode();
+            }
+        }
+        
+        updateGrade();
+        window.showAlert("Melanjutkan ke posisi berikutnya (+1).", "Lanjutkan", "info");
+    };
 
     /**
      * Calculate progress towards target for the current month
@@ -573,7 +642,7 @@ function useSetoran(uiData, DB, refreshData, userSession, appConfig) {
     };
 
     /**
-     * Fetch page map from API for a surah
+     * Fetch line-level metadata from Quran.com API (v37 Migration)
      */
     const fetchPageMap = async (surahNo) => {
         if (surahPageCache[surahNo]) {
@@ -581,29 +650,44 @@ function useSetoran(uiData, DB, refreshData, userSession, appConfig) {
         }
 
         autoCalcInfo.value.visible = true;
-        autoCalcInfo.value.text = 'Mengambil data halaman...';
+        autoCalcInfo.value.text = 'Sinkronisasi baris Madinah...';
 
         try {
-            const res = await fetch(`https://api.alquran.cloud/v1/surah/${surahNo}`);
+            // Using Quran.com V4 API with word metadata for precise line numbers
+            // Correction: Add per_page=300 to ensure we get all ayahs (Baqarah has 286)
+            const res = await fetch(`https://api.quran.com/api/v4/verses/by_chapter/${surahNo}?per_page=300&words=true&word_fields=line_number,page_number`);
+            
+            if (!res.ok) throw new Error('Status: ' + res.status);
+            
             const json = await res.json();
 
-            if (json.code === 200 && json.data && json.data.ayahs) {
+            if (json.verses && json.verses.length > 0) {
                 const map = {};
-                const density = {};
-
-                json.data.ayahs.forEach(a => {
-                    map[a.numberInSurah] = a.page;
-                    if (!density[a.page]) density[a.page] = 0;
-                    density[a.page]++;
+                
+                json.verses.forEach(v => {
+                    const ayatNo = v.verse_number;
+                    const words = v.words || [];
+                    
+                    if (words.length > 0) {
+                        const startLine = words[0].line_number;
+                        const endLine = words[words.length - 1].line_number;
+                        const page = words[0].page_number;
+                        
+                        map[ayatNo] = {
+                            p: page,
+                            sl: startLine,
+                            el: endLine,
+                            lines: (endLine - startLine) + 1
+                        };
+                    }
                 });
 
                 surahPageCache[surahNo] = map;
-                pageDensityCache[surahNo] = density;
-
                 return map;
             }
         } catch (error) {
-            console.warn('Failed to fetch page map:', error);
+            console.warn('Failed to fetch from Quran.com:', error);
+            window.showAlert('Gagal sinkron baris: ' + error.message, 'API Error', 'warning');
         }
 
         autoCalcInfo.value.visible = false;
@@ -611,7 +695,7 @@ function useSetoran(uiData, DB, refreshData, userSession, appConfig) {
     };
 
     /**
-     * Auto-calculate pages from ayat ranges (Sabaq type)
+     * Auto-calculate pages using LINE-LEVEL precision (15 Lines Standard Madinah)
      */
     const autoCalcPages = async () => {
         if (setoranForm.setoran_type !== 'Sabaq') return;
@@ -623,59 +707,40 @@ function useSetoran(uiData, DB, refreshData, userSession, appConfig) {
 
         if (!sNo1 || !sNo2 || !aFrom || !aTo) return;
 
-        // Fetch page maps
+        // Fetch data from new API
         const map1 = await fetchPageMap(sNo1);
         const map2 = (sNo1 === sNo2) ? map1 : await fetchPageMap(sNo2);
 
         if (!map1 || !map2) return;
 
-        let pStart = map1[aFrom];
-        let pEnd = map2[aTo];
+        const metaStart = map1[aFrom];
+        const metaEnd = map2[aTo];
 
-        // Fallback to last page if ayat not found
-        if (!pStart) pStart = map1[Object.keys(map1).pop()];
-        if (!pEnd) pEnd = map2[Object.keys(map2).pop()];
+        if (!metaStart || !metaEnd) return;
 
-        if (!pStart || !pEnd) return;
-
+        const LINES_PER_PAGE = 15; // Standard Madinah Mushaf
         let exactCount = 0;
 
-        if (pStart === pEnd) {
-            // Same page - calculate fraction
-            const density1 = pageDensityCache[sNo1]?.[pStart] || 15;
-            const density2 = (sNo1 !== sNo2) ? (pageDensityCache[sNo2]?.[pEnd] || 15) : 0;
-            const totalDensity = density1 + density2 || 15;
-
-            const versesCov = (sNo1 === sNo2)
-                ? Math.abs(aTo - aFrom) + 1
-                : totalDensity;
-
-            exactCount = versesCov / totalDensity;
+        if (metaStart.p === metaEnd.p) {
+            // Case A: Same Page - Calculate lines between
+            const totalLines = (metaEnd.el - metaStart.sl) + 1;
+            exactCount = totalLines / LINES_PER_PAGE;
         } else {
-            // Multiple pages
-            const middlePages = Math.max(0, pEnd - pStart - 1);
+            // Case B: Multiple Pages
+            const middlePages = Math.max(0, metaEnd.p - metaStart.p - 1);
+            
+            // Lines on first page (from start line to bottom)
+            const linesStart = (LINES_PER_PAGE - metaStart.sl) + 1;
+            const fracStart = linesStart / LINES_PER_PAGE;
 
-            // Start page fraction
-            const d1 = pageDensityCache[sNo1]?.[pStart] || 15;
-            const s1VersesOnPage = Object.entries(map1)
-                .filter(([k, v]) => v === pStart)
-                .map(([k, v]) => parseInt(k));
-            const s1EndVerseOnPage = Math.max(...s1VersesOnPage);
-            const capturedStart = (s1EndVerseOnPage - aFrom) + 1;
-            const fracStart = Math.max(0, capturedStart) / d1;
-
-            // End page fraction
-            const d2 = pageDensityCache[sNo2]?.[pEnd] || 15;
-            const s2VersesOnPage = Object.entries(map2)
-                .filter(([k, v]) => v === pEnd)
-                .map(([k, v]) => parseInt(k));
-            const s2StartVerseOnPage = Math.min(...s2VersesOnPage);
-            const capturedEnd = (aTo - s2StartVerseOnPage) + 1;
-            const fracEnd = Math.max(0, capturedEnd) / d2;
+            // Lines on last page (from top to end line)
+            const linesEnd = metaEnd.el;
+            const fracEnd = linesEnd / LINES_PER_PAGE;
 
             exactCount = middlePages + fracStart + fracEnd;
         }
 
+        // Apply result
         let final = parseFloat(exactCount.toFixed(1));
         if (final < 0.1) final = 0.1;
 
@@ -683,11 +748,12 @@ function useSetoran(uiData, DB, refreshData, userSession, appConfig) {
         updateGrade();
 
         autoCalcInfo.value.visible = true;
-        autoCalcInfo.value.text = `Otomatis: <b>${final} Hal</b> (Hal ${pStart} - ${pEnd})`;
+        autoCalcInfo.value.text = `Akurasi Baris: <b>${final} Hal</b> (Halaman ${metaStart.p} - ${metaEnd.p})`;
 
-        setTimeout(() => {
+        if (window._autoCalcTimer) clearTimeout(window._autoCalcTimer);
+        window._autoCalcTimer = setTimeout(() => {
             autoCalcInfo.value.visible = false;
-        }, 5000);
+        }, 8000);
     };
 
     /**
@@ -1002,13 +1068,28 @@ function useSetoran(uiData, DB, refreshData, userSession, appConfig) {
     const deleteSetoran = async (setoranId) => {
         if (!setoranId) return;
 
-        // --- Role Protection (v36) ---
         const role = userSession.value?.role;
         const isHoliday = appConfig?.value?.isHolidayMode === true;
-        
         const canHolidayDelete = (role === 'santri' || role === 'wali') && isHoliday;
-        
-        if (role !== 'admin' && role !== 'guru' && !canHolidayDelete) {
+
+        // v37: Precise Protection
+        // 1. Admin/Guru can delete everything
+        if (role === 'admin' || role === 'guru') {
+            // Allow
+        } 
+        // 2. Santri/Wali can only delete Mandiri records during Holiday
+        else if (canHolidayDelete) {
+            // v37 Fix: Search in ALL data to ensure we find old records too
+            const allData = DB.getAll();
+            const setoran = allData.find(s => s._id === setoranId && s.__type === 'setoran');
+            const creator = setoran ? setoran.input_by : null;
+            
+            if (creator === 'admin' || creator === 'guru') {
+                window.showAlert("Anda tidak diperbolehkan menghapus data yang dimasukkan oleh Guru/Admin.", "Dilarang", "danger");
+                return;
+            }
+        } 
+        else {
             window.showAlert("Anda tidak memiliki akses untuk menghapus data saat ini.", "Dilarang", "danger");
             return;
         }
@@ -1039,6 +1120,21 @@ function useSetoran(uiData, DB, refreshData, userSession, appConfig) {
      */
     const editSetoran = (setoran) => {
         if (!setoran) return;
+
+        // --- Role Protection (v37) ---
+        const role = userSession.value?.role;
+        const isHoliday = appConfig?.value?.isHolidayMode === true;
+
+        if (role === 'santri' || role === 'wali') {
+            if (!isHoliday) {
+                window.showAlert("Penyuntingan hanya diizinkan selama Masa Liburan.", "Akses Dibatasi", "warning");
+                return;
+            }
+            if (setoran.input_by === 'admin' || setoran.input_by === 'guru') {
+                window.showAlert("Anda tidak boleh mengedit data yang dimasukkan oleh Guru/Admin.", "Dilarang", "danger");
+                return;
+            }
+        }
 
 
         // Toggle Off if clicking SAME item
@@ -1169,7 +1265,12 @@ function useSetoran(uiData, DB, refreshData, userSession, appConfig) {
         formatTime: window.DateUtils.formatTime,
 
         lastRecordForType,
+        applyLastRecord,
         santriTargetProgress,
-        getJuzPageCount
+        getJuzPageCount,
+
+        // Surah Search (v37)
+        surahSearch,
+        filteredSurahList
     };
 }

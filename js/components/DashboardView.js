@@ -66,8 +66,18 @@ const DashboardView = {
             }
         };
 
-        watch(showNotifications, (newVal) => {
+        const handlePopState = (e) => {
+            if (showNotifications.value) {
+                showNotifications.value = false;
+            }
+        };
+
+        watch(showNotifications, (newVal, oldVal) => {
             if (newVal) {
+                // v37: Push state so back button closes dropdown
+                window.history.pushState({ notifOpen: true }, '', '#notif');
+                window.addEventListener('popstate', handlePopState);
+
                 // Use setTimeout to avoid immediate closure if triggered by the same click
                 setTimeout(() => {
                     window.addEventListener('mousedown', handleNotifClose);
@@ -76,12 +86,23 @@ const DashboardView = {
             } else {
                 window.removeEventListener('mousedown', handleNotifClose);
                 window.removeEventListener('scroll', handleNotifClose);
+                window.removeEventListener('popstate', handlePopState);
+
+                // If closed manually (not via back button), clear history state
+                if (window.history.state && window.history.state.notifOpen) {
+                    window.history.back();
+                }
             }
         });
 
         onUnmounted(() => {
             window.removeEventListener('mousedown', handleNotifClose);
             window.removeEventListener('scroll', handleNotifClose);
+            window.removeEventListener('popstate', handlePopState);
+            // Clean up history if unmounted while open
+            if (showNotifications.value && window.history.state && window.history.state.notifOpen) {
+                window.history.back();
+            }
         });
 
         // Helpers (injected or global)

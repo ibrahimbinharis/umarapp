@@ -1,6 +1,6 @@
 const APP_CONFIG = {
     appName: "E-Umar",
-    version: "v3.13",
+    version: "v3.14",
     supabaseUrl: "https://fxtmilqvxomuvkxxzjli.supabase.co",
     supabaseKey: "sb_publishable_aXcK3znrtRo0d3gH-Wg1Ew_-0Z3262O"
 };
@@ -108,7 +108,22 @@ const DB = {
         allData = data;
         buildIndexes();
         if (window.idbKeyval) {
-            await window.idbKeyval.set(DB_KEY, data);
+            // v37: Ensure data is not a Proxy or contains non-clonable bits
+            const cleanData = DB._serialize(data);
+            await window.idbKeyval.set(DB_KEY, cleanData);
+        }
+    },
+
+    /**
+     * Helper to strip Vue Proxies or non-serializable properties 
+     * before saving to IndexedDB (Structured Clone Fix)
+     */
+    _serialize: (obj) => {
+        try {
+            return JSON.parse(JSON.stringify(obj));
+        } catch (e) {
+            console.warn("[DB] Serialization warning:", e);
+            return obj;
         }
     },
 
@@ -142,7 +157,9 @@ const DB = {
     addToQueue: async (action, collection, payload) => {
         if (!window.idbKeyval) return;
         const q = await DB.getQueue();
-        q.push({ action, collection, payload, timestamp: Date.now() });
+        // v37: Serialize payload to avoid Proxy issues
+        const cleanPayload = DB._serialize(payload);
+        q.push({ action, collection, payload: cleanPayload, timestamp: Date.now() });
         await window.idbKeyval.set(QUEUE_KEY, q);
     },
     removeFromQueue: async (timestamp) => {
@@ -632,10 +649,13 @@ const DB = {
                         (res.error.message && res.error.message.includes('duplicate key'));
 
                     if (isUnrecoverable) {
-                        console.warn("Unrecoverable sync error. Removing from queue.", res.error.message);
+                        console.warn(`[CloudSync] Unrecoverable sync error (${res.error.code}). Removing from queue.`, res.error.message);
                         await DB.removeFromQueue(timestamp);
                     } else {
-                        console.error("Push Error", res.error);
+                        console.error(`[CloudSync] Push Error for ${collection}:`, res.error);
+                        // v37 Extra Debug info
+                        if (res.error.details) console.error("Error Details:", res.error.details);
+                        if (res.error.hint) console.error("Error Hint:", res.error.hint);
                     }
                 } else {
                     await DB.removeFromQueue(timestamp);
@@ -781,7 +801,17 @@ function generateId(type) {
     // Map internal type to prefix
     let prefix = 'X';
     if (type === 'santri') prefix = 'S';
-    else if (type === 'users' || type === 'user') prefix = 'U';
+    else if (type === 'users' || type === 'user') {
+        // v37: Use UUID for user accounts to ensure compatibility with Supabase Auth schema (UUID _id)
+        if (window.crypto && window.crypto.randomUUID) {
+            return window.crypto.randomUUID();
+        }
+        // Fallback for older browsers (Local UUIDv4 generator)
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+            var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+        });
+    }
     else if (type === 'mapel') prefix = 'M';
     else if (type === 'kelas') prefix = 'K';
     else if (type === 'setoran') prefix = 'TR';

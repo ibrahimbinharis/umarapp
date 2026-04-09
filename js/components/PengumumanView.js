@@ -1,11 +1,11 @@
 const PengumumanView = {
     props: ['userSession', 'pengumumanList', 'paginatedList', 'currentPage', 'totalPages',
-        'isLoading', 'showFormModal', 'showDetailModal', 'detailItem', 'form', 'PAGE_SIZE', 'fileUpload'],
+        'isLoading', 'showFormModal', 'showDetailModal', 'detailItem', 'form', 'PAGE_SIZE', 'fileUpload', 'searchQuery', 'currentView'],
     emits: [
         'load', 'open-add', 'open-edit', 'save', 'delete', 'open-detail',
         'go-page', 'close-form', 'close-detail', 'handle-file', 'remove-file',
         'update:form-judul', 'update:form-isi', 'update:form-kategori', 'update:form-target',
-        'upload-inline-image'
+        'upload-inline-image', 'update:search-query'
     ],
     setup(props, { emit }) {
         const { ref, computed, watch, nextTick, onMounted } = Vue;
@@ -79,19 +79,37 @@ const PengumumanView = {
         });
 
         // Helper
-        const formatDate = window.formatDate || ((d) => d ? d.split('T')[0] : '-');
+        const formatDate = (d) => {
+            if (window.formatDateLong) return window.formatDateLong(d);
+            return d ? d.split('T')[0] : '-';
+        };
 
         const getPlainText = (html) => {
             if (!html) return '';
+            // Replace block-level tags and line breaks with space to prevent words sticking together
+            const processedHtml = html
+                .replace(/<\/p>/g, ' ')
+                .replace(/<\/div>/g, ' ')
+                .replace(/<br\s*\/?>/g, ' ')
+                .replace(/<\/li>/g, ' ');
+
             const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = html;
-            const text = tempDiv.textContent || tempDiv.innerText || "";
+            tempDiv.innerHTML = processedHtml;
+            const text = (tempDiv.textContent || tempDiv.innerText || "").replace(/\s+/g, ' ').trim();
             return text.substring(0, 140) + (text.length > 140 ? '...' : '');
+        };
+
+        // Simple XSS Mitigation: Remove script tags and inline handlers
+        const sanitizeHtml = (html) => {
+            if (!html) return '';
+            return html.replace(/<script\b[^>]*>([\s\S]*?)<\/script>/gim, "")
+                       .replace(/on\w+="[^"]*"/gim, "") 
+                       .replace(/on\w+='[^']*'/gim, "");
         };
 
         onMounted(() => emit('load'));
 
-        return { editorRef, execCmd, syncIsi, onEditorInput, pageNumbers, formatDate, getPlainText, handleInlineImage, insertImageAtCursor };
+        return { editorRef, execCmd, syncIsi, onEditorInput, pageNumbers, formatDate, getPlainText, handleInlineImage, insertImageAtCursor, sanitizeHtml };
     },
     template: `
     <div class="fade-in pb-32 relative">
@@ -102,17 +120,34 @@ const PengumumanView = {
                 <h2 class="text-xl font-black text-slate-800">Pengumuman</h2>
                 <p class="text-xs text-slate-400 mt-0.5">{{ userSession?.role === 'admin' ? 'Kelola pengumuman untuk civitas pesantren' : 'Informasi terbaru dari pesantren' }}</p>
             </div>
-            <button v-if="userSession?.role === 'admin'" @click="$emit('open-add')"
-                class="flex items-center gap-2 bg-primary text-white px-5 py-3 rounded-xl font-bold text-sm shadow-lg shadow-blue-900/20 hover:bg-blue-800 active:scale-95 transition">
-                <span class="material-symbols-outlined text-base">add</span>
-                Buat Pengumuman
-            </button>
+            <div class="flex items-center gap-3">
+                <!-- Search Input Desktop -->
+                <div class="relative w-64">
+                    <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">search</span>
+                    <input :value="searchQuery" @input="$emit('update:search-query', $event.target.value)"
+                        placeholder="Cari pengumuman..."
+                        class="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/5 transition bg-white" />
+                </div>
+                <button v-if="userSession?.role === 'admin'" @click="$emit('open-add')"
+                    class="flex items-center gap-2 bg-primary text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-blue-900/20 hover:bg-blue-800 active:scale-95 transition">
+                    <span class="material-symbols-outlined text-base">add</span>
+                    Buat Baru
+                </button>
+            </div>
         </div>
 
-        <!-- Mobile Page Title -->
+        <!-- Mobile Header -->
         <div class="md:hidden mb-5">
             <h2 class="text-xl font-black text-slate-800">Pengumuman</h2>
-            <p class="text-xs text-slate-400 mt-0.5">Kelola pengumuman civitas pesantren</p>
+            <p class="text-xs text-slate-400 mt-0.5 mb-4">Informasi terbaru pesantren</p>
+            
+            <!-- Search Input Mobile -->
+            <div class="relative w-full mb-4">
+                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">search</span>
+                <input :value="searchQuery" @input="$emit('update:search-query', $event.target.value)"
+                    placeholder="Cari pengumuman..."
+                    class="w-full pl-9 pr-4 py-3 rounded-xl border border-slate-200 text-xs font-bold focus:outline-none focus:border-primary transition bg-white" />
+            </div>
         </div>
 
         <!-- Loading State -->
@@ -121,14 +156,14 @@ const PengumumanView = {
         </div>
 
         <!-- Empty State -->
-        <div v-else-if="pengumumanList.length === 0"
+        <div v-else-if="pengumumanList.length === 0 || (searchQuery && paginatedList.length === 0)"
             class="bg-white rounded-3xl border border-slate-100 card-shadow p-16 flex flex-col items-center justify-center text-center">
             <div class="size-20 rounded-full bg-slate-50 flex items-center justify-center mb-4 border border-slate-100">
-                <span class="material-symbols-outlined text-4xl text-slate-300">campaign</span>
+                <span class="material-symbols-outlined text-4xl text-slate-300">{{ searchQuery ? 'search_off' : 'campaign' }}</span>
             </div>
-            <h3 class="font-bold text-slate-600 mb-1">Belum ada pengumuman</h3>
-            <p class="text-xs text-slate-400 mb-6">{{ userSession?.role === 'admin' ? 'Buat pengumuman pertama untuk dikirim ke pengguna' : 'Silakan hubungi admin jika ada pengumuman yang belum muncul' }}</p>
-            <button v-if="userSession?.role === 'admin'" @click="$emit('open-add')"
+            <h3 class="font-bold text-slate-600 mb-1">{{ searchQuery ? 'Tidak ada hasil' : 'Belum ada pengumuman' }}</h3>
+            <p class="text-xs text-slate-400 mb-6">{{ searchQuery ? 'Coba gunakan kata kunci lain' : (userSession?.role === 'admin' ? 'Buat pengumuman pertama untuk dikirim ke pengguna' : 'Silakan hubungi admin jika ada pengumuman yang belum muncul') }}</p>
+            <button v-if="userSession?.role === 'admin' && !searchQuery" @click="$emit('open-add')"
                 class="flex items-center gap-2 bg-primary text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-md hover:bg-blue-800 active:scale-95 transition">
                 <span class="material-symbols-outlined text-base">add</span>
                 Buat Pengumuman
@@ -159,7 +194,7 @@ const PengumumanView = {
                             </span>
                         </div>
                         <!-- Date -->
-                        <span class="text-[10px] text-slate-400 whitespace-nowrap shrink-0 mt-0.5">{{ formatDate(item.created_at) }}</span>
+                        <span class="text-[10px] text-slate-400 whitespace-nowrap shrink-0 mt-0.5" v-html="formatDate(item.created_at)"></span>
                     </div>
 
                     <!-- Title -->
@@ -224,25 +259,22 @@ const PengumumanView = {
             </div>
         </div>
 
-        <!-- ===== FAB: Mobile floating action button ===== -->
-        <div v-if="userSession?.role === 'admin'" class="md:hidden fixed bottom-6 right-5 z-40">
-            <button @click="$emit('open-add')"
-                class="size-14 flex items-center justify-center rounded-full bg-primary text-white shadow-xl shadow-blue-900/30 hover:bg-blue-800 active:scale-90 transition-all duration-200">
-                <span class="material-symbols-outlined text-2xl">add</span>
-            </button>
-        </div>
-
         <!-- ===== GLOBAL BACKDROP — rendered via Teleport to cover full app ===== -->
         <Teleport to="body">
+
+            <!-- FAB: Mobile floating action button -->
+            <div v-if="userSession?.role === 'admin' && currentView === 'pengumuman'" class="md:hidden fixed bottom-28 right-5 z-[100]">
+                <button @click="$emit('open-add')"
+                    class="size-14 flex items-center justify-center rounded-full bg-primary text-white shadow-xl shadow-blue-900/30 hover:bg-blue-800 active:scale-90 transition-all duration-200">
+                    <span class="material-symbols-outlined text-2xl">add</span>
+                </button>
+            </div>
 
             <!-- FORM MODAL -->
             <Transition name="modal-fade">
                 <div v-if="showFormModal"
-                    class="fixed inset-0 z-[9999] flex items-center justify-center p-4"
+                    class="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md"
                     @click.self="$emit('close-form')">
-
-                    <!-- Full-page blur backdrop -->
-                    <div class="absolute inset-0 bg-black/60 backdrop-blur-md" @click="$emit('close-form')"></div>
 
                     <!-- Modal Card — centered -->
                     <div class="relative bg-white rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl ring-1 ring-black/10 animate-scale-in">
@@ -298,7 +330,14 @@ const PengumumanView = {
 
                             <!-- Rich Text Editor -->
                             <div>
-                                <label class="block text-xs font-bold text-slate-700 mb-1.5">Isi Pengumuman <span class="text-red-400">*</span></label>
+                                <div class="flex items-center justify-between mb-1.5">
+                                    <label class="block text-xs font-bold text-slate-700">Isi Pengumuman <span class="text-red-400">*</span></label>
+                                    <!-- Inline Upload Loading Indicator -->
+                                    <span v-if="fileUpload.isInlineUploading" class="text-[10px] font-bold text-primary flex items-center gap-1 animate-pulse">
+                                        <div class="size-3 border-2 border-primary/20 border-t-primary rounded-full animate-spin"></div>
+                                        Menyisipkan gambar...
+                                    </span>
+                                </div>
 
                                 <!-- Toolbar -->
                                 <div class="flex items-center gap-1 flex-wrap p-2 bg-slate-50 rounded-t-xl border border-b-0 border-slate-200">
@@ -430,11 +469,8 @@ const PengumumanView = {
             <!-- DETAIL MODAL -->
             <Transition name="modal-fade">
                 <div v-if="showDetailModal && detailItem"
-                    class="fixed inset-0 z-[9999] flex items-center justify-center p-4"
+                    class="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md"
                     @click.self="$emit('close-detail')">
-
-                    <!-- Full-page blur backdrop -->
-                    <div class="absolute inset-0 bg-black/60 backdrop-blur-md" @click="$emit('close-detail')"></div>
 
                     <!-- Modal Card -->
                     <div class="relative bg-white rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl ring-1 ring-black/10 animate-scale-in">
@@ -461,16 +497,14 @@ const PengumumanView = {
                                 </button>
                             </div>
                             <h3 class="font-black text-slate-800 text-lg mt-3 leading-snug">{{ detailItem.judul }}</h3>
-                            <p class="text-[11px] text-slate-400 mt-1 flex items-center gap-1">
-                                <span class="material-symbols-outlined text-xs">schedule</span>
-                                {{ formatDate(detailItem.created_at) }}
+                            <p class="text-[11px] text-slate-400 mt-1 flex items-center gap-1" v-html="formatDate(detailItem.created_at)">
                             </p>
                         </div>
 
                         <!-- Content -->
                         <div class="p-6">
                             <div class="prose prose-sm max-w-none text-slate-700 leading-relaxed text-sm announcement-content"
-                                 v-html="detailItem.isi">
+                                 v-html="sanitizeHtml(detailItem.isi)">
                             </div>
 
                             <!-- Attachment in Detail -->
