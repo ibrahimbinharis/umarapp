@@ -785,14 +785,28 @@ createApp({
                 if (santriList.length > 0 && santriList[0].full_name) {
                     userSession.value.full_name = santriList[0].full_name;
                 }
+            } else if (userSession.value && userSession.value.role === 'guru' && userSession.value.gender) {
+                // APPLY GURU GENDER FILTER (Guru only sees santri and records of their own gender)
+                const myGender = userSession.value.gender;
+                const mySantri = santriList.filter(s => s.gender === myGender);
+                const mySantriIds = mySantri.map(s => s._id);
+                const mySantriNISs = mySantri.map(s => s.nis || s.santri_id);
+
+                santriList = mySantri;
+                setoranList = setoranList.filter(d => mySantriIds.includes(d.santri_id) || mySantriNISs.includes(d.santri_id));
+                ujianList = ujianList.filter(d => mySantriIds.includes(d.santri_id) || mySantriNISs.includes(d.santri_id));
+                pelanggaranList = pelanggaranList.filter(d => mySantriIds.includes(d.santri_id) || mySantriNISs.includes(d.santri_id));
+                uangSakuList = uangSakuList.filter(d => mySantriIds.includes(d.santri_id) || mySantriNISs.includes(d.santri_id));
             }
 
             // 3. Assign to Reactive State
-            uiData.all_santri = activeData.filter(d => d.__type === 'santri');
-            uiData.all_setoran = activeData.filter(d => d.__type === 'setoran');
-            uiData.all_ujian = activeData.filter(d => d.__type === 'ujian');
-            uiData.all_pelanggaran = activeData.filter(d => d.__type === 'pelanggaran');
-            uiData.all_uang_saku = activeData.filter(d => d.__type === 'uang_saku');
+            const isGuru = userSession.value && userSession.value.role === 'guru';
+
+            uiData.all_santri = isGuru ? santriList : activeData.filter(d => d.__type === 'santri');
+            uiData.all_setoran = isGuru ? setoranList : activeData.filter(d => d.__type === 'setoran');
+            uiData.all_ujian = isGuru ? ujianList : activeData.filter(d => d.__type === 'ujian');
+            uiData.all_pelanggaran = isGuru ? pelanggaranList : activeData.filter(d => d.__type === 'pelanggaran');
+            uiData.all_uang_saku = isGuru ? uangSakuList : activeData.filter(d => d.__type === 'uang_saku');
 
             uiData.santri = santriList;
             uiData.setoran = setoranList;
