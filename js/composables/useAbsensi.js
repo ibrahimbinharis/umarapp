@@ -11,7 +11,7 @@
  * Dependencies: DB (from core.js), uiData (from parent)
  */
 
-function useAbsensi(uiData, DB, modalState) {
+function useAbsensi(uiData, DB, modalState, userSession) {
     // Get Vue from global (loaded via CDN)
     const { reactive, computed, ref } = Vue;
 
@@ -36,7 +36,22 @@ function useAbsensi(uiData, DB, modalState) {
     const absensiState = reactive({
         dateFilter: getLocalDateString(), // Use Local Time
         activeJadwal: null,  // Current jadwal being recorded
-        santriList: []       // Filtered santri for current jadwal
+        santriList: [],       // Filtered santri for current jadwal
+        absensiTab: 'absensi',// Tab: 'absensi' | 'jurnal'
+        jurnal: {            // Form for Jurnal
+            materi: '',
+            catatan: ''
+        },
+        // Jurnal Filters (v37)
+        jurnalStartDate: '',
+        jurnalEndDate: '',
+        quickJurnalFilter: 'month', // Default to This Month
+        // Calendar State (v37)
+        isCalendarOpen: false,
+        viewMonth: new Date().getMonth(),
+        viewYear: new Date().getFullYear(),
+        tempStart: '',
+        tempEnd: ''
     });
 
     /**
@@ -104,9 +119,16 @@ function useAbsensi(uiData, DB, modalState) {
      */
     const getAbsensiSummary = (details) => {
         const summary = { H: 0, S: 0, I: 0, A: 0 };
-        if (!details || !Array.isArray(details)) return summary;
+        
+        // Auto parse string if it was recently saved as JSON string
+        let parsedDetails = details;
+        if (typeof details === 'string') {
+            try { parsedDetails = JSON.parse(details); } catch(e) { parsedDetails = []; }
+        }
 
-        details.forEach(d => {
+        if (!parsedDetails || !Array.isArray(parsedDetails)) return summary;
+
+        parsedDetails.forEach(d => {
             if (summary[d.status] !== undefined) {
                 summary[d.status]++;
             }
@@ -114,6 +136,42 @@ function useAbsensi(uiData, DB, modalState) {
 
         return summary;
     };
+
+    /**
+     * Timeline History of all jurnals (absensi records with journal content)
+     */
+    const jurnalList = computed(() => {
+        const absData = uiData.absensi || [];
+        const jadwalData = uiData.jadwal || [];
+
+        let filtered = absData.filter(a => a.jurnal_materi || a.jurnal_catatan);
+
+        // Apply Date Filters
+        if (absensiState.jurnalStartDate) {
+            filtered = filtered.filter(a => a.date >= absensiState.jurnalStartDate);
+        }
+        if (absensiState.jurnalEndDate) {
+            filtered = filtered.filter(a => a.date <= absensiState.jurnalEndDate);
+        }
+
+        return filtered
+            .map(a => {
+                const jadwalObj = jadwalData.find(j => j._id === a.jadwal_id);
+                const inputGuru = (uiData.guru || []).find(g => g.username === a.input_by) || (uiData.users || []).find(u => u.username === a.input_by);
+                const inputByName = inputGuru ? (inputGuru.full_name || inputGuru.username) : (a.input_by === 'Sistem' ? 'Sistem' : a.input_by);
+                
+                return {
+                    ...a,
+                    jadwalObj: jadwalObj,
+                    input_by_name: inputByName,
+                    mapel: jadwalObj?.mapel || 'Mapel Terhapus',
+                    class_name: jadwalObj?.class_name || '-',
+                    time: jadwalObj?.time || '-'
+                };
+            })
+            // Sort by Date Descending
+            .sort((a, b) => new Date(b.date) - new Date(a.date));
+    });
 
     // ===== METHODS =====
 
@@ -168,6 +226,10 @@ function useAbsensi(uiData, DB, modalState) {
 
         formState.value = initialState;
         absensiState.santriList = santriData;
+        
+        // Initialize Jurnal State
+        absensiState.jurnal.materi = existing?.jurnal_materi || '';
+        absensiState.jurnal.catatan = existing?.jurnal_catatan || '';
 
         // Mark modal as open
         if (modalState) {
@@ -213,10 +275,21 @@ function useAbsensi(uiData, DB, modalState) {
             window.showAlert('Jadwal tidak ditemukan', 'Error', 'danger');
             return;
         }
+        // -- GUARD START -- 
+        // Only allow designated teacher or admin to save absensi for this jadwal
+        if (userSession?.value?.role === 'guru') {
+            const jObj = absensiState.activeJadwal;
+            if (!jObj || jObj.username !== userSession.value.username) {
+                window.showAlert("Akses Ditolak: Anda bukan guru pengampu jadwal ini.", "Peringatan Keamanan", "danger");
+                return false;
+            }
+        }
+        // -- GUARD END --
+
         try {
-            // Build details array from formState
+            const jId = absensiState.activeJadwal._id;
             const details = [];
-            absensiState.santriList.forEach(s => {
+                absensiState.santriList.forEach(s => {
                 const status = formState.value[s._id] || 'H';
                 details.push({
                     santri_id: s._id,
@@ -233,7 +306,10 @@ function useAbsensi(uiData, DB, modalState) {
                 date: absensiState.dateFilter,
                 day_name: dayName,
                 jadwal_id: jId,
-                details: JSON.stringify(details) // Serialize to prevent [Ljava.lang.Object error
+                details: JSON.stringify(details), // Serialize to prevent [Ljava.lang.Object error
+                jurnal_materi: absensiState.jurnal.materi,
+                jurnal_catatan: absensiState.jurnal.catatan,
+                input_by: userSession?.value?.username || 'Sistem'
             };
 
             // Check if updating existing record
@@ -277,6 +353,170 @@ function useAbsensi(uiData, DB, modalState) {
         formState.value = { ...formState.value };
     };
 
+    /**
+     * Set Quick Date Filter for Jurnal
+     */
+    const setQuickJurnalFilter = (preset) => {
+        const today = new Date();
+        const formatDate = (date) => {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        };
+
+        absensiState.quickJurnalFilter = preset;
+
+        switch (preset) {
+            case 'today':
+                absensiState.jurnalStartDate = formatDate(today);
+                absensiState.jurnalEndDate = formatDate(today);
+                absensiState.isCalendarOpen = false;
+                break;
+            case 'yesterday':
+                const yesterday = new Date(today);
+                yesterday.setDate(today.getDate() - 1);
+                absensiState.jurnalStartDate = formatDate(yesterday);
+                absensiState.jurnalEndDate = formatDate(yesterday);
+                absensiState.isCalendarOpen = false;
+                break;
+            case 'last7':
+                const d7 = new Date(today);
+                d7.setDate(today.getDate() - 7);
+                absensiState.jurnalStartDate = formatDate(d7);
+                absensiState.jurnalEndDate = formatDate(today);
+                absensiState.isCalendarOpen = false;
+                break;
+            case 'last30':
+                const d30 = new Date(today);
+                d30.setDate(today.getDate() - 30);
+                absensiState.jurnalStartDate = formatDate(d30);
+                absensiState.jurnalEndDate = formatDate(today);
+                absensiState.isCalendarOpen = false;
+                break;
+            case 'month':
+                const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+                absensiState.jurnalStartDate = formatDate(monthStart);
+                absensiState.jurnalEndDate = formatDate(today);
+                absensiState.isCalendarOpen = false;
+                break;
+            case 'all':
+                absensiState.jurnalStartDate = '';
+                absensiState.jurnalEndDate = '';
+                absensiState.isCalendarOpen = false;
+                break;
+            case 'custom':
+                absensiState.isCalendarOpen = true;
+                // Init temp range if empty
+                if (!absensiState.tempStart) {
+                    absensiState.tempStart = absensiState.jurnalStartDate;
+                    absensiState.tempEnd = absensiState.jurnalEndDate;
+                }
+                break;
+        }
+    };
+
+    /**
+     * Calendar Logic (v37)
+     */
+    const moveCalendar = (dir) => {
+        let m = absensiState.viewMonth + dir;
+        let y = absensiState.viewYear;
+        if (m > 11) { m = 0; y++; }
+        if (m < 0) { m = 11; y--; }
+        absensiState.viewMonth = m;
+        absensiState.viewYear = y;
+    };
+
+    const selectCalendarDate = (dateStr) => {
+        if (!absensiState.tempStart || (absensiState.tempStart && absensiState.tempEnd)) {
+            absensiState.tempStart = dateStr;
+            absensiState.tempEnd = '';
+        } else {
+            if (dateStr < absensiState.tempStart) {
+                absensiState.tempEnd = absensiState.tempStart;
+                absensiState.tempStart = dateStr;
+            } else {
+                absensiState.tempEnd = dateStr;
+            }
+        }
+    };
+
+    const applyCustomRange = () => {
+        if (absensiState.tempStart && absensiState.tempEnd) {
+            absensiState.jurnalStartDate = absensiState.tempStart;
+            absensiState.jurnalEndDate = absensiState.tempEnd;
+            absensiState.isCalendarOpen = false;
+        }
+    };
+
+    const calendarWeeks = computed(() => {
+        const year = absensiState.viewYear;
+        const month = absensiState.viewMonth;
+        const firstDay = new Date(year, month, 1).getDay();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        
+        const days = [];
+        // Empty slots for prev month
+        for (let i = 0; i < firstDay; i++) days.push(null);
+        
+        // Month days
+        for (let i = 1; i <= daysInMonth; i++) {
+            const date = new Date(year, month, i);
+            const dateStr = date.toISOString().split('T')[0];
+            days.push({
+                day: i,
+                dateStr: dateStr,
+                isToday: dateStr === new Date().toISOString().split('T')[0],
+                isSelected: dateStr === absensiState.tempStart || dateStr === absensiState.tempEnd,
+                isInRange: absensiState.tempStart && absensiState.tempEnd && 
+                          dateStr > absensiState.tempStart && dateStr < absensiState.tempEnd
+            });
+        }
+        return days;
+    });
+
+    // Initial Filter
+    setQuickJurnalFilter('month');
+
+    /**
+     * Delete absensi/jurnal record
+     */
+    const deleteAbsensi = async (id) => {
+        // -- GUARD START --
+        if (userSession?.value?.role === 'guru') {
+            const existing = (uiData.absensi || []).find(a => a._id === id);
+            if (existing && existing.input_by !== userSession.value.username) {
+                window.showAlert("Akses Ditolak: Anda hanya diperbolehkan menghapus data jurnal milik Anda sendiri.", "Peringatan Keamanan", "danger");
+                return false;
+            }
+        }
+        // -- GUARD END --
+
+        return new Promise((resolve) => {
+            window.showConfirm({
+                title: 'Hapus Data Jurnal & Absensi',
+                message: 'Apakah Anda yakin ingin menghapus data absensi beserta catatan jurnal ini secara permanen?',
+                confirmText: 'Ya, Hapus',
+                type: 'danger',
+                onConfirm: async () => {
+                    try {
+                        await DB.delete(id);
+                        absensiState.jurnal.materi = '';
+                        absensiState.jurnal.catatan = '';
+                        window.showAlert('Data berhasil dihapus', 'Sukses', 'info');
+                        if (window.refreshData) window.refreshData();
+                        resolve(true);
+                    } catch (e) {
+                        console.error(e);
+                        window.showAlert('Gagal menghapus: ' + e.message, 'Error', 'danger');
+                        resolve(false);
+                    }
+                }
+            });
+        });
+    };
+
     // ===== RETURN =====
     return {
         // State
@@ -287,6 +527,7 @@ function useAbsensi(uiData, DB, modalState) {
         // Computed
         absensiDayName,
         dailyJadwal,
+        jurnalList,
         getAbsensiForJadwal,
         getAbsensiSummary,
 
@@ -294,7 +535,13 @@ function useAbsensi(uiData, DB, modalState) {
         openAbsensiPage,
         changeAbsensiDate,
         saveAbsensi,
+        deleteAbsensi,
         setAllAbsensi,
-        updateSantriStatus
+        updateSantriStatus,
+        setQuickJurnalFilter,
+        moveCalendar,
+        selectCalendarDate,
+        applyCustomRange,
+        calendarWeeks
     };
 }

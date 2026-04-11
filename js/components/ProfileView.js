@@ -98,13 +98,8 @@ const ProfileView = {
             expandedRole.value = expandedRole.value === role ? null : role;
         };
 
-        const checkPushStatus = () => {
-            isPushEnabled.value = Notification.permission === 'granted';
-        };
-
         const togglePush = async () => {
             if (Notification.permission === 'granted') {
-                // Already granted, just re-sync token
                 if (window.PushService) await window.PushService.subscribeUser(props.userSession._id);
                 window.showAlert('Notifikasi sudah aktif.', 'Info', 'info');
             } else {
@@ -113,10 +108,95 @@ const ProfileView = {
                     isPushEnabled.value = true;
                     window.showAlert('Notifikasi berhasil diaktifkan!', 'Sukses', 'info');
                 } else {
-                    window.showAlert('Gagal mengaktifkan notifikasi. Pastikan Anda mengizinkan notifikasi di pengaturan browser.', 'Error', 'danger');
+                    window.showAlert('Gagal mengaktifkan notifikasi.', 'Error', 'danger');
                 }
             }
         };
+
+        // --- History Modal Support (v37) ---
+        const isCalendarOpen = ref(false);
+        const viewMonth = ref(new Date().getMonth());
+        const viewYear = ref(new Date().getFullYear());
+        const tempStart = ref('');
+        const tempEnd = ref('');
+        const monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+
+        const formatDateShort = (d) => {
+            if (!d) return '--/--/----';
+            const parts = d.split('-');
+            if (parts.length < 3) return d;
+            return `${parts[2]}/${parts[1]}/${parts[0]}`;
+        };
+
+        const calendarWeeks = computed(() => {
+            const firstDay = new Date(viewYear.value, viewMonth.value, 1).getDay();
+            const daysInMonth = new Date(viewYear.value, viewMonth.value + 1, 0).getDate();
+            const todayStr = new Date().toISOString().split('T')[0];
+
+            const weeks = [];
+            for (let i = 0; i < firstDay; i++) weeks.push(null);
+            for (let d = 1; d <= daysInMonth; d++) {
+                const dateStr = `${viewYear.value}-${String(viewMonth.value + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                weeks.push({
+                    day: d,
+                    dateStr,
+                    isToday: dateStr === todayStr,
+                    isSelected: dateStr === tempStart.value || dateStr === tempEnd.value,
+                    isInRange: tempStart.value && tempEnd.value && dateStr > tempStart.value && dateStr < tempEnd.value
+                });
+            }
+            return weeks;
+        });
+
+        const moveCalendar = (delta) => {
+            viewMonth.value += delta;
+            if (viewMonth.value > 11) { viewMonth.value = 0; viewYear.value++; }
+            if (viewMonth.value < 0) { viewMonth.value = 11; viewYear.value--; }
+        };
+
+        const selectCalendarDate = (dateStr) => {
+            if (!tempStart.value || (tempStart.value && tempEnd.value)) {
+                tempStart.value = dateStr;
+                tempEnd.value = '';
+            } else if (dateStr < tempStart.value) {
+                tempEnd.value = tempStart.value;
+                tempStart.value = dateStr;
+            } else if (dateStr > tempStart.value) {
+                tempEnd.value = dateStr;
+            } else {
+                tempStart.value = '';
+            }
+        };
+
+        const applyCalendarRange = () => {
+            props.saveAppConfig({
+                holiday_start: tempStart.value,
+                holiday_end: tempEnd.value
+            });
+            isCalendarOpen.value = false;
+        };
+
+        const openHolidayPicker = () => {
+            tempStart.value = props.appConfig.holiday_start || '';
+            tempEnd.value = props.appConfig.holiday_end || '';
+            isCalendarOpen.value = true;
+        };
+
+        const handleCalendarPop = () => {
+            if (isCalendarOpen.value) isCalendarOpen.value = false;
+        };
+
+        watch(isCalendarOpen, (newVal) => {
+            if (newVal) {
+                window.history.pushState({ modal: 'holiday-calendar' }, '');
+                window.addEventListener('popstate', handleCalendarPop);
+            } else {
+                window.removeEventListener('popstate', handleCalendarPop);
+                if (window.history.state && window.history.state.modal === 'holiday-calendar') {
+                    window.history.back();
+                }
+            }
+        });
 
         return {
             activeSubMenu,
@@ -132,7 +212,12 @@ const ProfileView = {
             navigateToSub,
             goBack,
             handleLink,
-            togglePush
+            togglePush,
+
+            // Calendar Exports
+            isCalendarOpen, viewMonth, viewYear, tempStart, tempEnd, monthNames,
+            formatDateShort, calendarWeeks, moveCalendar, selectCalendarDate,
+            applyCalendarRange, openHolidayPicker
         };
     },
     mounted() {
@@ -426,22 +511,94 @@ const ProfileView = {
                         </div>
                     </div>
 
-                    <!-- Tanggal Libur (v36) -->
-                    <div class="mt-4 grid grid-cols-2 gap-3 p-4 bg-orange-50/30 rounded-2xl border border-orange-100/50">
-                        <div>
-                            <label class="text-[9px] font-black text-orange-400 uppercase tracking-widest mb-1 block">Mulai Libur</label>
-                            <input type="date" :value="appConfig.holiday_start" 
-                                @change="(e) => saveAppConfig({ 'holiday_start': e.target.value })"
-                                class="w-full p-2.5 rounded-xl border border-orange-100/50 text-xs font-bold text-slate-700 bg-white shadow-sm focus:ring-2 focus:ring-orange-200 outline-none transition">
+                    <!-- Tanggal Libur (v37 Premium Range Picker) -->
+                    <div @click="openHolidayPicker"
+                        class="mt-4 p-4 bg-orange-50/30 rounded-2xl border border-orange-100/50 cursor-pointer hover:bg-orange-50 transition-colors group">
+                        <div class="flex items-center justify-between">
+                            <div class="space-y-1">
+                                <label class="text-[9px] font-black text-orange-400 uppercase tracking-widest block">Rentang Tanggal Libur</label>
+                                <div class="text-xs font-medium text-slate-600 flex items-center gap-2">
+                                    <span>{{ formatDateShort(appConfig.holiday_start) }} — {{ formatDateShort(appConfig.holiday_end) }}</span>
+                                </div>
+                            </div>
+                             <span class="material-symbols-outlined text-orange-300 text-sm group-hover:text-orange-400 transition">edit_calendar</span>
                         </div>
-                        <div>
-                            <label class="text-[9px] font-black text-orange-400 uppercase tracking-widest mb-1 block">Tgl Masuk</label>
-                            <input type="date" :value="appConfig.holiday_end" 
-                                @change="(e) => saveAppConfig({ 'holiday_end': e.target.value })"
-                                class="w-full p-2.5 rounded-xl border border-orange-100/50 text-xs font-bold text-slate-700 bg-white shadow-sm focus:ring-2 focus:ring-orange-200 outline-none transition">
-                        </div>
+                        <p v-if="!appConfig.holiday_start" class="text-[10px] text-orange-400 font-medium italic mt-2">Klik untuk mengatur tanggal</p>
                     </div>
                 </div>
+
+                <!-- Holiday Calendar Modal -->
+                <teleport to="body">
+                    <transition name="modal-fade">
+                        <div v-if="isCalendarOpen" 
+                             @click.self="isCalendarOpen = false"
+                             class="fixed inset-0 z-[10001] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in px-6">
+                            
+                            <div class="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden border border-slate-100 animate-scale-in">
+                                <div class="p-6">
+                                    <div class="space-y-4">
+                                        <!-- Calendar Header -->
+                                        <div class="flex items-center justify-between mb-2">
+                                            <button @click="moveCalendar(-1)" 
+                                                class="p-1.5 rounded-lg border border-slate-100 bg-slate-50 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition-colors">
+                                                <span class="material-symbols-outlined text-sm">chevron_left</span>
+                                            </button>
+                                            <div class="text-center flex-1">
+                                                <h3 class="font-black text-slate-800 text-sm tracking-tight">
+                                                    {{ monthNames[viewMonth] }} {{ viewYear }}
+                                                </h3>
+                                            </div>
+                                            <button @click="moveCalendar(1)" 
+                                                class="p-1.5 rounded-lg border border-slate-100 bg-slate-50 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition-colors">
+                                                <span class="material-symbols-outlined text-sm">chevron_right</span>
+                                            </button>
+                                        </div>
+
+                                        <!-- Calendar Grid -->
+                                        <div class="grid grid-cols-7 gap-y-1 gap-x-1">
+                                            <div v-for="d in ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab']" :key="d"
+                                                class="text-center text-[10px] font-bold text-slate-400 pb-2">{{ d }}</div>
+                                            
+                                            <div v-for="(day, idx) in calendarWeeks" :key="idx" 
+                                                @click="day && selectCalendarDate(day.dateStr)"
+                                                class="h-9 flex items-center justify-center text-xs font-semibold cursor-pointer transition-all relative rounded-lg border border-transparent"
+                                                :class="{
+                                                    'pointer-events-none opacity-0': !day,
+                                                    'bg-orange-500 text-white shadow-lg z-10': day?.isSelected,
+                                                    'bg-orange-50 text-orange-700 font-bold': day?.isInRange,
+                                                    'hover:bg-slate-100 text-slate-700': day && !day.isSelected && !day.isInRange,
+                                                    'border-orange-500/20': day?.isToday && !day.isSelected
+                                                }">
+                                                <span v-if="day">{{ day.day }}</span>
+                                                <div v-if="day?.isToday" class="absolute bottom-1 size-1 rounded-full" 
+                                                    :class="day.isSelected ? 'bg-white' : 'bg-orange-500'"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Footer -->
+                                <div class="p-4 border-t flex flex-col sm:flex-row justify-between items-center gap-4 bg-slate-50">
+                                    <div class="text-[11px] font-black text-slate-700 flex flex-col items-center sm:items-start uppercase tracking-tight">
+                                        <span>{{ formatDateShort(tempStart) }} — {{ formatDateShort(tempEnd) }}</span>
+                                    </div>
+                                    <div class="flex gap-2 w-full sm:w-auto">
+                                        <button @click="isCalendarOpen = false"
+                                            class="flex-1 sm:flex-none px-4 py-2.5 rounded-xl font-bold text-xs text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 transition">
+                                            Batal
+                                        </button>
+                                        <button @click="applyCalendarRange"
+                                            :disabled="!tempStart || !tempEnd"
+                                            :class="(!tempStart || !tempEnd) ? 'opacity-50 cursor-not-allowed' : ''"
+                                            class="flex-1 sm:flex-none px-4 py-2.5 bg-orange-500 text-white rounded-xl font-bold text-xs hover:bg-orange-600 transition shadow-lg shadow-orange-200">
+                                            Simpan
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </transition>
+                </teleport>
 
                 <!-- Notification Routing -->
                 <div>

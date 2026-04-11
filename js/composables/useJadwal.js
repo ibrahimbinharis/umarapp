@@ -164,10 +164,16 @@ function useJadwal(uiData, DB, modalState) {
             if (!jadwalForm.time_start || !jadwalForm.time_end) return window.showAlert("Jam mulai dan selesai wajib diisi", "Peringatan", "warning");
             try {
                 const timeRange = `${jadwalForm.time_start} - ${jadwalForm.time_end}`;
+                
+                // Map the Selected Teacher to their Username/NIG
+                const selectedGuru = (uiData.guru || []).find(g => g.full_name === jadwalForm.teacher.trim());
+                const teacherUsername = selectedGuru ? selectedGuru.username : '';
+
                 const payload = {
                     day: jadwalForm.day, gender: jadwalForm.gender,
                     mapel: jadwalForm.mapel.trim(), time: timeRange,
-                    class_name: jadwalForm.class_name.trim(), teacher: jadwalForm.teacher.trim()
+                    class_name: jadwalForm.class_name.trim(), teacher: jadwalForm.teacher.trim(),
+                    username: teacherUsername
                 };
                 if (jadwalForm.id) { await DB.update(jadwalForm.id, payload); window.showAlert("Jadwal berhasil diupdate!", "Sukses", "info"); }
                 else { await DB.create('jadwal', payload); window.showAlert("Jadwal berhasil ditambahkan!", "Sukses", "info"); }

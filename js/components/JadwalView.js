@@ -4,17 +4,23 @@ const JadwalView = {
         dayFilter: { type: Object, required: true },
         setDayFilter: { type: Function, required: true },
         jadwalGenderFilter: { type: String, required: true },
-        // openJadwalModal: { type: Function, required: true }, // We might need to emit or pass prop. useJadwal returns openJadwalModal
         openJadwalModal: Function,
         deleteJadwal: Function,
         userSession: Object,
         activeDropdown: [String, Number, null],
-        isModalOpen: Boolean // New Prop
+        isModalOpen: Boolean,
+        uiData: Object
     },
     emits: ['update:jadwalGenderFilter', 'toggle-dropdown'],
     setup(props) {
         const { ref, watch } = Vue;
         const days = ['Semua', 'Hari Ini', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Ahad'];
+
+        const getBookName = (mapelName) => {
+            if (!props.uiData?.mapel) return null;
+            const mapel = props.uiData.mapel.find(m => m.name === mapelName);
+            return mapel?.book_name || null;
+        };
 
         // FAB Click State
         const isFabClicked = ref(false);
@@ -33,7 +39,8 @@ const JadwalView = {
         return {
             days,
             isFabClicked,
-            onJadwalFabClick
+            onJadwalFabClick,
+            getBookName
         };
     },
     template: `
@@ -82,7 +89,13 @@ const JadwalView = {
                         <span class="text-[10px] font-bold text-slate-400">{{ item.day }}</span>
                     </div>
                     
-                    <h4 class="font-bold text-slate-800">{{ item.mapel }}</h4>
+                    <div class="flex flex-col">
+                        <h4 class="font-bold text-slate-800">{{ item.mapel }}</h4>
+                        <p v-if="getBookName(item.mapel)" class="text-[10px] font-medium text-slate-400 flex items-center gap-1">
+                            <span class="material-symbols-outlined text-xs">auto_stories</span>
+                            {{ getBookName(item.mapel) }}
+                        </p>
+                    </div>
                     
                     <div class="flex items-center gap-3 text-xs text-slate-500">
                         <div class="flex items-center gap-1">

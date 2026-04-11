@@ -16,7 +16,8 @@ function useMapel(uiData, DB, modalState) {
     // ===== STATE =====
     const mapelForm = reactive({
         id: null,
-        name: ''
+        name: '',
+        book_name: ''
     });
 
     const mapelModalState = reactive({
@@ -44,6 +45,11 @@ function useMapel(uiData, DB, modalState) {
         if (mapel) {
             mapelForm.id = mapel._id;
             mapelForm.name = mapel.name || '';
+            mapelForm.book_name = mapel.book_name || '';
+        } else {
+            mapelForm.id = null;
+            mapelForm.name = '';
+            mapelForm.book_name = '';
         }
         if (modalState) {
             modalState.isOpen = true;
@@ -59,6 +65,7 @@ function useMapel(uiData, DB, modalState) {
         if (modalState) modalState.isOpen = false;
         mapelForm.id = null;
         mapelForm.name = '';
+        mapelForm.book_name = '';
     };
 
     /**
@@ -68,8 +75,12 @@ function useMapel(uiData, DB, modalState) {
         return window.withSaving(async () => {
             if (!mapelForm.name || !mapelForm.name.trim()) { window.showAlert("Nama Mapel wajib diisi", "Peringatan", "warning"); return; }
             try {
-                if (mapelForm.id) { await DB.update(mapelForm.id, { name: mapelForm.name.trim() }); }
-                else { await DB.create('mapel', { name: mapelForm.name.trim() }); }
+                const mapelData = { 
+                    name: mapelForm.name.trim(),
+                    book_name: mapelForm.book_name.trim()
+                };
+                if (mapelForm.id) { await DB.update(mapelForm.id, mapelData); }
+                else { await DB.create('mapel', mapelData); }
                 if (window.refreshData) window.refreshData();
                 closeMapelModal();
                 window.showAlert(mapelForm.id ? "Mapel berhasil diupdate!" : "Mapel berhasil ditambahkan!", "Sukses", "info");

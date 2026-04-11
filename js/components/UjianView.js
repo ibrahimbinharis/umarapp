@@ -71,6 +71,12 @@ const UjianView = {
             searchQuery.value = '';
         };
 
+        const getBookName = (mapelName) => {
+            if (!props.uiData?.mapel) return null;
+            const mapel = props.uiData.mapel.find(m => m.name === mapelName);
+            return mapel?.book_name || null;
+        };
+
         return {
             getSantriName,
             formatDate,
@@ -79,7 +85,8 @@ const UjianView = {
             filteredSantriList,
             selectedSantriLabel,
             selectSantri,
-            clearSantri
+            clearSantri,
+            getBookName
         };
     },
     template: `
@@ -417,8 +424,14 @@ const UjianView = {
                             <div class="font-bold text-slate-800 text-xs truncate">
                                 {{ getSantriName(u.santri_id) }}
                             </div>
-                            <div class="text-[9px] text-slate-500 font-medium truncate">
-                                {{ u.detail || u.type }}
+                            <div class="flex flex-col gap-0.5">
+                                <div class="text-[9px] text-slate-500 font-medium truncate">
+                                    {{ u.detail || u.type }}
+                                </div>
+                                <div v-if="u.b_mapel || u.s_mapel" class="text-[8px] font-bold text-blue-400 flex items-center gap-1">
+                                    <span class="material-symbols-outlined text-[10px]">auto_stories</span>
+                                    {{ getBookName(u.b_mapel || u.s_mapel) }}
+                                </div>
                             </div>
                         </div>
 

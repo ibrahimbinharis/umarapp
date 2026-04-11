@@ -176,9 +176,9 @@ createApp({
         // santriForm moved to useSantri
 
 
-        // Global Data (Reactive Wrapper for UI lists)
         const uiData = reactive({
             santri: [],
+            users: [], // Master User Directory
             guru: [], // Master Data
             mapel: [], // Master Data
             kelas: [],
@@ -220,7 +220,7 @@ createApp({
         const jadwal = useJadwal(uiData, DB, modalState);
 
         // Initialize Absensi Composable
-        const absensi = useAbsensi(uiData, DB, modalState);
+        const absensi = useAbsensi(uiData, DB, modalState, userSession);
 
         // Initialize Target Composable
         const target = useTarget(uiData, DB, modalState);
@@ -308,7 +308,9 @@ createApp({
 
 
 
-        const mapelList = ['Fiqih', 'Aqidah Akhlaq', 'Bahasa Arab', 'Hadits', 'Sirah Nabawiyah', 'Tajwid', 'Matematika', 'B. Indonesia', 'B. Inggris'];
+        const mapelList = computed(() => {
+            return (uiData.mapel || []).map(m => m.name);
+        });
 
         // --- SYNC STATE ---
         const syncState = reactive({
@@ -754,6 +756,8 @@ createApp({
             let ujianList = activeData.filter(d => d.__type === 'ujian');
             let pelanggaranList = activeData.filter(d => d.__type === 'pelanggaran');
             let uangSakuList = activeData.filter(d => d.__type === 'uang_saku');
+            let jadwalList = activeData.filter(d => d.__type === 'jadwal');
+            let absensiList = activeData.filter(d => d.__type === 'absensi');
 
             // 2. APPLY WALI FILTER (Wali only sees their linked children's data)
             if (userSession.value && userSession.value.role === 'wali') {
@@ -797,6 +801,13 @@ createApp({
                 ujianList = ujianList.filter(d => mySantriIds.includes(d.santri_id) || mySantriNISs.includes(d.santri_id));
                 pelanggaranList = pelanggaranList.filter(d => mySantriIds.includes(d.santri_id) || mySantriNISs.includes(d.santri_id));
                 uangSakuList = uangSakuList.filter(d => mySantriIds.includes(d.santri_id) || mySantriNISs.includes(d.santri_id));
+                
+                // v37 Security: Filter Jadwal & Absensi by Guru Gender
+                jadwalList = jadwalList.filter(j => (j.gender || 'L') === myGender);
+                absensiList = absensiList.filter(a => {
+                    const j = activeData.find(d => d._id === a.jadwal_id);
+                    return !j || (j.gender || 'L') === myGender;
+                });
             }
 
             // 3. Assign to Reactive State
@@ -814,11 +825,12 @@ createApp({
             uiData.pelanggaran = pelanggaranList;
             uiData.uang_saku = uangSakuList;
 
+            uiData.users = activeData.filter(d => d.__type === 'user');
             uiData.guru = activeData.filter(d => d.__type === 'user' && d.role === 'guru');
             uiData.mapel = activeData.filter(d => d.__type === 'mapel');
             uiData.kelas = activeData.filter(d => d.__type === 'kelas');
-            uiData.jadwal = activeData.filter(d => d.__type === 'jadwal');
-            uiData.absensi = activeData.filter(d => d.__type === 'absensi');
+            uiData.jadwal = jadwalList;
+            uiData.absensi = absensiList;
             uiData.master_pelanggaran = activeData.filter(d => d.__type === 'pelanggaran_type');
             uiData.settings = activeData.filter(d => d.__type === 'settings');
 
@@ -1190,6 +1202,16 @@ createApp({
 
                 // Special handling for Double Back on Dashboard
                 if (currentView.value === 'dashboard') {
+                    // v37: Prevent 'Exit Toast' when closing modals/dropdowns
+                    // We check if the state we landed on is either the Dashboard view state
+                    // OR if it's the initial null state (which means we went back to the start)
+                    if (event.state && event.state.view === 'dashboard') return;
+                    if (!event.state) {
+                        // If land on null, check if we stayed on dashboard
+                        // (Usually means we closed a modal like 'notifOpen:true')
+                        return; 
+                    }
+
                     if (!exitAttempt.value) {
                         // First attempt: Cancel 'back' by pushing state again
                         window.history.pushState({ view: 'dashboard' }, '', '#dashboard');

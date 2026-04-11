@@ -24,11 +24,77 @@ const RekapView = {
         const isUploadingLogo = ref(false);
         const isJuzGridOpen = ref(false);
         const isCalendarOpen = ref(false);
-        const calendarViewDate = ref(new Date()); // Current month shown in left calendar
+        const viewMonth = ref(new Date().getMonth());
+        const viewYear = ref(new Date().getFullYear());
 
         const tempRange = reactive({
             start: props.rekapStartDate,
             end: props.rekapEndDate
+        });
+
+        const calendarWeeks = computed(() => {
+            const firstDay = new Date(viewYear.value, viewMonth.value, 1).getDay();
+            const daysInMonth = new Date(viewYear.value, viewMonth.value + 1, 0).getDate();
+            const todayStr = new Date().toISOString().split('T')[0];
+
+            const weeks = [];
+            for (let i = 0; i < firstDay; i++) weeks.push(null);
+            for (let d = 1; d <= daysInMonth; d++) {
+                const dateStr = `${viewYear.value}-${String(viewMonth.value + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                weeks.push({
+                    day: d,
+                    dateStr,
+                    isToday: dateStr === todayStr,
+                    isSelected: dateStr === tempRange.start || dateStr === tempRange.end,
+                    isInRange: tempRange.start && tempRange.end && dateStr > tempRange.start && dateStr < tempRange.end
+                });
+            }
+            return weeks;
+        });
+
+        const handleDateClick = (dateStr) => {
+            if (!tempRange.start || (tempRange.start && tempRange.end)) {
+                tempRange.start = dateStr;
+                tempRange.end = null;
+            } else {
+                if (dateStr < tempRange.start) {
+                    tempRange.start = dateStr;
+                    tempRange.end = null;
+                } else {
+                    tempRange.end = dateStr;
+                }
+            }
+        };
+
+        const applyRange = () => {
+            if (!tempRange.start) return;
+            const finalEnd = tempRange.end || tempRange.start;
+            emit('update:rekapStartDate', tempRange.start);
+            emit('update:rekapEndDate', finalEnd);
+            isCalendarOpen.value = false;
+        };
+
+        const moveMonth = (delta) => {
+            viewMonth.value += delta;
+            if (viewMonth.value > 11) { viewMonth.value = 0; viewYear.value++; }
+            if (viewMonth.value < 0) { viewMonth.value = 11; viewYear.value--; }
+        };
+
+        // --- Back Navigation for Modal (v37) ---
+        const handleCalendarPop = () => {
+            if (isCalendarOpen.value) isCalendarOpen.value = false;
+        };
+
+        watch(isCalendarOpen, (newVal) => {
+            if (newVal) {
+                window.history.pushState({ modal: 'rekap-calendar' }, '');
+                window.addEventListener('popstate', handleCalendarPop);
+            } else {
+                window.removeEventListener('popstate', handleCalendarPop);
+                if (window.history.state && window.history.state.modal === 'rekap-calendar') {
+                    window.history.back();
+                }
+            }
         });
 
         const parsedJuzProgress = computed(() => {
@@ -40,12 +106,6 @@ const RekapView = {
         });
 
         // Date Picker Helpers
-        const toYMD = (d) => {
-            const year = d.getFullYear();
-            const month = String(d.getMonth() + 1).padStart(2, '0');
-            const day = String(d.getDate()).padStart(2, '0');
-            return `${year}-${month}-${day}`;
-        };
         const formatDateShort = (ymd) => {
             if (!ymd) return '';
             const [y, m, d] = ymd.split('-');
@@ -57,16 +117,6 @@ const RekapView = {
             const s = props.uiData?.santri?.find(s => s.santri_id === props.rekapSantriId || s._id === props.rekapSantriId);
             return s ? s.full_name : '-- Pilih Santri --';
         });
-
-        const getDaysInMonth = (year, month) => {
-            const date = new Date(year, month, 1);
-            const days = [];
-            while (date.getMonth() === month) {
-                days.push(new Date(date));
-                date.setDate(date.getDate() + 1);
-            }
-            return days;
-        };
 
         const handleLogoUpload = async (event) => {
             const file = event.target.files[0];
@@ -87,102 +137,36 @@ const RekapView = {
             }
         };
 
-        const calendars = computed(() => {
-            const leftMonth = calendarViewDate.value.getMonth();
-            const leftYear = calendarViewDate.value.getFullYear();
-
-            const rightDate = new Date(leftYear, leftMonth + 1, 1);
-            const rightMonth = rightDate.getMonth();
-            const rightYear = rightDate.getFullYear();
-
-            const createMonthData = (y, m) => {
-                const days = getDaysInMonth(y, m);
-                const firstDayIdx = days[0].getDay(); // 0: Sunday, 1: Monday...
-                // Adjust for Monday start if needed, but standard is Sunday.
-                // The image shows M S S R K J S (Senin Selasa?) 
-                // Wait, image headers: M S S R K J S (Indonesian: Minggu Senin Selasa Rabu Kamis Jumat Sabtu)
-                // Actually M is Minggu (0), S is Senin (1)...
-                const paddedDays = Array(firstDayIdx).fill(null).concat(days);
-                return {
-                    name: props.monthNames[m],
-                    year: y,
-                    days: paddedDays
-                };
-            };
-
-            return [createMonthData(leftYear, leftMonth)];
-        });
-
-        const handleDateClick = (date) => {
-            if (!date) return;
-            const ymd = toYMD(date);
-
-            if (!tempRange.start || (tempRange.start && tempRange.end)) {
-                tempRange.start = ymd;
-                tempRange.end = null;
-            } else {
-                if (ymd < tempRange.start) {
-                    tempRange.start = ymd;
-                    tempRange.end = null;
-                } else {
-                    tempRange.end = ymd;
-                }
-            }
-        };
-
-        const isDateInRange = (date) => {
-            if (!date || !tempRange.start || !tempRange.end) return false;
-            const ymd = toYMD(date);
-            return ymd >= tempRange.start && ymd <= tempRange.end;
-        };
-
-        const isDateSelected = (date) => {
-            if (!date) return false;
-            const ymd = toYMD(date);
-            return ymd === tempRange.start || ymd === tempRange.end;
-        };
-
-        const applyRange = () => {
-            if (!tempRange.start) return;
-            const finalEnd = tempRange.end || tempRange.start;
-            emit('update:rekapStartDate', tempRange.start);
-            emit('update:rekapEndDate', finalEnd);
-            isCalendarOpen.value = false;
-        };
-
         const activeShortcut = computed(() => {
             const start = props.rekapStartDate;
             const end = props.rekapEndDate;
             if (!start || !end) return null;
 
             const todayD = new Date();
-            const today = toYMD(todayD);
+            const today = todayD.toISOString().split('T')[0];
 
             if (start === end && start === today) return 'realtime';
 
             const yesterdayD = new Date();
             yesterdayD.setDate(yesterdayD.getDate() - 1);
-            if (start === end && start === toYMD(yesterdayD)) return 'kemarin';
+            const yesterday = yesterdayD.toISOString().split('T')[0];
+            if (start === end && start === yesterday) return 'kemarin';
 
             const p7 = new Date();
             p7.setDate(p7.getDate() - 7);
-            if (end === today && start === toYMD(p7)) return '7hari';
+            const p7Str = p7.toISOString().split('T')[0];
+            if (end === today && start === p7Str) return '7hari';
 
             const p30 = new Date();
             p30.setDate(p30.getDate() - 30);
-            if (end === today && start === toYMD(p30)) return '30hari';
+            const p30Str = p30.toISOString().split('T')[0];
+            if (end === today && start === p30Str) return '30hari';
 
-            const startMonth = toYMD(new Date(todayD.getFullYear(), todayD.getMonth(), 1));
+            const startMonth = new Date(todayD.getFullYear(), todayD.getMonth(), 1).toISOString().split('T')[0];
             if (end === today && start === startMonth) return 'bulan-ini';
 
             return null;
         });
-
-        const moveMonth = (delta) => {
-            const d = new Date(calendarViewDate.value);
-            d.setMonth(d.getMonth() + delta);
-            calendarViewDate.value = d;
-        };
 
         let trendChart = null;
         let personalDonutChart = null;
@@ -359,9 +343,9 @@ const RekapView = {
         return {
             isJuzGridOpen, activeTab, activeMetric, totalWeight, tempSettings, isConfigOpen, configTab,
             isUploadingLogo, handleLogoUpload,
-            isCalendarOpen, calendarViewDate, tempRange, calendars, formatDateShort, toYMD,
+            isCalendarOpen, viewMonth, viewYear, tempRange, calendarWeeks, formatDateShort,
             rekapSelectedSantriName,
-            handleDateClick, isDateInRange, isDateSelected, applyRange, moveMonth, activeShortcut,
+            handleDateClick, applyRange, moveMonth, activeShortcut,
             parsedJuzProgress,
             handleSave: async () => {
                 if (totalWeight.value !== 100) return window.showAlert("Total bobot harus 100%", "Warning", "warning");
@@ -409,11 +393,11 @@ const RekapView = {
         <div class="px-2 pt-2">
             <div class="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
                 <div class="flex flex-col gap-3">
-                    <!-- Custom Range Picker Trigger -->
+                    <!-- Custom Range Picker Trigger (v37 Premium Style) -->
                     <div @click="isCalendarOpen = true; tempRange.start = rekapStartDate; tempRange.end = rekapEndDate" 
-                        class="flex items-center justify-center bg-white border border-slate-200 py-2 px-3 rounded-lg cursor-pointer hover:border-slate-300 transition-colors">
-                        <div class="text-center">
-                            <p class="text-sm font-bold text-slate-700">{{ formatDateShort(rekapStartDate) }} - {{ formatDateShort(rekapEndDate) }}</p>
+                        class="flex items-center justify-center bg-slate-50 border border-slate-200 py-2.5 px-3 rounded-xl cursor-pointer hover:bg-white hover:border-slate-300 transition-all active:scale-95 group shadow-sm">
+                        <div class="text-xs font-medium text-slate-600 flex items-center gap-2">
+                            <span class="font-bold text-slate-800 tracking-tight">{{ formatDateShort(rekapStartDate) }} — {{ formatDateShort(rekapEndDate) }}</span>
                         </div>
                     </div>
 
@@ -1076,52 +1060,65 @@ const RekapView = {
             </div>
         </teleport>
 
-        <!-- PREMIUM DATE RANGE PICKER MODAL -->
+        <!-- PREMIUM DATE RANGE PICKER MODAL (v37) -->
         <teleport to="body">
-            <div v-if="isCalendarOpen" @click.self="isCalendarOpen = false" 
-                class="fixed inset-0 z-[1000] bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
-                <div @click.stop class="bg-white rounded-xl w-full max-w-sm shadow-xl overflow-hidden animate-in zoom-in-95 duration-200">
-                    <div class="p-6 md:flex gap-8 overflow-y-auto max-h-[80vh]">
-                        <div v-for="(cal, calIdx) in calendars" :key="calIdx" class="flex-1 space-y-4">
-                            <div class="flex justify-between items-center mb-4">
-                                <button @click="moveMonth(-1)" class="p-1.5 rounded-lg border border-slate-100 bg-slate-50 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition-colors">
+            <div v-if="isCalendarOpen" 
+                class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-300"
+                style="z-index: 10000;"
+                @click.self="isCalendarOpen = false">
+                <div class="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden border border-slate-100 animate-scale-in">
+                    <div class="p-6">
+                        <div class="space-y-4">
+                            <!-- Calendar Header -->
+                            <div class="flex items-center justify-between mb-2">
+                                <button @click="moveMonth(-1)" 
+                                    class="p-1.5 rounded-lg border border-slate-100 bg-slate-50 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition-colors">
                                     <span class="material-symbols-outlined text-sm">chevron_left</span>
                                 </button>
-                                <h4 class="font-bold text-slate-700 text-sm">{{ cal.name }} {{ cal.year }}</h4>
-                                <button @click="moveMonth(1)" class="p-1.5 rounded-lg border border-slate-100 bg-slate-50 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition-colors">
+                                <div class="text-center flex-1">
+                                    <h3 class="font-black text-slate-800 text-sm tracking-tight">{{ monthNames[viewMonth] }} {{ viewYear }}</h3>
+                                </div>
+                                <button @click="moveMonth(1)" 
+                                    class="p-1.5 rounded-lg border border-slate-100 bg-slate-50 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition-colors">
                                     <span class="material-symbols-outlined text-sm">chevron_right</span>
                                 </button>
                             </div>
 
-                            <div class="grid grid-cols-7 gap-y-2 gap-x-1">
-                                <div v-for="dayName in ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab']" :key="dayName"
-                                    class="text-center text-[10px] font-bold text-slate-400 pb-2">
-                                    {{ dayName }}
-                                </div>
-                                <div v-for="(day, dayIdx) in cal.days" :key="dayIdx"
-                                    class="h-8 flex items-center justify-center text-xs font-semibold cursor-pointer transition-all relative"
-                                    :class="[
-                                        day ? 'hover:bg-blue-50' : 'pointer-events-none',
-                                        isDateSelected(day) ? 'bg-blue-600 text-white rounded-lg z-10 hover:bg-blue-700' : 'text-slate-700',
-                                        isDateInRange(day) ? 'bg-blue-50 text-blue-700' : '',
-                                        !isDateSelected(day) && day ? 'rounded-lg' : ''
-                                    ]"
-                                    @click="handleDateClick(day)">
-                                    {{ day ? day.getDate() : '' }}
+                            <!-- Calendar Grid -->
+                            <div class="grid grid-cols-7 gap-y-1 gap-x-1">
+                                <div v-for="d in ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab']" :key="d"
+                                    class="text-center text-[10px] font-bold text-slate-400 pb-2">{{ d }}</div>
+                                
+                                <div v-for="(day, idx) in calendarWeeks" :key="idx" 
+                                    @click="day && handleDateClick(day.dateStr)"
+                                    class="h-9 flex items-center justify-center text-xs font-semibold cursor-pointer transition-all relative rounded-lg"
+                                    :class="{
+                                        'pointer-events-none opacity-0': !day,
+                                        'bg-blue-600 text-white shadow-lg z-10': day?.isSelected,
+                                        'bg-blue-50 text-blue-700 font-bold': day?.isInRange,
+                                        'hover:bg-slate-100 text-slate-700': day && !day.isSelected && !day.isInRange
+                                    }">
+                                    <span v-if="day">{{ day.day }}</span>
+                                    <!-- Today Indicator Dot -->
+                                    <div v-if="day?.isToday" class="absolute bottom-1 size-1 rounded-full" 
+                                        :class="day.isSelected ? 'bg-white' : 'bg-blue-500'"></div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
+                    <!-- Footer -->
                     <div class="p-4 border-t flex flex-col sm:flex-row justify-between items-center gap-4 bg-slate-50">
-                        <div class="text-xs font-medium text-slate-600 flex items-center gap-2">
-                            {{ formatDateShort(tempRange.start) }} - {{ formatDateShort(tempRange.end || tempRange.start) }}
+                        <div class="text-[11px] font-black text-slate-700 flex flex-col items-center sm:items-start uppercase tracking-tight">
+                            <span>{{ formatDateShort(tempRange.start) }} — {{ formatDateShort(tempRange.end || tempRange.start) }}</span>
                         </div>
                         <div class="flex gap-2 w-full sm:w-auto">
-                            <button @click="isCalendarOpen = false" class="flex-1 sm:flex-none px-4 py-2.5 rounded-xl font-bold text-sm text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 transition">
+                            <button @click="isCalendarOpen = false"
+                                class="flex-1 sm:flex-none px-4 py-2.5 rounded-xl font-bold text-xs text-slate-500 bg-white border border-slate-200 hover:bg-slate-50 transition active:scale-95">
                                 Batal
                             </button>
-                            <button @click="applyRange" class="flex-1 sm:flex-none px-4 py-2.5 bg-blue-600 text-white rounded-xl font-bold text-sm hover:bg-blue-700 transition">
+                            <button @click="applyRange"
+                                class="flex-1 sm:flex-none px-6 py-2.5 bg-blue-600 text-white rounded-xl font-bold text-xs hover:bg-blue-700 transition shadow-md shadow-blue-200 active:scale-95">
                                 Terapkan
                             </button>
                         </div>

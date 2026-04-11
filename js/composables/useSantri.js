@@ -277,14 +277,14 @@ function useSantri(uiData, DB, userSession, modalState, refreshData, searchText)
                         }
                     }
 
-                    // Queue UPDATES for Cloud
+                    // Queue UPDATES for Cloud (Await to prevent IDB race condition)
                     for (const d of itemsToSoftDelete) {
                         if (d.__type) {
-                            DB.addToQueue('update', d.__type, { _id: d._id, _deleted: true });
+                            await DB.addToQueue('update', d.__type, { _id: d._id, _deleted: true });
                         }
                     }
 
-                    DB.saveAll(allData);
+                    await DB.saveAll(allData);
                     DB.triggerAutoSync();
 
                     refreshData();
@@ -333,13 +333,14 @@ function useSantri(uiData, DB, userSession, modalState, refreshData, searchText)
                         }
                     }
 
+                    // Await to prevent IDB race condition
                     for (const d of itemsToRestore) {
                         if (d.__type) {
-                            DB.addToQueue('update', d.__type, { _id: d._id, _deleted: false });
+                            await DB.addToQueue('update', d.__type, { _id: d._id, _deleted: false });
                         }
                     }
 
-                    DB.saveAll(allData);
+                    await DB.saveAll(allData);
                     DB.triggerAutoSync();
 
                     refreshData();

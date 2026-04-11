@@ -367,7 +367,7 @@
                             :set-day-filter="setDayFilter" :jadwal-gender-filter="jadwalGenderFilter"
                             :open-jadwal-modal="openJadwalModal" :delete-jadwal="deleteJadwal"
                             :user-session="userSession" :active-dropdown="activeDropdown"
-                            :is-modal-open="modalState.isOpen"
+                            :is-modal-open="modalState.isOpen" :ui-data="uiData"
                             @update:jadwal-gender-filter="jadwalGenderFilter = $event"
                             @toggle-dropdown="toggleDropdown"></jadwal-view>
                     </div>
@@ -557,9 +557,16 @@
 
                     <div v-if="currentView === 'absensi'">
                         <absensi-view :absensi-state="absensiState" :daily-jadwal="dailyJadwal"
+                            :jurnal-list="jurnalList"
                             :gender-filter="genderFilter" :absensi-day-name="absensiDayName"
                             :get-absensi-for-jadwal="getAbsensiForJadwal" :get-absensi-summary="getAbsensiSummary"
+                            :delete-absensi="deleteAbsensi"
                             :change-absensi-date="changeAbsensiDate" :open-absensi-page="openAbsensiPage"
+                            :set-quick-jurnal-filter="setQuickJurnalFilter"
+                            :move-calendar="moveCalendar" :select-calendar-date="selectCalendarDate"
+                            :apply-custom-range="applyCustomRange" :calendar-weeks="calendarWeeks"
+                            :month-names="monthNames" :format-date="formatDate"
+                            :ui-data="uiData"
                             @update:gender-filter="genderFilter = $event" :user-session="userSession"></absensi-view>
                     </div>
 
@@ -604,7 +611,13 @@
                                     <div class="size-11 rounded-full bg-blue-50 text-blue-500 flex items-center justify-center">
                                         <span class="material-symbols-outlined text-xl">book_2</span>
                                     </div>
-                                    <h3 class="font-bold text-slate-800 text-sm">{{ mapel.name }}</h3>
+                                    <div class="flex flex-col">
+                                        <h3 class="font-bold text-slate-800 text-sm">{{ mapel.name }}</h3>
+                                        <p v-if="mapel.book_name" class="text-[10px] font-medium text-slate-400 flex items-center gap-1 mt-0.5">
+                                            <span class="material-symbols-outlined text-xs">auto_stories</span>
+                                            {{ mapel.book_name }}
+                                        </p>
+                                    </div>
                                 </div>
                                 <div class="relative">
                                     <button @click.stop="toggleDropdown(mapel._id)"
@@ -929,10 +942,10 @@
                 </div>
 
                 <!-- Modal Content -->
-                <div class="p-6 overflow-y-auto">
+                <div class="flex-1 overflow-y-auto relative no-scrollbar">
 
                     <!-- FORM SANTRI -->
-                    <form v-if="modalState.view === 'santri-form'" @submit.prevent="saveSantri" class="space-y-4">
+                    <form v-if="modalState.view === 'santri-form'" @submit.prevent="saveSantri" class="p-6 space-y-4">
                         <div class="grid grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-xs font-bold text-slate-700 mb-1">ID Resmi (NIS)</label>
@@ -1000,7 +1013,7 @@
                     </form>
 
                     <!-- FORM GURU -->
-                    <form v-if="modalState.view === 'guru'" @submit.prevent="saveGuru" class="space-y-4">
+                    <form v-if="modalState.view === 'guru'" @submit.prevent="saveGuru" class="p-6 space-y-4">
                         <div>
                             <label class="block text-xs font-bold text-slate-700 mb-1">Nama Lengkap</label>
                             <input v-model="guruForm.full_name" type="text"
@@ -1041,7 +1054,7 @@
                     </form>
 
                     <!-- FORM JADWAL -->
-                    <form v-if="modalState.view === 'jadwal'" @submit.prevent="saveJadwal" class="space-y-4">
+                    <form v-if="modalState.view === 'jadwal'" @submit.prevent="saveJadwal" class="p-6 space-y-4">
                         <div>
                             <label class="block text-xs font-bold text-slate-700 mb-1">Hari</label>
                             <select v-model="jadwalForm.day"
@@ -1105,79 +1118,104 @@
                     </form>
 
                     <!-- FORM ABSENSI -->
-                    <div v-if="modalState.view === 'absensi'" class="space-y-4">
-                        <!-- Info Jadwal -->
-                        <div v-if="absensiState.activeJadwal"
-                            class="bg-blue-50 p-4 rounded-xl border border-blue-100 mb-4">
-                            <div class="flex justify-between items-start">
-                                <div>
-                                    <h4 class="font-bold text-slate-900">{{ absensiState.activeJadwal.mapel }}</h4>
-                                    <p class="text-xs text-slate-500 font-mono">{{ absensiState.activeJadwal.class_name
-                                        }} &bull; {{ absensiState.activeJadwal.time }}</p>
-                                    <p class="text-xs text-slate-500 mt-1">{{ absensiState.activeJadwal.teacher }}</p>
+                    <div v-if="modalState.view === 'absensi'">
+                        <div class="p-6 pb-2 space-y-4">
+                            <!-- INFO JADWAL -->
+                            <div v-if="absensiState.activeJadwal"
+                                class="bg-blue-50 p-4 rounded-xl border border-blue-100 mb-4">
+                                <div class="flex justify-between items-start">
+                                    <div>
+                                        <h4 class="font-bold text-slate-900">{{ absensiState.activeJadwal.mapel }}</h4>
+                                        <p class="text-xs text-slate-500 font-mono">{{ absensiState.activeJadwal.class_name }} &bull; {{ absensiState.activeJadwal.time }}</p>
+                                        <p class="text-xs text-slate-500 mt-1">{{ absensiState.activeJadwal.teacher }}</p>
+                                    </div>
+                                    <div class="bg-white px-2 py-1 rounded-lg border text-xs font-bold text-slate-500 shadow-sm">
+                                        {{ absensiState.santriList.length }} Santri
+                                    </div>
                                 </div>
-                                <div
-                                    class="bg-white px-2 py-1 rounded-lg border text-xs font-bold text-slate-500 shadow-sm">
-                                    {{ absensiState.santriList.length }} Santri
+                            </div>
+
+                            <!-- FORM JURNAL -->
+                            <div class="bg-white p-4 rounded-xl border border-slate-100 shadow-sm mb-4 space-y-4">
+                                <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                                    <span class="material-symbols-outlined text-base">menu_book</span> Jurnal Kelas
+                                </h3>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-700 mb-1">Materi Pokok / Pembahasan</label>
+                                    <textarea v-model="absensiState.jurnal.materi" rows="2" placeholder="Contoh: Fiqih Bab Wudhu, 45-56"
+                                        class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:outline-none"></textarea>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-700 mb-1">Catatan Kelas / Hambatan <span class="text-slate-400 font-normal">(Opsional)</span></label>
+                                    <textarea v-model="absensiState.jurnal.catatan" rows="2" placeholder="Contoh: Anak-anak kurang fokus karena hujan..."
+                                        class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:outline-none"></textarea>
+                                </div>
+                            </div>
+
+                            <!-- DIVIDER -->
+                            <div class="flex items-center gap-4 my-2">
+                                <div class="flex-1 h-px bg-slate-200"></div>
+                                <span class="text-xs font-black text-slate-400 uppercase tracking-widest">Absensi Santri</span>
+                                <div class="flex-1 h-px bg-slate-200"></div>
+                            </div>
+
+                            <!-- Bulk Actions -->
+                            <div class="flex gap-2 overflow-x-auto pb-2">
+                                <button type="button" @click="setAllAbsensi('H')"
+                                    class="px-3 py-1.5 rounded-lg bg-green-50 text-green-700 text-xs font-bold border border-green-200 hover:bg-green-100">Semua Hadir</button>
+                                <button type="button" @click="setAllAbsensi('S')"
+                                    class="px-3 py-1.5 rounded-lg bg-yellow-50 text-yellow-700 text-xs font-bold border border-yellow-200 hover:bg-yellow-100">Semua Sakit</button>
+                                <button type="button" @click="setAllAbsensi('I')"
+                                    class="px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 text-xs font-bold border border-blue-200 hover:bg-blue-100">Semua Izin</button>
+                                <button type="button" @click="setAllAbsensi('A')"
+                                    class="px-3 py-1.5 rounded-lg bg-red-50 text-red-700 text-xs font-bold border border-red-200 hover:bg-red-100">Semua Alpha</button>
+                            </div>
+
+                            <!-- Santri List -->
+                            <div class="space-y-2">
+                                <div v-for="s in absensiState.santriList" :key="s._id"
+                                    class="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-xl border border-slate-100 hover:border-slate-200 transition bg-slate-50/50 gap-2 sm:gap-0">
+                                    <div class="flex-1">
+                                        <p class="font-bold text-slate-800 text-sm">{{ s.full_name }}</p>
+                                        <p class="text-[10px] text-slate-400">{{ s.nis || '-' }}</p>
+                                    </div>
+                                    <div class="flex gap-1 bg-white p-1 rounded-lg border shadow-sm w-full sm:w-auto overflow-hidden">
+                                        <button type="button" @click="updateSantriStatus(s._id, 'H')"
+                                            class="flex-1 sm:size-8 px-2 py-1.5 sm:p-0 rounded-md flex items-center justify-center font-bold text-xs transition-all"
+                                            :class="formState[s._id] === 'H' ? 'bg-green-500 text-white shadow' : 'text-slate-400 hover:bg-slate-50'">H</button>
+                                        <button type="button" @click="updateSantriStatus(s._id, 'S')"
+                                            class="flex-1 sm:size-8 px-2 py-1.5 sm:p-0 rounded-md flex items-center justify-center font-bold text-xs transition-all"
+                                            :class="formState[s._id] === 'S' ? 'bg-yellow-500 text-white shadow' : 'text-slate-400 hover:bg-slate-50'">S</button>
+                                        <button type="button" @click="updateSantriStatus(s._id, 'I')"
+                                            class="flex-1 sm:size-8 px-2 py-1.5 sm:p-0 rounded-md flex items-center justify-center font-bold text-xs transition-all"
+                                            :class="formState[s._id] === 'I' ? 'bg-blue-500 text-white shadow' : 'text-slate-400 hover:bg-slate-50'">I</button>
+                                        <button type="button" @click="updateSantriStatus(s._id, 'A')"
+                                            class="flex-1 sm:size-8 px-2 py-1.5 sm:p-0 rounded-md flex items-center justify-center font-bold text-xs transition-all"
+                                            :class="formState[s._id] === 'A' ? 'bg-red-500 text-white shadow' : 'text-slate-400 hover:bg-slate-50'">A</button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Bulk Actions -->
-                        <div class="flex gap-2 overflow-x-auto pb-2">
-                            <button type="button" @click="setAllAbsensi('H')"
-                                class="px-3 py-1.5 rounded-lg bg-green-50 text-green-700 text-xs font-bold border border-green-200 hover:bg-green-100">Semua
-                                Hadir</button>
-                            <button type="button" @click="setAllAbsensi('S')"
-                                class="px-3 py-1.5 rounded-lg bg-yellow-50 text-yellow-700 text-xs font-bold border border-yellow-200 hover:bg-yellow-100">Semua
-                                Sakit</button>
-                            <button type="button" @click="setAllAbsensi('I')"
-                                class="px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 text-xs font-bold border border-blue-200 hover:bg-blue-100">Semua
-                                Izin</button>
-                            <button type="button" @click="setAllAbsensi('A')"
-                                class="px-3 py-1.5 rounded-lg bg-red-50 text-red-700 text-xs font-bold border border-red-200 hover:bg-red-100">Semua
-                                Alpha</button>
-                        </div>
-
-                        <!-- Santri List -->
-                        <div class="space-y-2 max-h-[400px] overflow-y-auto pr-1">
-                            <div v-for="s in absensiState.santriList" :key="s._id"
-                                class="flex items-center justify-between p-3 rounded-xl border border-slate-100 hover:border-slate-200 transition bg-slate-50/50">
-                                <div>
-                                    <p class="font-bold text-slate-800 text-sm">{{ s.full_name }}</p>
-                                    <p class="text-[10px] text-slate-400">{{ s.nis || '-' }}</p>
-                                </div>
-                                <div class="flex gap-1 bg-white p-1 rounded-lg border shadow-sm">
-                                    <button type="button" @click="updateSantriStatus(s._id, 'H')"
-                                        class="size-8 rounded-md flex items-center justify-center font-bold text-xs transition-all"
-                                        :class="formState[s._id] === 'H' ? 'bg-green-500 text-white shadow' : 'text-slate-400 hover:bg-slate-50'">H</button>
-                                    <button type="button" @click="updateSantriStatus(s._id, 'S')"
-                                        class="size-8 rounded-md flex items-center justify-center font-bold text-xs transition-all"
-                                        :class="formState[s._id] === 'S' ? 'bg-yellow-500 text-white shadow' : 'text-slate-400 hover:bg-slate-50'">S</button>
-                                    <button type="button" @click="updateSantriStatus(s._id, 'I')"
-                                        class="size-8 rounded-md flex items-center justify-center font-bold text-xs transition-all"
-                                        :class="formState[s._id] === 'I' ? 'bg-blue-500 text-white shadow' : 'text-slate-400 hover:bg-slate-50'">I</button>
-                                    <button type="button" @click="updateSantriStatus(s._id, 'A')"
-                                        class="size-8 rounded-md flex items-center justify-center font-bold text-xs transition-all"
-                                        :class="formState[s._id] === 'A' ? 'bg-red-500 text-white shadow' : 'text-slate-400 hover:bg-slate-50'">A</button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Actions -->
-                        <div class="pt-4 flex gap-3 border-t border-slate-50">
+                        <!-- Actions (Sticky Footer - Now Truly Outside the Padded Content) -->
+                        <div class="sticky bottom-0 bg-white p-6 z-30 flex gap-3 border-t border-slate-50 flex-wrap sm:flex-nowrap shadow-[0_-10px_20px_-10px_rgba(0,0,0,0.1)]">
+                            <button v-if="absensiState.activeJadwal && getAbsensiForJadwal(absensiState.activeJadwal._id)" type="button" @click="deleteAbsensi(getAbsensiForJadwal(absensiState.activeJadwal._id)._id).then(ok => { if(ok) closeModal(); })"
+                                class="w-full sm:w-auto px-6 py-3 rounded-xl border border-red-200 text-red-500 hover:bg-red-50 font-bold transition order-3 sm:order-none text-sm">
+                                Hapus
+                            </button>
                             <button type="button" @click="closeModal"
-                                class="flex-1 py-3 rounded-xl border border-slate-200 font-bold text-slate-600 hover:bg-slate-50 transition">Batal</button>
+                                class="flex-1 py-3 rounded-xl border border-slate-200 font-bold text-slate-600 hover:bg-slate-50 transition text-sm">Batal</button>
                             <button type="button" @click="saveAbsensi().then(ok => { if(ok) closeModal(); })"
-                                class="flex-1 py-3 rounded-xl bg-primary text-white font-bold hover:bg-blue-800 shadow-lg shadow-blue-900/20 transition">Simpan
-                                Absensi</button>
+                                class="flex-1 py-3 rounded-xl bg-primary text-white font-bold hover:bg-blue-800 shadow-lg shadow-blue-900/20 transition text-sm">
+                                Simpan Data
+                            </button>
                         </div>
                     </div>
 
 
 
                     <!-- FORM MASTER PELANGGARAN -->
-                    <div v-if="modalState.view === 'master_pelanggaran'" class="space-y-4">
+                    <div v-if="modalState.view === 'master_pelanggaran'" class="p-6 space-y-4">
                         <div>
                             <label class="block text-xs font-bold text-slate-700 mb-1">Nama Pelanggaran</label>
                             <input v-model="masterPelanggaranForm.name" type="text"
@@ -1201,12 +1239,18 @@
                     </div>
 
                     <!-- FORM MAPEL (Integrated v31) -->
-                    <form v-if="modalState.view === 'mapel'" @submit.prevent="saveMapel" class="space-y-4">
+                    <form v-if="modalState.view === 'mapel'" @submit.prevent="saveMapel" class="p-6 space-y-4">
                         <div>
                             <label class="block text-xs font-bold text-slate-700 mb-1">Nama Mata Pelajaran</label>
                             <input v-model="mapelForm.name" type="text"
                                 class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-primary bg-white"
                                 placeholder="Contoh: Matematika, Fiqih, dll" required>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">Nama Buku/Kitab</label>
+                            <input v-model="mapelForm.book_name" type="text"
+                                class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-primary bg-white"
+                                placeholder="Contoh: Bulughul Maram, Safinah, dll">
                         </div>
                         <div class="flex gap-3 pt-4">
                             <button type="button" @click="closeModal"
@@ -1217,7 +1261,7 @@
                     </form>
 
                     <!-- FORM KELAS (Integrated v31) -->
-                    <form v-if="modalState.view === 'kelas'" @submit.prevent="saveKelas" class="space-y-4">
+                    <form v-if="modalState.view === 'kelas'" @submit.prevent="saveKelas" class="p-6 space-y-4">
                         <div>
                             <label class="block text-xs font-bold text-slate-700 mb-1">Nama Kelas</label>
                             <input v-model="kelasForm.name" type="text"
@@ -1233,7 +1277,7 @@
                     </form>
 
                     <!-- FORM TARGET (Integrated v32) -->
-                    <div v-if="modalState.view === 'target-form'" class="space-y-5">
+                    <div v-if="modalState.view === 'target-form'" class="p-6 space-y-5">
                         <div class="flex items-center gap-3 mb-2 bg-blue-50 p-3 rounded-xl border border-blue-100">
                             <div
                                 class="size-10 bg-white rounded-full flex items-center justify-center font-bold text-blue-600 shadow-sm uppercase">
@@ -1301,7 +1345,7 @@
                     </div>
 
                     <!-- FORM BULK TARGET (Integrated v32) -->
-                    <div v-if="modalState.view === 'bulk-target'" class="space-y-6">
+                    <div v-if="modalState.view === 'bulk-target'" class="p-6 space-y-6">
                         <p
                             class="text-xs text-slate-500 bg-blue-50 p-3 rounded-xl border border-blue-100 flex items-start gap-2">
                             <span class="material-symbols-outlined text-blue-500 text-sm mt-0.5">info</span>
@@ -1359,7 +1403,7 @@
                     </div>
 
                     <!-- GRADING MODAL -->
-                    <div v-if="modalState.view === 'grading'" class="space-y-6">
+                    <div v-if="modalState.view === 'grading'" class="p-6 space-y-6">
                         <!-- Manual Score Input -->
                         <div
                             class="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex items-center justify-between">
@@ -1644,7 +1688,7 @@
 
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js?v=3.16').then(reg => {
+                navigator.serviceWorker.register('sw.js?v=3.17').then(reg => {
                     console.log('SW Registered!', reg);
 
                     // 1. Check if update is already waiting (e.g. from previous visit)
