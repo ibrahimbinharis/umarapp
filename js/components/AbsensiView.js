@@ -189,10 +189,26 @@ const AbsensiView = {
             </button>
         </div>
 
+        <!-- SHARED GENDER FILTER (v37) -->
+        <div class="px-4">
+            <div class="flex p-1 bg-slate-200/50 rounded-xl border border-slate-100 shadow-sm">
+                <button @click="$emit('update:genderFilter', 'L')"
+                    :class="genderFilter === 'L' ? 'bg-white text-blue-600 shadow-sm font-bold' : 'text-slate-500 hover:text-slate-600'"
+                    class="flex-1 py-2 text-xs rounded-lg transition-all flex items-center justify-center gap-2">
+                    Putra
+                </button>
+                <button @click="$emit('update:genderFilter', 'P')"
+                    :class="genderFilter === 'P' ? 'bg-white text-pink-500 shadow-sm font-bold' : 'text-slate-500 hover:text-slate-600'"
+                    class="flex-1 py-2 text-xs rounded-lg transition-all flex items-center justify-center gap-2">
+                    Putri
+                </button>
+            </div>
+        </div>
+
         <!-- ABSENSI TAB CONTENT -->
         <div v-if="absensiState.absensiTab === 'absensi'" class="px-4">
-            <!-- Header & Date Nav (Fixed) -->
-            <div class="fixed top-16 left-0 right-0 md:left-64 md:top-0 pt-0 px-4 pb-3 md:pt-0 md:px-6 md:pb-4 z-[100] bg-slate-50 md:bg-slate-50/90 backdrop-blur-md">
+            <!-- Header & Date Nav (Refactored for Desktop) -->
+            <div class="md:sticky md:top-[-1px] md:z-[50] md:bg-slate-50 md:pb-4">
                 <div class="bg-white p-4 rounded-xl border border-slate-100 shadow-sm space-y-4">
                     <!-- Date Navigator -->
                     <div class="flex items-center justify-between bg-slate-50 p-1 rounded-xl border border-slate-100">
@@ -211,22 +227,8 @@ const AbsensiView = {
                         </button>
                     </div>
 
-                    <!-- Gender Filter -->
-                    <div class="flex p-1 bg-slate-100 rounded-lg">
-                        <button @click="$emit('update:genderFilter', 'L')"
-                            :class="genderFilter === 'L' ? 'bg-white text-blue-600 shadow-sm font-bold' : 'text-slate-500 hover:text-slate-700'"
-                            class="flex-1 py-1.5 text-xs rounded-md transition-all">
-                            Putra
-                        </button>
-                        <button @click="$emit('update:genderFilter', 'P')"
-                            :class="genderFilter === 'P' ? 'bg-white text-pink-500 shadow-sm font-bold' : 'text-slate-500 hover:text-slate-700'"
-                            class="flex-1 py-1.5 text-xs rounded-md transition-all">
-                            Putri
-                        </button>
-                    </div>
-
                     <!-- Quick Filters (Capsule Style) -->
-                    <div class="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+                    <div class="flex items-center justify-center gap-2 overflow-x-auto no-scrollbar pb-1">
                         <button @click="isMyScheduleOnly = !isMyScheduleOnly" 
                             :class="isMyScheduleOnly ? 'bg-amber-500 text-white border-amber-500 shadow-amber-200' : 'bg-white text-slate-500 border-slate-100'"
                             class="shrink-0 px-4 py-1.5 rounded-full border text-[11px] font-bold transition active:scale-95 shadow-sm">
@@ -252,10 +254,7 @@ const AbsensiView = {
                 </div>
             </div>
 
-            <!-- Spacer for Fixed Header -->
-            <div class="h-[220px] md:h-[240px]"></div>
-
-            <div class="space-y-4">
+            <div class="space-y-4 pt-4">
                 <!-- Schedule List -->
                 <div v-if="displayedJadwal.length > 0" class="lg:grid lg:grid-cols-2 xl:grid-cols-3 lg:gap-4 space-y-3 lg:space-y-0 text-left">
                     <div v-for="item in displayedJadwal" :key="item._id"
@@ -410,20 +409,20 @@ const AbsensiView = {
 
             <div v-if="jurnalList.length > 0" class="relative">
                 <!-- Vertical Line -->
-                <div class="absolute left-6 md:left-14 top-0 bottom-0 w-0.5 bg-slate-200"></div>
+                <div class="absolute left-6 top-0 bottom-0 w-0.5 bg-slate-200"></div>
 
                 <div class="space-y-6 pt-4 pb-24">
-                    <div v-for="j in jurnalList" :key="j._id" class="relative flex flex-col md:flex-row md:items-start group">
+                    <div v-for="j in jurnalList" :key="j._id" class="relative flex flex-col group">
                         
-                        <!-- Date Badge (Circle overlapping the line) -->
-                        <div class="w-full md:w-28 shrink-0 flex justify-start md:justify-center z-10 pl-2 md:pl-0 pb-2 md:pt-2 bg-transparent">
+                        <!-- Date Badge -->
+                        <div class="w-full shrink-0 flex justify-start z-10 pl-2 pb-2 bg-transparent">
                             <div class="bg-primary text-white text-[9px] md:text-xs font-black px-2.5 py-1 rounded-full shadow-md z-10 text-center whitespace-nowrap">
                                 {{ formatDateLong(j.date) }}
                             </div>
                         </div>
 
                         <!-- Card Content -->
-                        <div class="flex-1 pl-8 md:pl-4 pr-2 w-full">
+                        <div class="flex-1 pl-12 pr-2 w-full">
                             <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm transition hover:shadow-md hover:border-blue-100">
                                 
                                 <!-- Card Header -->

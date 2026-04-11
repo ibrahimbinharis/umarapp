@@ -154,6 +154,12 @@ function useAbsensi(uiData, DB, modalState, userSession) {
             filtered = filtered.filter(a => a.date <= absensiState.jurnalEndDate);
         }
 
+        // Apply Gender Filter (v37 Integration)
+        filtered = filtered.filter(a => {
+            const jadwalObj = jadwalData.find(j => j._id === a.jadwal_id);
+            return (jadwalObj?.gender || 'L') === genderFilter.value;
+        });
+
         return filtered
             .map(a => {
                 const jadwalObj = jadwalData.find(j => j._id === a.jadwal_id);
