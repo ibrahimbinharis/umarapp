@@ -637,12 +637,14 @@ const ProfileView = {
                                 { role: 'admin', label: 'Admin', types: [
                                     { key: 'pelanggaran',  label: 'Pelanggaran',            icon: 'warning' },
                                     { key: 'uang_saku',    label: 'Riwayat Uang Saku',      icon: 'payments' },
+                                    { key: 'uang_saku_low', label: 'Saldo Menipis (Peringatan)', icon: 'error_outline' },
                                     { key: 'pengumuman',   label: 'Pengumuman',              icon: 'campaign' },
                                     { key: 'alert_harian', label: 'Alert Harian (Otomatis)', icon: 'schedule' },
                                 ]},
                                 { role: 'guru', label: 'Guru', types: [
                                     { key: 'pelanggaran',  label: 'Pelanggaran',            icon: 'warning' },
                                     { key: 'uang_saku',    label: 'Riwayat Uang Saku',      icon: 'payments' },
+                                    { key: 'uang_saku_low', label: 'Saldo Menipis (Peringatan)', icon: 'error_outline' },
                                     { key: 'pengumuman',   label: 'Pengumuman',              icon: 'campaign' },
                                     { key: 'alert_harian', label: 'Alert Harian (Otomatis)', icon: 'schedule' },
                                 ]},
@@ -672,7 +674,14 @@ const ProfileView = {
                                         <!-- Active types count badge -->
                                         <span v-if="(appConfig.notifications.targets || []).includes(roleDef.role)"
                                             class="text-[9px] font-black text-primary/70 bg-primary/10 px-2 py-0.5 rounded-full">
-                                            {{ roleDef.types.filter(t => (appConfig.notifications.types?.[t.key]?.targets || roleDef.types.map(x=>x.key)).includes(roleDef.role) && appConfig.notifications.types?.[t.key]?.enabled !== false).length }}/{{ roleDef.types.length }}
+                                            {{ 
+                                                roleDef.types.filter(t => {
+                                                    const defaults = (t.key === 'setoran' || t.key === 'ujian') ? ['wali'] : ['wali', 'guru', 'admin'];
+                                                    const targets = appConfig.notifications.types?.[t.key]?.targets || defaults;
+                                                    const isTypeEnabled = appConfig.notifications.types?.[t.key]?.enabled !== false;
+                                                    return targets.includes(roleDef.role) && isTypeEnabled;
+                                                }).length 
+                                            }}/{{ roleDef.types.length }}
                                         </span>
                                         <!-- Expand Arrow -->
                                         <span class="material-symbols-outlined text-base text-slate-400 transition-transform duration-300"
@@ -688,15 +697,20 @@ const ProfileView = {
                                             <div class="flex items-center justify-between px-4 py-2.5">
                                                 <div class="flex items-center gap-2.5">
                                                     <span class="material-symbols-outlined text-sm"
-                                                        :class="(appConfig.notifications.types?.[notifType.key]?.enabled !== false) && (appConfig.notifications.types?.[notifType.key]?.targets || roleDef.types.map(t=>t.key).concat([roleDef.role])).includes(roleDef.role) ? 'text-primary' : 'text-slate-300'">
+                                                        :class="(() => {
+                                                            const defaults = (notifType.key === 'setoran' || notifType.key === 'ujian') ? ['wali'] : ['wali', 'guru', 'admin'];
+                                                            const targets = appConfig.notifications.types?.[notifType.key]?.targets || defaults;
+                                                            const isTypeEnabled = appConfig.notifications.types?.[notifType.key]?.enabled !== false;
+                                                            return targets.includes(roleDef.role) && isTypeEnabled ? 'text-primary' : 'text-slate-300';
+                                                        })()">
                                                         {{ notifType.icon }}
                                                     </span>
                                                     <span class="text-xs font-semibold text-slate-600">{{ notifType.label }}</span>
                                                 </div>
                                                 <!-- Toggle: tambah/hapus role ini dari targets jenis notif -->
                                                 <button @click.stop="() => {
-                                                    const allDefaultRolesForType = notifType.key === 'setoran' || notifType.key === 'ujian' ? ['wali'] : ['wali','guru','admin'];
-                                                    const current = appConfig.notifications.types?.[notifType.key]?.targets || allDefaultRolesForType;
+                                                    const defaults = (notifType.key === 'setoran' || notifType.key === 'ujian') ? ['wali'] : ['wali','guru','admin'];
+                                                    const current = appConfig.notifications.types?.[notifType.key]?.targets || defaults;
                                                     const isOn = current.includes(roleDef.role);
                                                     const newTargets = isOn ? current.filter(r => r !== roleDef.role) : [...current, roleDef.role];
                                                     saveAppConfig({ ['notifications.types.' + notifType.key + '.targets']: newTargets });
@@ -705,16 +719,16 @@ const ProfileView = {
                                                 class="w-9 h-5 rounded-full transition-all duration-300 relative p-[3px] flex-shrink-0"
                                                 :class="[
                                                     (() => {
-                                                        const allDefaultRolesForType = notifType.key === 'setoran' || notifType.key === 'ujian' ? ['wali'] : ['wali','guru','admin'];
-                                                        const current = appConfig.notifications.types?.[notifType.key]?.targets || allDefaultRolesForType;
+                                                        const defaults = (notifType.key === 'setoran' || notifType.key === 'ujian') ? ['wali'] : ['wali','guru','admin'];
+                                                        const current = appConfig.notifications.types?.[notifType.key]?.targets || defaults;
                                                         return current.includes(roleDef.role) ? 'bg-primary' : 'bg-slate-200';
                                                     })(),
                                                     !(appConfig.notifications.targets || []).includes(roleDef.role) ? 'opacity-30 cursor-not-allowed' : ''
                                                 ]">
                                                 <div class="size-[13px] bg-white rounded-full shadow-sm transition-all duration-300 transform"
                                                     :class="(() => {
-                                                        const allDefaultRolesForType = notifType.key === 'setoran' || notifType.key === 'ujian' ? ['wali'] : ['wali','guru','admin'];
-                                                        const current = appConfig.notifications.types?.[notifType.key]?.targets || allDefaultRolesForType;
+                                                        const defaults = (notifType.key === 'setoran' || notifType.key === 'ujian') ? ['wali'] : ['wali','guru','admin'];
+                                                        const current = appConfig.notifications.types?.[notifType.key]?.targets || defaults;
                                                         return current.includes(roleDef.role) ? 'translate-x-[16px]' : 'translate-x-0';
                                                     })()"></div>
                                                 </button>
