@@ -69,17 +69,30 @@ function useJadwal(uiData, DB, modalState, userSession) {
             items = items.filter(j => j.username === currentUser);
         }
 
+        // Apply Day Filter logic
+        let finalItems = [];
         if (dayFilter.value === 'Semua') {
-            return items;
-        }
-
-        if (dayFilter.value === 'Hari Ini') {
+            finalItems = items;
+        } else if (dayFilter.value === 'Hari Ini') {
             const daysMap = ['Ahad', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
             const today = daysMap[new Date().getDay()];
-            return items.filter(j => j.day === today);
+            finalItems = items.filter(j => j.day === today);
+        } else {
+            finalItems = items.filter(j => j.day === dayFilter.value);
         }
 
-        return items.filter(j => j.day === dayFilter.value);
+        // SORTING LOGIC: Always sort by Day Order THEN by Time
+        const dayOrder = { 'Senin': 1, 'Selasa': 2, 'Rabu': 3, 'Kamis': 4, 'Jumat': 5, 'Sabtu': 6, 'Ahad': 7 };
+        
+        return finalItems.sort((a, b) => {
+            // 1. Sort by Day
+            const orderA = dayOrder[a.day] || 99;
+            const orderB = dayOrder[b.day] || 99;
+            if (orderA !== orderB) return orderA - orderB;
+
+            // 2. Sort by Time (HH:mm - HH:mm)
+            return (a.time || '').localeCompare(b.time || '');
+        });
     });
 
     // ... (mapelOptions, kelasOptions, guruOptions unmodified) ...
