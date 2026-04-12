@@ -10,7 +10,7 @@
  * Dependencies: DB (from core.js), uiData (from parent)
  */
 
-function useJadwal(uiData, DB, modalState) {
+function useJadwal(uiData, DB, modalState, userSession) {
     // Get Vue from global (loaded via CDN)
     const { reactive, computed, ref } = Vue;
 
@@ -36,6 +36,11 @@ function useJadwal(uiData, DB, modalState) {
     });
 
     /**
+     * My Schedule Toggle
+     */
+    const isMyScheduleOnly = ref(false);
+
+    /**
      * Day filter for view
      */
     const dayFilter = reactive({
@@ -49,6 +54,7 @@ function useJadwal(uiData, DB, modalState) {
      */
     const filteredJadwalList = computed(() => {
         const jadwalData = uiData.jadwal || [];
+        const currentUser = userSession.value ? userSession.value.username : '';
 
         // Filter by Gender
         // Strict Check: j.gender must equal jadwalGenderFilter.value
@@ -57,6 +63,11 @@ function useJadwal(uiData, DB, modalState) {
             const g = j.gender || 'L';
             return g === jadwalGenderFilter.value;
         });
+
+        // Apply "My Schedule" Filter
+        if (isMyScheduleOnly.value && currentUser) {
+            items = items.filter(j => j.username === currentUser);
+        }
 
         if (dayFilter.value === 'Semua') {
             return items;
@@ -215,6 +226,7 @@ function useJadwal(uiData, DB, modalState) {
         // jadwalModalState removed, utilizing global modalState
         dayFilter,
         jadwalGenderFilter,
+        isMyScheduleOnly,
 
         // Computed
         filteredJadwalList,

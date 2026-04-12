@@ -9,9 +9,10 @@ const JadwalView = {
         userSession: Object,
         activeDropdown: [String, Number, null],
         isModalOpen: Boolean,
-        uiData: Object
+        uiData: Object,
+        isMyScheduleOnly: Boolean
     },
-    emits: ['update:jadwalGenderFilter', 'toggle-dropdown'],
+    emits: ['update:jadwalGenderFilter', 'toggle-dropdown', 'update:isMyScheduleOnly'],
     setup(props) {
         const { ref, watch } = Vue;
         const days = ['Semua', 'Hari Ini', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Ahad'];
@@ -64,7 +65,14 @@ const JadwalView = {
             </div>
 
             <!-- Day Filter (Scrollable) -->
-            <div class="flex gap-2 overflow-x-auto pb-2 custom-scrollbar">
+            <div class="flex gap-2 overflow-x-auto pb-2 no-scrollbar custom-scrollbar items-center">
+                <button @click="$emit('update:isMyScheduleOnly', !isMyScheduleOnly)" 
+                    :class="isMyScheduleOnly ? 'bg-amber-500 text-white border-amber-500 shadow-amber-200' : 'bg-white text-slate-500 border-slate-100'"
+                    class="shrink-0 px-4 py-1.5 rounded-full border text-[11px] font-bold transition active:scale-95 shadow-sm">
+                    Jadwalku
+                </button>
+                <div class="w-px h-4 bg-slate-200 shrink-0 mx-1"></div>
+                
                 <button v-for="day in days" :key="day"
                     @click="setDayFilter(day)"
                     class="px-4 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all border"

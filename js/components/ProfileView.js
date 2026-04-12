@@ -20,7 +20,8 @@ const ProfileView = {
         activeSubMenu: { type: [String, Object], default: null },
         // App Settings Props
         appConfig: { type: Object },
-        saveAppConfig: { type: Function }
+        saveAppConfig: { type: Function },
+        checkUpdate: { type: Function }
     },
     setup(props, { emit }) {
         const { ref, watch } = Vue;
@@ -342,6 +343,19 @@ const ProfileView = {
                              <div v-if="isPushEnabled" class="size-2 bg-emerald-500 rounded-full animate-pulse"></div>
                              <span class="material-symbols-outlined text-slate-300 text-lg">chevron_right</span>
                         </div>
+                    </button>
+
+                    <!-- Cek Update (v37 Standardized) -->
+                    <button @click="checkUpdate" 
+                        class="w-full flex items-center justify-between p-5 hover:bg-slate-50/50 transition active:bg-slate-50">
+                        <div class="flex items-center gap-4 text-slate-700">
+                            <span class="material-symbols-outlined text-slate-400">system_update_alt</span>
+                            <div class="text-left">
+                                <p class="font-bold text-sm">Cek Pembaruan</p>
+                                <p class="text-[10px] text-slate-400 font-medium">Versi Saat Ini: v{{ appVersion }}</p>
+                            </div>
+                        </div>
+                        <span class="material-symbols-outlined text-slate-300 text-lg">chevron_right</span>
                     </button>
                 </div>
 
@@ -731,7 +745,7 @@ const ProfileView = {
 
             <!-- VERSION INFO (Always at bottom inside card) -->
             <div class="p-6 border-t border-slate-50 bg-slate-50/20 text-center mt-auto">
-                <p class="text-[9px] font-black text-slate-300 uppercase tracking-[0.4em]">Tahfidz App v{{ appVersion }}</p>
+                <p class="text-[9px] font-black text-slate-400 uppercase tracking-[0.4em]">Versi Aplikasi {{ appVersion.replace('v', '') }}</p>
             </div>
         </div>
 

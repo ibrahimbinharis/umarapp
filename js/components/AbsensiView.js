@@ -228,7 +228,7 @@ const AbsensiView = {
                     </div>
 
                     <!-- Quick Filters (Capsule Style) -->
-                    <div class="flex items-center justify-center gap-2 overflow-x-auto no-scrollbar pb-1">
+                    <div class="flex items-center lg:justify-center gap-2 overflow-x-auto no-scrollbar pb-1 px-1">
                         <button @click="isMyScheduleOnly = !isMyScheduleOnly" 
                             :class="isMyScheduleOnly ? 'bg-amber-500 text-white border-amber-500 shadow-amber-200' : 'bg-white text-slate-500 border-slate-100'"
                             class="shrink-0 px-4 py-1.5 rounded-full border text-[11px] font-bold transition active:scale-95 shadow-sm">

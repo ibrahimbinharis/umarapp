@@ -133,10 +133,10 @@ createApp({
         };
 
         const showConfirm = (options) => {
-            confirmState.title = options.title || 'Konfirmasi';
-            confirmState.message = options.message || 'Apakah Anda yakin?';
-            confirmState.confirmText = options.confirmText || 'Ya';
-            confirmState.cancelText = options.cancelText || 'Batal';
+            confirmState.title = options.title !== undefined ? options.title : 'Konfirmasi';
+            confirmState.message = options.message !== undefined ? options.message : 'Apakah Anda yakin?';
+            confirmState.confirmText = options.confirmText !== undefined ? options.confirmText : 'Ya';
+            confirmState.cancelText = options.cancelText !== undefined ? options.cancelText : 'Batal';
             confirmState.type = options.type || 'danger';
             confirmState.onConfirm = options.onConfirm || null;
             confirmState.onCancel = options.onCancel || null;
@@ -217,7 +217,7 @@ createApp({
         const kelas = useKelas(uiData, DB, modalState);
 
         // Initialize Jadwal Composable
-        const jadwal = useJadwal(uiData, DB, modalState);
+        const jadwal = useJadwal(uiData, DB, modalState, userSession);
 
         // Initialize Absensi Composable
         const absensi = useAbsensi(uiData, DB, modalState, userSession);
@@ -1317,6 +1317,47 @@ createApp({
             return p;
         };
 
+        const checkUpdate = async () => {
+            loading.value = true;
+            try {
+                // Fresh fetch from server (specifically from app_config row)
+                const { data, error } = await sb.from('settings')
+                    .select('latest_version')
+                    .eq('_id', 'app_config')
+                    .maybeSingle();
+                
+                if (error) throw error;
+                const latest = data ? data.latest_version : null;
+                
+                if (latest && latest !== APP_CONFIG.version) {
+                    showAlert(
+                        `Versi baru ${latest} sudah tersedia! (Versi saat ini: ${APP_CONFIG.version}). Perbarui sekarang untuk mendapatkan fitur terbaru dan perbaikan bug.`,
+                        'Update Tersedia',
+                        'info'
+                    );
+                    // Since it's info showAlert, it only has OK.
+                    // If we want a confirm, we use showConfirm
+                    /* 
+                    showConfirm({
+                        title: 'Update Tersedia',
+                        message: `Versi baru ${latest} tersedia. Perbarui sekarang?`,
+                        confirmText: 'Ya, Update',
+                        cancelText: 'Nanti',
+                        type: 'info',
+                        onConfirm: () => { ... }
+                    });
+                    */
+                } else {
+                    showToast('Aplikasi sudah versi terbaru (' + APP_CONFIG.version + ')', 'success');
+                }
+            } catch (e) {
+                console.error("Check update failed", e);
+                showToast('Gagal mengecek pembaruan', 'warning');
+            } finally {
+                loading.value = false;
+            }
+        };
+
         // --- EXPORT TO TEMPLATE ---
         return {
             formatWANumber,
@@ -1329,6 +1370,7 @@ createApp({
             mapelList, syncState,
             myMenus, bottomMenus, isSidebarVisible, isHeaderVisible, isHeaderHidden, handleGlobalScroll,
             navigateTo, handleLogin, handleRegister, isRegisterMode, logout, getInitials, refreshData, forceSync,
+            checkUpdate,
             syncStatus, dataStats,
             isSaving, // Global save guard for disabling buttons
             closeModal,
