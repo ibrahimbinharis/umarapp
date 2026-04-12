@@ -1330,23 +1330,29 @@ createApp({
                 const latest = data ? data.latest_version : null;
                 
                 if (latest && latest !== APP_CONFIG.version) {
-                    showAlert(
-                        `Versi baru ${latest} sudah tersedia! (Versi saat ini: ${APP_CONFIG.version}). Perbarui sekarang untuk mendapatkan fitur terbaru dan perbaikan bug.`,
-                        'Update Tersedia',
-                        'info'
-                    );
-                    // Since it's info showAlert, it only has OK.
-                    // If we want a confirm, we use showConfirm
-                    /* 
                     showConfirm({
-                        title: 'Update Tersedia',
-                        message: `Versi baru ${latest} tersedia. Perbarui sekarang?`,
-                        confirmText: 'Ya, Update',
+                        title: 'Update Tersedia 🚀',
+                        message: `Versi baru ${latest} sudah tersedia! (Anda menggunakan ${APP_CONFIG.version}). Perbarui sekarang untuk mendapatkan fitur terbaru dan perbaikan sistem?`,
+                        confirmText: 'Update',
                         cancelText: 'Nanti',
                         type: 'info',
-                        onConfirm: () => { ... }
+                        onConfirm: () => {
+                            loading.value = true;
+                            // Unregister Service Worker & Hard Reload
+                            if ('serviceWorker' in navigator) {
+                                navigator.serviceWorker.getRegistrations().then(registrations => {
+                                    for (let registration of registrations) {
+                                        registration.unregister();
+                                    }
+                                    // Tambahkan cache buster agar browser ambil file fresh
+                                    const cleanUrl = window.location.origin + window.location.pathname;
+                                    window.location.href = cleanUrl + '?v=' + Date.now();
+                                });
+                            } else {
+                                window.location.reload(true);
+                            }
+                        }
                     });
-                    */
                 } else {
                     showToast('Aplikasi sudah versi terbaru (' + APP_CONFIG.version + ')', 'success');
                 }
