@@ -6,7 +6,7 @@
  */
 
 function useSantri(uiData, DB, userSession, modalState, refreshData, searchText) {
-    const { reactive, computed, ref } = Vue;
+    const { reactive, computed, ref, watch, onUnmounted } = Vue;
 
     // ===== STATE (Matched to app_vue.js) =====
     const santriGenderFilter = ref('L'); // L = Putra, P = Putri
@@ -352,6 +352,29 @@ function useSantri(uiData, DB, userSession, modalState, refreshData, searchText)
             }
         });
     };
+
+    // --- Back Navigation Logic (v37) ---
+    const handlePopState = (e) => {
+        if (modalState.isOpen && modalState.view === 'santri-form') {
+            modalState.isOpen = false;
+        }
+    };
+
+    watch(() => modalState.isOpen, (newVal) => {
+        if (newVal && modalState.view === 'santri-form') {
+            window.history.pushState({ modal: 'santri-form' }, '');
+            window.addEventListener('popstate', handlePopState);
+        } else if (!newVal && modalState.view === 'santri-form') {
+            window.removeEventListener('popstate', handlePopState);
+            if (window.history.state && window.history.state.modal === 'santri-form') {
+                window.history.back();
+            }
+        }
+    });
+
+    onUnmounted(() => {
+        window.removeEventListener('popstate', handlePopState);
+    });
 
     return {
         santriForm,

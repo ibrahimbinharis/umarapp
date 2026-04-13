@@ -123,7 +123,36 @@ const UangSakuView = {
 
         const formattedSaldo = computed(() => props.formatRp ? props.formatRp(props.saldo) : 'Rp 0');
 
+        const mainTab = ref('saldo'); // 'saldo' or 'histori'
         const genderFilter = ref('semua');
+        const isMobile = ref(window.innerWidth < 768);
+
+        // Resize listener for responsive behavior
+        const handleResize = () => { isMobile.value = window.innerWidth < 768; };
+        onMounted(() => window.addEventListener('resize', handleResize));
+        onUnmounted(() => window.removeEventListener('resize', handleResize));
+
+        const filteredTransactions = computed(() => {
+            let list = (props.uiData.uang_saku || []).filter(tx => !tx._deleted);
+            
+            // Filter by gender
+            if (genderFilter.value !== 'semua') {
+                const genderIds = new Set(props.uiData.santri?.filter(s => s.gender === genderFilter.value).map(s => s._id || s.santri_id));
+                list = list.filter(tx => genderIds.has(tx.santri_id));
+            }
+
+            if (props.santriSearchQuery) {
+                const q = props.santriSearchQuery.toLowerCase();
+                list = list.filter(tx => {
+                    const s = (props.uiData.santri || []).find(x => x._id === tx.santri_id || x.santri_id === tx.santri_id);
+                    return (s?.full_name?.toLowerCase().includes(q)) || 
+                           (tx.keterangan?.toLowerCase().includes(q)) ||
+                           (tx.santri_id?.toLowerCase().includes(q));
+                });
+            }
+
+            return list.sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal)).slice(0, 100);
+        });
 
         const computedGlobalSummary = computed(() => {
             const santriList = (props.uiData.santri || []);
@@ -190,6 +219,9 @@ const UangSakuView = {
             // bulk
             handleBulkJumlahInput,
             formatDisplayJumlah,
+            mainTab,
+            filteredTransactions,
+            isMobile,
             
             clearActiveSantri: () => {
                 if (window.history.state && window.history.state.detail) {
@@ -460,10 +492,26 @@ const UangSakuView = {
         <!-- Landing Page: Santri List with Bulk Select -->
         <div v-else class="space-y-4 fade-in mt-2" :class="isBulkMode ? 'pb-80' : 'pb-10'">
             <!-- Search -->
-            <div class="relative" :class="{'px-2': false}">
+            <div class="relative">
                 <span class="material-symbols-outlined absolute left-4 top-[14px] text-slate-400 text-lg">search</span>
-                <input type="text" :value="santriSearchQuery" @input="updateSearch($event.target.value)" placeholder="Cari santri..." 
+                <input type="text" :value="santriSearchQuery" @input="updateSearch($event.target.value)" placeholder="Cari santri atau transaksi..." 
                     class="w-full bg-white pl-12 pr-4 py-3 rounded-2xl text-sm border border-slate-200 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all font-medium shadow-sm">
+            </div>
+
+            <!-- Tab Switcher (Saldo vs Histori) - NEW v37 -->
+            <div class="flex bg-white p-1 rounded-2xl border border-slate-100 shadow-sm">
+                <button @click="mainTab = 'saldo'" 
+                    class="flex-1 py-2.5 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-2"
+                    :class="mainTab === 'saldo' ? 'bg-primary text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'">
+                    <span class="material-symbols-outlined text-sm">account_balance_wallet</span>
+                    Saldo
+                </button>
+                <button @click="mainTab = 'histori'" 
+                    class="flex-1 py-2.5 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-2"
+                    :class="mainTab === 'histori' ? 'bg-primary text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'">
+                    <span class="material-symbols-outlined text-sm">history</span>
+                    Histori
+                </button>
             </div>
 
             <!-- Filter Tabs + Bulk hint -->
@@ -502,76 +550,127 @@ const UangSakuView = {
                 Tekan lama kartu santri untuk aksi masal
             </p>
 
-            <!-- List -->
+            <!-- List Content -->
             <div class="space-y-3 mt-1">
-                <div v-for="santri in santriBalances" :key="santri._id"
-                    class="bg-white border text-left border-slate-100 p-4 rounded-3xl shadow-sm flex items-center justify-between group hover:border-primary transition cursor-pointer select-none touch-pan-y relative overflow-hidden"
-                    :class="{
-                        'border-primary ring-2 ring-primary/10 bg-blue-50/30': bulkSelectedIds.includes(santri._id),
-                        'active:scale-[0.98]': !isBulkMode
-                    }"
-                    @click="handleCardClick(santri._id)"
-                    @mousedown="handleStart($event, santri._id)"
-                    @mousemove="handleMove($event)"
-                    @mouseup="handleEnd"
-                    @touchstart.passive="handleStart($event, santri._id)"
-                    @touchmove.passive="handleMove($event)"
-                    @touchend="handleEnd"
-                    @touchcancel="handleEnd">
+                
+                <!-- View 1: Saldo View (Student List) -->
+                <template v-if="mainTab === 'saldo'">
+                    <div v-for="santri in santriBalances" :key="santri._id"
+                        class="bg-white border text-left border-slate-100 p-4 rounded-3xl shadow-sm flex items-center justify-between group hover:border-primary transition cursor-pointer select-none touch-pan-y relative overflow-hidden"
+                        :class="{
+                            'border-primary ring-2 ring-primary/10 bg-blue-50/30': bulkSelectedIds.includes(santri._id),
+                            'active:scale-[0.98]': !isBulkMode
+                        }"
+                        @click="handleCardClick(santri._id)"
+                        @mousedown="handleStart($event, santri._id)"
+                        @mousemove="handleMove($event)"
+                        @mouseup="handleEnd"
+                        @touchstart.passive="handleStart($event, santri._id)"
+                        @touchmove.passive="handleMove($event)"
+                        @touchend="handleEnd"
+                        @touchcancel="handleEnd">
 
-                    <!-- Bulk selection checkmark -->
-                    <Transition name="modal-fade">
-                        <div v-if="bulkSelectedIds.includes(santri._id)"
-                            class="absolute top-0 right-0 bg-primary text-white p-1 rounded-bl-2xl z-10">
-                            <span class="material-symbols-outlined text-sm font-black">check</span>
-                        </div>
-                    </Transition>
+                        <!-- Bulk selection checkmark -->
+                        <Transition name="modal-fade">
+                            <div v-if="bulkSelectedIds.includes(santri._id)"
+                                class="absolute top-0 right-0 bg-primary text-white p-1 rounded-bl-2xl z-10">
+                                <span class="material-symbols-outlined text-sm font-black">check</span>
+                            </div>
+                        </Transition>
 
-                    <div class="flex items-center gap-3">
-                        <div class="size-11 rounded-full flex items-center justify-center font-bold text-sm transition-all"
-                            :class="bulkSelectedIds.includes(santri._id) ? 'bg-primary text-white' : 'bg-blue-50 text-blue-600'">
-                            {{ getInitials(santri.full_name) }}
+                        <div class="flex items-center gap-3">
+                            <div class="size-11 rounded-full flex items-center justify-center font-bold text-sm transition-all"
+                                :class="bulkSelectedIds.includes(santri._id) ? 'bg-primary text-white' : 'bg-blue-50 text-blue-600'">
+                                {{ getInitials(santri.full_name) }}
+                            </div>
+                            <div>
+                                <p class="font-bold text-slate-800 text-sm mb-0.5">{{ santri.full_name }}</p>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-md font-medium">{{ santri.santri_id }}</span>
+                                    <span class="text-[10px] text-slate-400">{{ santri.kelas }}</span>
+                                </div>
+                            </div>
                         </div>
-                        <div>
-                            <p class="font-bold text-slate-800 text-sm mb-0.5">{{ santri.full_name }}</p>
-                            <div class="flex items-center gap-2">
-                                <span class="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-md font-medium">{{ santri.santri_id }}</span>
-                                <span class="text-[10px] text-slate-400">{{ santri.kelas }}</span>
+                        <div class="text-right">
+                            <p class="font-black text-sm" :class="santri.saldo >= 0 ? 'text-slate-800' : 'text-red-500'">{{ formatRp(santri.saldo) }}</p>
+                            <p class="text-[10px] font-bold tracking-wider text-slate-400 uppercase">Saldo</p>
+                        </div>
+                    </div>
+                    <div v-if="!santriBalances.length" class="text-center py-10 bg-white rounded-3xl border border-dashed border-slate-200">
+                        <span class="material-symbols-outlined text-4xl text-slate-300 mb-2">group_off</span>
+                        <p class="text-sm font-medium text-slate-500">Tidak ada santri ditemukan</p>
+                    </div>
+                </template>
+
+                <!-- View 2: Global Histori View (Transaction List) -->
+                <template v-else>
+                    <div v-for="item in filteredTransactions" :key="item._id" 
+                        class="bg-white border text-left border-slate-100 p-4 rounded-3xl shadow-sm flex items-center justify-between group hover:border-blue-100 transition cursor-pointer active:scale-[0.98]"
+                        @click="selectSantri(item.santri_id)">
+                        <div class="flex items-center gap-3 w-full">
+                            <div class="size-11 rounded-2xl flex items-center justify-center font-bold relative shrink-0"
+                                :class="item.type === 'masuk' ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'">
+                                <span class="material-symbols-outlined text-xl">{{ item.type === 'masuk' ? 'south_west' : 'north_east' }}</span>
+                                <!-- Small indicator for student identity -->
+                                <div class="absolute -bottom-1 -right-1 size-5 rounded-full bg-white border border-slate-100 flex items-center justify-center text-[8px] text-slate-400 font-bold shadow-sm">
+                                    {{ getInitials((uiData.santri.find(s => s._id === item.santri_id || s.santri_id === item.santri_id))?.full_name) }}
+                                </div>
+                            </div>
+                            <div class="min-w-0 flex-1">
+                                <p class="font-black text-slate-800 text-[13px] truncate">{{ (uiData.santri.find(s => s._id === item.santri_id || s.santri_id === item.santri_id))?.full_name || 'Santri' }}</p>
+                                <p class="text-xs font-bold text-slate-500 mb-0.5 line-clamp-1">{{ item.keterangan }}</p>
+                                <p class="text-[9px] font-black text-slate-300 tracking-tighter">{{ formatDateLocal(item.tanggal) }}</p>
+                            </div>
+                            <div class="text-right shrink-0">
+                                <p class="font-black text-[14px] whitespace-nowrap"
+                                    :class="item.type === 'masuk' ? 'text-emerald-500' : 'text-red-500'">
+                                    {{ item.type === 'masuk' ? '+' : '-' }}{{ formatRp(item.jumlah) }}
+                                </p>
+                                <span class="bg-slate-50 text-slate-400 px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-tighter">
+                                    {{ item.type }}
+                                </span>
                             </div>
                         </div>
                     </div>
-                    <div class="text-right">
-                        <p class="font-black text-sm" :class="santri.saldo >= 0 ? 'text-slate-800' : 'text-red-500'">{{ formatRp(santri.saldo) }}</p>
-                        <p class="text-[10px] font-bold tracking-wider text-slate-400 uppercase">Saldo</p>
+                    <div v-if="!filteredTransactions.length" class="text-center py-10 bg-white rounded-3xl border border-dashed border-slate-200">
+                        <span class="material-symbols-outlined text-4xl text-slate-200 mb-2">history</span>
+                        <p class="text-sm font-medium text-slate-400">Belum ada riwayat transaksi</p>
                     </div>
-                </div>
-                <div v-if="!santriBalances.length" class="text-center py-10 bg-white rounded-3xl border border-dashed border-slate-200">
-                    <span class="material-symbols-outlined text-4xl text-slate-300 mb-2">group_off</span>
-                    <p class="text-sm font-medium text-slate-500">Tidak ada santri ditemukan</p>
-                </div>
+                </template>
+
             </div>
         </div>
 
-        <!-- v37: BULK ACTION BOTTOM SHEET -->
+        <!-- v37: BULK ACTION BOTTOM SHEET / DESKTOP POPUP -->
         <Teleport to="body">
-            <!-- Sheet -->
-            <Transition name="slide-up">
-                <div v-if="isBulkMode && (userSession.role === 'admin' || userSession.role === 'guru')"
-                    class="fixed bottom-0 left-0 right-0 z-[300] bg-white rounded-t-[24px] shadow-[0_-12px_40px_-12px_rgba(0,0,0,0.25)] border-t border-slate-100 overflow-hidden">
+            <!-- Backdrop (Desktop/Mobile overlay) -->
+            <Transition name="fade">
+                <div v-if="isBulkMode && (userSession.role === 'admin' || userSession.role === 'guru')" 
+                    @click="$emit('bulk-cancel')"
+                    class="fixed inset-0 z-[250] bg-slate-900/40 backdrop-blur-[2px]"></div>
+            </Transition>
 
-                    <!-- Handle -->
-                    <div class="flex justify-center pt-2.5 pb-1">
-                        <div class="w-9 h-[3px] bg-slate-200 rounded-full"></div>
+            <!-- Sheet / Popup Container -->
+            <Transition :name="isMobile ? 'slide-up' : 'fade'">
+                <div v-if="isBulkMode && (userSession.role === 'admin' || userSession.role === 'guru')"
+                    class="fixed z-[300] bg-white shadow-2xl transition-all duration-200 overflow-hidden
+                           bottom-0 left-0 right-0 rounded-t-[32px] border-t border-slate-100
+                           md:bottom-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 
+                           md:w-full md:max-w-md md:rounded-[28px] md:border md:shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)]">
+
+                    <!-- Handle (Click to close - Mobile Only) -->
+                    <div v-if="isMobile" @click="$emit('bulk-cancel')" class="flex justify-center pt-3 pb-2 cursor-pointer active:opacity-50 transition-opacity">
+                        <div class="w-12 h-1.5 bg-slate-200 rounded-full"></div>
                     </div>
 
                     <!-- Compact Form -->
-                    <div class="px-4 pt-2 pb-4 space-y-2.5">
+                    <div class="px-4 pb-6 space-y-3" :class="isMobile ? 'pt-2' : 'pt-6'">
 
-                        <!-- Header row: count badge + type toggle + close -->
+                        <!-- Header row -->
                         <div class="flex items-center gap-2">
 
                             <!-- Type toggle -->
-                            <div class="flex-1 bg-slate-100 p-0.5 rounded-xl flex shadow-inner">
+                            <div class="flex-1 bg-slate-100 p-1 rounded-xl flex shadow-inner">
                                 <button @click="bulkForm.activeType = 'masuk'"
                                     class="flex-1 py-2 rounded-[10px] text-xs font-bold transition-all"
                                     :class="!bulkForm.activeType || bulkForm.activeType === 'masuk' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-400'">
@@ -583,12 +682,6 @@ const UangSakuView = {
                                     Pengeluaran
                                 </button>
                             </div>
-
-                            <!-- Close -->
-                            <button @click="$emit('bulk-cancel')"
-                                class="shrink-0 size-7 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 hover:bg-red-50 hover:text-red-500 transition">
-                                <span class="material-symbols-outlined text-base">close</span>
-                            </button>
                         </div>
 
                         <!-- Nominal -->

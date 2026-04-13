@@ -14,7 +14,7 @@
 // Composable function (global, no module export needed)
 function useGuru(uiData, DB, modalState) {
     // Get Vue from global (loaded via CDN)
-    const { reactive, computed } = Vue;
+    const { reactive, computed, watch, onUnmounted } = Vue;
 
     // ===== STATE =====
     const guruForm = reactive({
@@ -137,6 +137,29 @@ function useGuru(uiData, DB, modalState) {
             }
         });
     };
+
+    // --- Back Navigation Logic (v37) ---
+    const handlePopState = (e) => {
+        if (modalState.isOpen && modalState.view === 'guru') {
+            modalState.isOpen = false;
+        }
+    };
+
+    watch(() => modalState.isOpen, (newVal) => {
+        if (newVal && modalState.view === 'guru') {
+            window.history.pushState({ modal: 'guru-form' }, '');
+            window.addEventListener('popstate', handlePopState);
+        } else if (!newVal && modalState.view === 'guru') {
+            window.removeEventListener('popstate', handlePopState);
+            if (window.history.state && window.history.state.modal === 'guru-form') {
+                window.history.back();
+            }
+        }
+    });
+
+    onUnmounted(() => {
+        window.removeEventListener('popstate', handlePopState);
+    });
 
     // ===== PUBLIC API =====
     return {

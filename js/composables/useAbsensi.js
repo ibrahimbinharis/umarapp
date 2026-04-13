@@ -13,7 +13,7 @@
 
 function useAbsensi(uiData, DB, modalState, userSession) {
     // Get Vue from global (loaded via CDN)
-    const { reactive, computed, ref } = Vue;
+    const { reactive, computed, ref, watch, onUnmounted } = Vue;
 
     // Helper: Get Local Date String YYYY-MM-DD
     const getLocalDateString = (dateObj = new Date()) => {
@@ -522,6 +522,29 @@ function useAbsensi(uiData, DB, modalState, userSession) {
             });
         });
     };
+
+    // --- Back Navigation Logic (v37) ---
+    const handlePopState = (e) => {
+        if (modalState.isOpen && modalState.view === 'absensi') {
+            modalState.isOpen = false;
+        }
+    };
+
+    watch(() => modalState.isOpen, (newVal) => {
+        if (newVal && modalState.view === 'absensi') {
+            window.history.pushState({ modal: 'absensi' }, '');
+            window.addEventListener('popstate', handlePopState);
+        } else if (!newVal && modalState.view === 'absensi') {
+            window.removeEventListener('popstate', handlePopState);
+            if (window.history.state && window.history.state.modal === 'absensi') {
+                window.history.back();
+            }
+        }
+    });
+
+    onUnmounted(() => {
+        window.removeEventListener('popstate', handlePopState);
+    });
 
     // ===== RETURN =====
     return {

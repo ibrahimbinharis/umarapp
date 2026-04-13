@@ -8,7 +8,7 @@
  */
 
 function usePengumuman(uiData, DB, userSession, refreshData) {
-    const { ref, reactive, computed } = Vue;
+    const { ref, reactive, computed, watch, onMounted, onUnmounted } = Vue;
 
     // ===== STATE =====
     const PAGE_SIZE = 10;
@@ -39,6 +39,42 @@ function usePengumuman(uiData, DB, userSession, refreshData) {
         isUploading: false,
         isInlineUploading: false,
         error: null
+    });
+
+    
+    // ===== NAVIGATION HISTORY MANAGEMENT =====
+    const MODAL_STATE_KEY = 'modal_pengumuman';
+
+    // Watch for modal state changes to push/pop history
+    watch([showFormModal, showDetailModal], ([formActive, detailActive], [prevForm, prevDetail]) => {
+        const isActive = formActive || detailActive;
+        const wasActive = prevForm || prevDetail;
+
+        if (isActive && !wasActive) {
+            // Modal opened: Push state
+            window.history.pushState({ modal: MODAL_STATE_KEY }, "");
+        } else if (!isActive && wasActive) {
+            // Modal closed manually: Back history IF it was pushed by us
+            if (window.history.state?.modal === MODAL_STATE_KEY) {
+                window.history.back();
+            }
+        }
+    });
+
+    const handlePopState = (event) => {
+        // If back button pressed and we were in a modal, close it
+        if (showFormModal.value || showDetailModal.value) {
+            showFormModal.value = false;
+            showDetailModal.value = false;
+        }
+    };
+
+    onMounted(() => {
+        window.addEventListener('popstate', handlePopState);
+    });
+
+    onUnmounted(() => {
+        window.removeEventListener('popstate', handlePopState);
     });
 
     // ===== COMPUTED =====

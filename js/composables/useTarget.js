@@ -12,7 +12,7 @@
 
 function useTarget(uiData, DB, modalState) {
     // Get Vue from global (loaded via CDN)
-    const { reactive, computed, ref, watch, nextTick } = Vue;
+    const { reactive, computed, ref, watch, nextTick, onUnmounted } = Vue;
 
     // ===== STATE =====
 
@@ -287,6 +287,30 @@ function useTarget(uiData, DB, modalState) {
             }
         });
     };
+
+    // --- Back Navigation Logic (v37) ---
+    const handlePopState = (e) => {
+        if (modalState.isOpen && (modalState.view === 'target-form' || modalState.view === 'bulk-target')) {
+            modalState.isOpen = false;
+        }
+    };
+
+    watch(() => modalState.isOpen, (newVal) => {
+        const views = ['target-form', 'bulk-target'];
+        if (newVal && views.includes(modalState.view)) {
+            window.history.pushState({ modal: 'target' }, '');
+            window.addEventListener('popstate', handlePopState);
+        } else if (!newVal && views.includes(modalState.view)) {
+            window.removeEventListener('popstate', handlePopState);
+            if (window.history.state && window.history.state.modal === 'target') {
+                window.history.back();
+            }
+        }
+    });
+
+    onUnmounted(() => {
+        window.removeEventListener('popstate', handlePopState);
+    });
 
     // ===== RETURN =====
     return {

@@ -11,7 +11,7 @@
  */
 
 function useUangSaku(uiData, DB, refreshUI, userSession, currentView) {
-    const { ref, reactive, computed, onMounted, watch } = Vue;
+    const { ref, reactive, computed, onMounted, onUnmounted, watch } = Vue;
 
     // State
     const activeSantriId = ref('');
@@ -305,7 +305,41 @@ function useUangSaku(uiData, DB, refreshUI, userSession, currentView) {
         }
     });
 
-    onMounted(checkRoleAndAutoSelect);
+    // v37: Navigation Guard for Bulk Mode
+    watch(isBulkMode, (newVal) => {
+        if (newVal && currentView?.value === 'uang_saku' && (!window.history.state || !window.history.state.bulk)) {
+            window.history.pushState({ view: 'uang_saku', bulk: true }, '', '#uang_saku-bulk');
+        } else if (!newVal && window.history.state?.bulk) {
+            window.history.back();
+        }
+    });
+
+    // Handle System Back for all modals/states
+    const handlePopState = (event) => {
+        if (currentView?.value !== 'uang_saku') return;
+        
+        // If we were in bulk mode and the state is gone, cancel it
+        if (isBulkMode.value && (!event.state || !event.state.bulk)) {
+            cancelBulkMode();
+        }
+        // If we were in detail and the state is gone, clear it
+        if (activeSantriId.value && (!event.state || (!event.state.detail && !event.state.bulk))) {
+            activeSantriId.value = '';
+        }
+        // If modal was open, close it
+        if (isTxModalOpen.value && (!event.state || !event.state.modal)) {
+            closeTxModal();
+        }
+    };
+
+    onMounted(() => {
+        checkRoleAndAutoSelect();
+        window.addEventListener('popstate', handlePopState);
+    });
+    onUnmounted(() => {
+        window.removeEventListener('popstate', handlePopState);
+    });
+
     watch(() => userSession?.value, checkRoleAndAutoSelect);
 
     return {

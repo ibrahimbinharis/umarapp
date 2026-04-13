@@ -634,12 +634,12 @@
 
                                     <!-- Dropdown Menu -->
                                     <div v-if="activeDropdown === mapel._id"
-                                        class="absolute right-0 top-10 w-32 bg-white border border-slate-100 shadow-2xl rounded-2xl z-20 flex flex-col py-1 overflow-hidden animate-scale-in origin-top-right">
-                                        <button @click="openMapelModal(mapel); toggleDropdown(null)"
+                                        class="absolute right-0 top-10 w-32 bg-white border border-slate-100 shadow-2xl rounded-2xl z-50 flex flex-col py-1 overflow-hidden animate-scale-in origin-top-right">
+                                        <button @click.stop="toggleDropdown(null); openMapelModal(mapel)"
                                             class="flex items-center gap-2 px-4 py-2.5 text-xs font-bold text-slate-600 hover:bg-blue-50 hover:text-blue-600 transition text-left w-full">
                                             <span class="material-symbols-outlined text-base">edit</span> Edit
                                         </button>
-                                        <button @click="deleteMapel(mapel._id); toggleDropdown(null)"
+                                        <button @click.stop="toggleDropdown(null); deleteMapel(mapel._id)"
                                             class="flex items-center gap-2 px-4 py-2.5 text-xs font-bold text-slate-600 hover:bg-red-50 hover:text-red-500 transition text-left w-full">
                                             <span class="material-symbols-outlined text-base">delete</span> Hapus
                                         </button>
@@ -699,12 +699,12 @@
 
                                     <!-- Dropdown Menu -->
                                     <div v-if="activeDropdown === kelas._id"
-                                        class="absolute right-0 top-10 w-32 bg-white border border-slate-100 shadow-2xl rounded-2xl z-20 flex flex-col py-1 overflow-hidden animate-scale-in origin-top-right">
-                                        <button @click="openKelasModal(kelas); toggleDropdown(null)"
+                                        class="absolute right-0 top-10 w-32 bg-white border border-slate-100 shadow-2xl rounded-2xl z-50 flex flex-col py-1 overflow-hidden animate-scale-in origin-top-right">
+                                        <button @click.stop="toggleDropdown(null); openKelasModal(kelas)"
                                             class="flex items-center gap-2 px-4 py-2.5 text-xs font-bold text-slate-600 hover:bg-blue-50 hover:text-blue-600 transition text-left w-full">
                                             <span class="material-symbols-outlined text-base">edit</span> Edit
                                         </button>
-                                        <button @click="deleteKelas(kelas._id); toggleDropdown(null)"
+                                        <button @click.stop="toggleDropdown(null); deleteKelas(kelas._id)"
                                             class="flex items-center gap-2 px-4 py-2.5 text-xs font-bold text-slate-600 hover:bg-red-50 hover:text-red-500 transition text-left w-full">
                                             <span class="material-symbols-outlined text-base">delete</span> Hapus
                                         </button>
@@ -931,13 +931,21 @@
 
         <!-- TARGET MODALS (Moved to Global Modal Container) -->
 
-        <!-- MODAL OVERLAY (Updated v30: Simple fade to preserve backdrop-blur) -->
+        <!-- MODAL OVERLAY (Updated v37: Supports Immersive/Full Page) -->
         <div v-if="modalState.isOpen" @click.self="closeModal"
-            class="fixed inset-0 z-[10000] bg-black/40 backdrop-blur-md flex items-center justify-center p-4 simple-fade">
+            :class="[
+                (modalState.view === 'absensi' || modalState.view === 'santri-form' || modalState.view === 'guru' || modalState.view === 'target-form' || modalState.view === 'bulk-target') ? 'p-0' : 'p-4',
+                'fixed inset-0 z-[10000] bg-black/40 backdrop-blur-md flex items-center justify-center md:p-4 simple-fade'
+            ]">
             <div @click.stop
-                class="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden max-h-[90vh] flex flex-col animate-scale-in">
-                <!-- Modal Header -->
-                <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                :class="[
+                    (modalState.view === 'absensi' || modalState.view === 'santri-form' || modalState.view === 'guru' || modalState.view === 'target-form' || modalState.view === 'bulk-target') 
+                        ? 'h-full md:h-auto md:max-h-[90vh] max-w-2xl md:rounded-[40px]' 
+                        : 'max-w-md rounded-3xl max-h-[90vh] w-full',
+                    'bg-white shadow-2xl overflow-hidden flex flex-col animate-scale-in'
+                ]">
+                <!-- Default Modal Header (Hidden for Immersive Views) -->
+                <div v-if="modalState.view !== 'absensi' && modalState.view !== 'santri-form' && modalState.view !== 'guru' && modalState.view !== 'target-form' && modalState.view !== 'bulk-target'" class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
                     <h3 class="font-bold text-lg text-slate-800">{{ modalState.title }}</h3>
                     <button @click="closeModal"
                         class="size-8 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-red-500 transition"><span
@@ -948,113 +956,196 @@
                 <div class="flex-1 overflow-y-auto relative no-scrollbar">
 
                     <!-- FORM SANTRI -->
-                    <form v-if="modalState.view === 'santri-form'" @submit.prevent="saveSantri" class="p-6 space-y-4">
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-xs font-bold text-slate-700 mb-1">ID Resmi (NIS)</label>
-                                <input v-model="santriForm.nis" type="text" readonly
-                                    class="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:outline-none focus:border-primary focus:ring-4 focus:ring-blue-500/10 bg-slate-100 text-slate-500 transition-all cursor-not-allowed">
+                    <div v-if="modalState.view === 'santri-form'" class="h-full flex flex-col">
+                        <!-- Immersive Header for Santri -->
+                        <div class="relative w-full shrink-0 min-h-[160px] flex flex-col justify-end p-8 pb-6 overflow-hidden bg-white">
+                            <!-- Back Button Row -->
+                            <div class="absolute top-0 left-0 w-full p-6 pb-0 z-[100]">
+                                <button @click="closeModal"
+                                    class="text-slate-900 hover:text-primary transition active:scale-95 flex items-center justify-center p-2 -ml-3">
+                                    <span class="material-symbols-outlined text-4xl font-light">chevron_left</span>
+                                </button>
                             </div>
-                            <div>
-                                <label class="block text-xs font-bold text-slate-700 mb-1">Kelas</label>
-                                <select v-model="santriForm.class_id"
-                                    class="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:outline-none focus:border-primary focus:ring-4 focus:ring-blue-500/10 bg-slate-50/50 text-slate-700 transition-all">
-                                    <option value="">Pilih Kelas</option>
-                                    <option v-for="k in uiData.kelas" :value="k.name">{{ k.name }}</option>
-                                </select>
-                            </div>
-                        </div>
 
-                        <div>
-                            <label class="block text-xs font-bold text-slate-700 mb-1">Nama Lengkap</label>
-                            <input v-model="santriForm.full_name" type="text"
-                                class="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:outline-none focus:border-primary focus:ring-4 focus:ring-blue-500/10 bg-slate-50/50 text-slate-700 transition-all placeholder:font-normal placeholder:text-slate-400"
-                                placeholder="Nama lengkap santri" required>
-                        </div>
-
-                        <div>
-                            <label class="block text-xs font-bold text-slate-700 mb-1">Username (Opsional)</label>
-                            <input v-model="santriForm.username" type="text"
-                                class="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:outline-none focus:border-primary focus:ring-4 focus:ring-blue-500/10 bg-slate-50/50 text-slate-700 transition-all placeholder:font-normal placeholder:text-slate-400"
-                                placeholder="Username untuk login alternatif">
-                        </div>
-
-                        <div>
-                            <label class="block text-xs font-bold text-slate-700 mb-1">Jenis Kelamin</label>
-                            <select v-model="santriForm.gender"
-                                class="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:outline-none focus:border-primary focus:ring-4 focus:ring-blue-500/10 bg-slate-50/50 text-slate-700 transition-all">
-                                <option value="L">Laki-laki</option>
-                                <option value="P">Perempuan</option>
-                            </select>
-                        </div>
-
-                        <!-- Informasi Wali -->
-                        <div class="pt-4 border-t border-slate-100">
-                            <h4 class="text-xs font-bold text-slate-800 mb-3">Informasi Wali</h4>
-                            <div class="grid grid-cols-2 gap-3">
-                                <input v-model="santriForm.parent_name" type="text"
-                                    class="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:outline-none focus:border-primary focus:ring-4 focus:ring-blue-500/10 bg-slate-50/50 text-slate-700 transition-all placeholder:font-normal placeholder:text-slate-400 text-sm"
-                                    placeholder="Nama Wali">
-                                <input v-model="santriForm.parent_phone" type="text"
-                                    class="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:outline-none focus:border-primary focus:ring-4 focus:ring-blue-500/10 bg-slate-50/50 text-slate-700 transition-all placeholder:font-normal placeholder:text-slate-400 text-sm"
-                                    placeholder="No. HP / WA">
+                            <!-- Blurred Decoration (Blue/Indigo theme) -->
+                            <div class="absolute -top-10 -right-10 size-48 bg-indigo-500/10 rounded-full blur-3xl opacity-50"></div>
+                            <div class="absolute -bottom-10 -left-10 size-48 bg-sky-500/10 rounded-full blur-3xl opacity-50"></div>
+                            
+                            <div class="relative z-10">
+                                <div class="flex items-center gap-2 mb-3 mt-10">
+                                    <span class="inline-flex items-center text-[10px] font-black px-3 py-1 rounded-full bg-indigo-50 text-indigo-600 border-2 border-indigo-100 uppercase tracking-tighter">
+                                        Data Santri
+                                    </span>
+                                    <span v-if="santriForm.nis" class="inline-flex items-center text-[10px] font-black px-3 py-1 rounded-full bg-slate-50 text-slate-500 border-2 border-slate-100 uppercase tracking-tighter font-mono">
+                                        NIS: {{ santriForm.nis }}
+                                    </span>
+                                </div>
+                                <h3 class="font-black text-slate-900 text-2xl leading-tight">
+                                    {{ modalState.isEdit ? 'Edit Data Santri' : 'Tambah Santri Baru' }}
+                                </h3>
+                                <p class="text-[11px] text-slate-400 mt-2 font-bold uppercase tracking-widest flex items-center gap-2">
+                                    <span class="material-symbols-outlined text-xs">manage_accounts</span>
+                                    <span>Kelola informasi detail santri dalam sistem</span>
+                                </p>
                             </div>
                         </div>
 
-                        <!-- Target Hafalan Removed -->
+                        <!-- Scrollable Body -->
+                        <div class="flex-1 overflow-y-auto p-8 pt-2 space-y-6">
+                            <form @submit.prevent="saveSantri" class="space-y-6 pb-6">
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-700 mb-1 tracking-tight">ID Resmi (NIS)</label>
+                                        <input v-model="santriForm.nis" type="text" readonly
+                                            class="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:outline-none focus:border-primary focus:ring-4 focus:ring-blue-500/10 bg-slate-100 text-slate-500 transition-all cursor-not-allowed">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-700 mb-1 tracking-tight">Kelas</label>
+                                        <select v-model="santriForm.class_id"
+                                            class="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:outline-none focus:border-primary focus:ring-4 focus:ring-blue-500/10 bg-slate-50/50 text-slate-700 transition-all">
+                                            <option value="">Pilih Kelas</option>
+                                            <option v-for="k in uiData.kelas" :value="k.name">{{ k.name }}</option>
+                                        </select>
+                                    </div>
+                                </div>
 
-                        <div class="pt-4 flex gap-3">
-                            <button type="button" @click="closeModal" :disabled="isSaving"
-                                class="flex-1 py-3 rounded-xl border border-slate-200 font-bold text-slate-600 hover:bg-slate-50 transition disabled:opacity-50">Batal</button>
-                            <button type="submit" :disabled="isSaving"
-                                class="flex-1 py-3 rounded-xl bg-primary text-white font-bold hover:bg-blue-800 shadow-lg shadow-blue-900/20 transition disabled:opacity-60 flex items-center justify-center gap-2">
-                                <span v-if="isSaving"
-                                    class="material-symbols-outlined text-base animate-spin">progress_activity</span>
-                                <span>{{ isSaving ? 'Menyimpan...' : 'Simpan' }}</span>
-                            </button>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-700 mb-1 tracking-tight">Nama Lengkap</label>
+                                    <input v-model="santriForm.full_name" type="text"
+                                        class="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:outline-none focus:border-primary focus:ring-4 focus:ring-blue-500/10 bg-slate-50/50 text-slate-700 transition-all placeholder:font-normal placeholder:text-slate-400"
+                                        placeholder="Nama lengkap santri" required>
+                                </div>
+
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-700 mb-1 tracking-tight">Username (Opsional)</label>
+                                    <input v-model="santriForm.username" type="text"
+                                        class="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:outline-none focus:border-primary focus:ring-4 focus:ring-blue-500/10 bg-slate-50/50 text-slate-700 transition-all placeholder:font-normal placeholder:text-slate-400"
+                                        placeholder="Username untuk login alternatif">
+                                </div>
+
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-700 mb-1 tracking-tight">Jenis Kelamin</label>
+                                    <select v-model="santriForm.gender"
+                                        class="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:outline-none focus:border-primary focus:ring-4 focus:ring-blue-500/10 bg-slate-50/50 text-slate-700 transition-all">
+                                        <option value="L">Laki-laki</option>
+                                        <option value="P">Perempuan</option>
+                                    </select>
+                                </div>
+
+                                <!-- Informasi Wali -->
+                                <div class="pt-6 border-t border-slate-100">
+                                    <h4 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Informasi Wali</h4>
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <input v-model="santriForm.parent_name" type="text"
+                                            class="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:outline-none focus:border-primary focus:ring-4 focus:ring-blue-500/10 bg-slate-50/50 text-slate-700 transition-all placeholder:font-normal placeholder:text-slate-400 text-sm"
+                                            placeholder="Nama Wali">
+                                        <input v-model="santriForm.parent_phone" type="text"
+                                            class="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:outline-none focus:border-primary focus:ring-4 focus:ring-blue-500/10 bg-slate-50/50 text-slate-700 transition-all placeholder:font-normal placeholder:text-slate-400 text-sm"
+                                            placeholder="No. HP / WA">
+                                    </div>
+                                </div>
+                                
+                                <!-- Sticky Bottom Actions for Santri -->
+                                <div class="pt-4 flex gap-3">
+                                    <button type="button" @click="closeModal" :disabled="isSaving"
+                                        class="flex-1 py-4 rounded-2xl border border-slate-200 font-bold text-slate-600 hover:bg-slate-50 transition disabled:opacity-50">Batal</button>
+                                    <button type="submit" :disabled="isSaving"
+                                        class="flex-1 py-4 rounded-2xl bg-primary text-white font-bold hover:bg-blue-800 shadow-lg shadow-blue-900/20 transition disabled:opacity-60 flex items-center justify-center gap-2">
+                                        <span v-if="isSaving"
+                                            class="material-symbols-outlined text-base animate-spin">progress_activity</span>
+                                        <span>{{ isSaving ? 'Menyimpan...' : 'Simpan Data' }}</span>
+                                    </button>
+                                </div>
+                            </form>
                         </div>
-                    </form>
+                    </div>
 
                     <!-- FORM GURU -->
-                    <form v-if="modalState.view === 'guru'" @submit.prevent="saveGuru" class="p-6 space-y-4">
-                        <div>
-                            <label class="block text-xs font-bold text-slate-700 mb-1">Nama Lengkap</label>
-                            <input v-model="guruForm.full_name" type="text"
-                                class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-primary bg-white"
-                                required>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-slate-700 mb-1">ID Resmi</label>
-                            <input v-model="guruForm.username" type="text" readonly
-                                class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-primary bg-slate-100 text-slate-500 cursor-not-allowed"
-                                placeholder="Generated ID" required>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-slate-700 mb-1">Username (Opsional)</label>
-                            <input v-model="guruForm.custom_username" type="text"
-                                class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-primary bg-white"
-                                placeholder="Username alternatif">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-slate-700 mb-1">Nomor HP / WA</label>
-                            <input v-model="guruForm.no_hp" type="text"
-                                class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-primary bg-white"
-                                placeholder="08xxxxxxxxxx">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-slate-700 mb-1">Password</label>
-                            <input v-model="guruForm.password" type="password"
-                                class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-primary bg-white"
-                                placeholder="Biarkan kosong jika tidak diubah">
+                    <div v-if="modalState.view === 'guru'" class="h-full flex flex-col">
+                        <!-- Immersive Header for Guru -->
+                        <div class="relative w-full shrink-0 min-h-[160px] flex flex-col justify-end p-8 pb-6 overflow-hidden bg-white">
+                            <!-- Back Button Row -->
+                            <div class="absolute top-0 left-0 w-full p-6 pb-0 z-[100]">
+                                <button @click="closeModal"
+                                    class="text-slate-900 hover:text-primary transition active:scale-95 flex items-center justify-center p-2 -ml-3">
+                                    <span class="material-symbols-outlined text-4xl font-light">chevron_left</span>
+                                </button>
+                            </div>
+
+                            <!-- Blurred Decoration (Emerald theme for Guru) -->
+                            <div class="absolute -top-10 -right-10 size-48 bg-emerald-500/10 rounded-full blur-3xl opacity-50"></div>
+                            <div class="absolute -bottom-10 -left-10 size-48 bg-teal-500/10 rounded-full blur-3xl opacity-50"></div>
+                            
+                            <div class="relative z-10">
+                                <div class="flex items-center gap-2 mb-3 mt-10">
+                                    <span class="inline-flex items-center text-[10px] font-black px-3 py-1 rounded-full bg-emerald-50 text-emerald-600 border-2 border-emerald-100 uppercase tracking-tighter">
+                                        Data Pengajar
+                                    </span>
+                                    <span v-if="guruForm.username" class="inline-flex items-center text-[10px] font-black px-3 py-1 rounded-full bg-slate-50 text-slate-500 border-2 border-slate-100 uppercase tracking-tighter font-mono">
+                                        ID: {{ guruForm.username }}
+                                    </span>
+                                </div>
+                                <h3 class="font-black text-slate-900 text-2xl leading-tight">
+                                    {{ modalState.isEdit ? 'Edit Data Pengajar' : 'Tambah Pengajar Baru' }}
+                                </h3>
+                                <p class="text-[11px] text-slate-400 mt-2 font-bold uppercase tracking-widest flex items-center gap-2">
+                                    <span class="material-symbols-outlined text-xs">admin_panel_settings</span>
+                                    <span>Kelola hak akses dan informasi guru</span>
+                                </p>
+                            </div>
                         </div>
 
-                        <div class="pt-4 flex gap-3">
-                            <button type="button" @click="closeModal"
-                                class="flex-1 py-3 rounded-xl border border-slate-200 font-bold text-slate-600 hover:bg-slate-50 transition">Batal</button>
-                            <button type="submit"
-                                class="flex-1 py-3 rounded-xl bg-primary text-white font-bold hover:bg-blue-800 shadow-lg shadow-blue-900/20 transition">Simpan</button>
+                        <!-- Scrollable Body -->
+                        <div class="flex-1 overflow-y-auto p-8 pt-2 space-y-6">
+                            <form @submit.prevent="saveGuru" class="space-y-6 pb-6">
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-700 mb-1 tracking-tight">Nama Lengkap</label>
+                                    <input v-model="guruForm.full_name" type="text"
+                                        class="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:outline-none focus:border-primary focus:ring-4 focus:ring-blue-500/10 bg-white"
+                                        placeholder="Nama lengkap pengajar" required>
+                                </div>
+
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-700 mb-1 tracking-tight">ID Resmi (NIG)</label>
+                                        <input v-model="guruForm.username" type="text" readonly
+                                            class="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:outline-none focus:border-primary bg-slate-100 text-slate-500 cursor-not-allowed"
+                                            placeholder="Generated ID" required>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-700 mb-1 tracking-tight">Login Alternatif (Username)</label>
+                                        <input v-model="guruForm.custom_username" type="text"
+                                            class="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:outline-none focus:border-primary focus:ring-4 focus:ring-blue-500/10 bg-white"
+                                            placeholder="Zaid01 (Opsional)">
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-700 mb-1 tracking-tight">Nomor WhatsApp</label>
+                                    <input v-model="guruForm.phone" type="text"
+                                        class="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:outline-none focus:border-primary focus:ring-4 focus:ring-blue-500/10 bg-white"
+                                        placeholder="0812xxxxxxx">
+                                </div>
+
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-700 mb-1 tracking-tight">Password {{ modalState.isEdit ? '(Kosongkan jika tidak ganti)' : '' }}</label>
+                                    <input v-model="guruForm.password" type="text"
+                                        class="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:outline-none focus:border-primary focus:ring-4 focus:ring-blue-500/10 bg-white"
+                                        :placeholder="modalState.isEdit ? '********' : 'Password login'"
+                                        :required="!modalState.isEdit">
+                                </div>
+
+                                <div class="pt-4 flex gap-3">
+                                    <button type="button" @click="closeModal"
+                                        class="flex-1 py-4 rounded-2xl border border-slate-200 font-bold text-slate-600 hover:bg-slate-50 transition">Batal</button>
+                                    <button type="submit"
+                                        class="flex-1 py-4 rounded-2xl bg-primary text-white font-bold hover:bg-blue-800 shadow-lg shadow-blue-900/20 transition flex items-center justify-center gap-2">
+                                        <span>Simpan Perubahan</span>
+                                    </button>
+                                </div>
+                            </form>
                         </div>
-                    </form>
+                    </div>
 
                     <!-- FORM JADWAL -->
                     <form v-if="modalState.view === 'jadwal'" @submit.prevent="saveJadwal" class="p-6 space-y-4">
@@ -1121,25 +1212,45 @@
                     </form>
 
                     <!-- FORM ABSENSI -->
-                    <div v-if="modalState.view === 'absensi'">
-                        <div class="p-6 pb-2 space-y-4">
-                            <!-- INFO JADWAL -->
-                            <div v-if="absensiState.activeJadwal"
-                                class="bg-blue-50 p-4 rounded-xl border border-blue-100 mb-4">
-                                <div class="flex justify-between items-start">
-                                    <div>
-                                        <h4 class="font-bold text-slate-900">{{ absensiState.activeJadwal.mapel }}</h4>
-                                        <p class="text-xs text-slate-500 font-mono">{{ absensiState.activeJadwal.class_name }} &bull; {{ absensiState.activeJadwal.time }}</p>
-                                        <p class="text-xs text-slate-500 mt-1">{{ absensiState.activeJadwal.teacher }}</p>
-                                    </div>
-                                    <div class="bg-white px-2 py-1 rounded-lg border text-xs font-bold text-slate-500 shadow-sm">
-                                        {{ absensiState.santriList.length }} Santri
-                                    </div>
-                                </div>
+                    <div v-if="modalState.view === 'absensi'" class="h-full flex flex-col">
+                        <!-- Immersive Header for Absensi -->
+                        <div class="relative w-full shrink-0 min-h-[160px] flex flex-col justify-end p-8 pb-6 overflow-hidden bg-white">
+                            <!-- Back Button Row -->
+                            <div class="absolute top-0 left-0 w-full p-6 pb-0 z-[100]">
+                                <button @click="closeModal"
+                                    class="text-slate-900 hover:text-primary transition active:scale-95 flex items-center justify-center p-2 -ml-3">
+                                    <span class="material-symbols-outlined text-4xl font-light">chevron_left</span>
+                                </button>
                             </div>
 
+                            <!-- Blurred Decoration -->
+                            <div class="absolute -top-10 -right-10 size-48 bg-emerald-500/10 rounded-full blur-3xl opacity-50"></div>
+                            <div class="absolute -bottom-10 -left-10 size-48 bg-blue-500/10 rounded-full blur-3xl opacity-50"></div>
+                            
+                            <div v-if="absensiState.activeJadwal" class="relative z-10">
+                                <div class="flex items-center gap-2 mb-3 mt-10">
+                                    <span class="inline-flex items-center text-[10px] font-black px-3 py-1 rounded-full bg-emerald-50 text-emerald-600 border-2 border-emerald-100 uppercase tracking-tighter">
+                                        {{ absensiState.activeJadwal.class_name }}
+                                    </span>
+                                    <span class="inline-flex items-center text-[10px] font-black px-3 py-1 rounded-full bg-slate-50 text-slate-500 border-2 border-slate-100 uppercase tracking-tighter">
+                                        {{ absensiState.santriList.length }} Santri
+                                    </span>
+                                </div>
+                                <h3 class="font-black text-slate-900 text-2xl leading-tight">{{ absensiState.activeJadwal.mapel }}</h3>
+                                <p class="text-[11px] text-slate-400 mt-2 font-bold uppercase tracking-widest flex items-center gap-2">
+                                    <span class="material-symbols-outlined text-xs">person</span>
+                                    <span>{{ absensiState.activeJadwal.teacher }}</span>
+                                    <span class="mx-1">•</span>
+                                    <span class="material-symbols-outlined text-xs">schedule</span>
+                                    <span>{{ absensiState.activeJadwal.time }}</span>
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Scrollable Body -->
+                        <div class="flex-1 overflow-y-auto p-8 pt-2 space-y-4">
                             <!-- FORM JURNAL -->
-                            <div class="bg-white p-4 rounded-xl border border-slate-100 shadow-sm mb-4 space-y-4">
+                            <div class="bg-white p-4 rounded-xl border border-slate-100 shadow-sm space-y-4">
                                 <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
                                     <span class="material-symbols-outlined text-base">menu_book</span> Jurnal Kelas
                                 </h3>
@@ -1279,130 +1390,194 @@
                         </div>
                     </form>
 
-                    <!-- FORM TARGET (Integrated v32) -->
-                    <div v-if="modalState.view === 'target-form'" class="p-6 space-y-5">
-                        <div class="flex items-center gap-3 mb-2 bg-blue-50 p-3 rounded-xl border border-blue-100">
-                            <div
-                                class="size-10 bg-white rounded-full flex items-center justify-center font-bold text-blue-600 shadow-sm uppercase">
-                                {{ (targetForm.full_name || '').charAt(0) }}</div>
-                            <div>
-                                <p class="font-bold text-slate-900 text-sm italic">{{ targetForm.full_name }}</p>
-                                <p class="text-[10px] text-slate-500 uppercase font-bold">Total Hafalan: {{
-                                    targetForm.hafalan_desc }}</p>
+                    <!-- FORM TARGET (v37 Immersive) -->
+                    <div v-if="modalState.view === 'target-form'" class="h-full flex flex-col">
+                        <!-- Immersive Header -->
+                        <div class="relative w-full shrink-0 min-h-[160px] flex flex-col justify-end p-8 pb-6 overflow-hidden bg-white">
+                            <div class="absolute top-0 left-0 w-full p-6 pb-0 z-[100]">
+                                <button @click="closeModal"
+                                    class="text-slate-900 hover:text-primary transition active:scale-95 flex items-center justify-center p-2 -ml-3">
+                                    <span class="material-symbols-outlined text-4xl font-light">chevron_left</span>
+                                </button>
                             </div>
-                        </div>
 
-                        <div>
-                            <label class="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Target Sabaq
-                                (Hafalan Baru)</label>
-                            <div class="flex items-center gap-2">
-                                <input v-model.number="targetForm.sabaq" type="number"
-                                    class="w-full p-3 border rounded-xl font-bold text-slate-700 text-center text-lg focus:border-primary outline-none">
-                                <div class="text-xs font-bold text-slate-400 whitespace-nowrap">Hal/Bulan</div>
-                            </div>
-                        </div>
-
-                        <div>
-                            <label class="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Target Manzil
-                                (Murojaah)</label>
-                            <div class="grid grid-cols-3 gap-2">
-                                <div class="col-span-1">
-                                    <label
-                                        class="text-[9px] font-bold text-slate-400 uppercase text-center block mb-1">Persen
-                                        %</label>
-                                    <input v-model.number="targetForm.pct" @input="recalcManzil(targetForm.pct)"
-                                        type="number"
-                                        class="w-full p-2.5 border rounded-xl font-bold text-slate-700 text-center focus:border-primary outline-none text-sm">
+                            <!-- Blurred Decoration (Rose theme for Target) -->
+                            <div class="absolute -top-10 -right-10 size-48 bg-rose-500/10 rounded-full blur-3xl opacity-50"></div>
+                            <div class="absolute -bottom-10 -left-10 size-48 bg-pink-500/10 rounded-full blur-3xl opacity-50"></div>
+                            
+                            <div class="relative z-10">
+                                <div class="flex items-center gap-2 mb-3 mt-10">
+                                    <span class="inline-flex items-center text-[10px] font-black px-3 py-1 rounded-full bg-rose-50 text-rose-600 border-2 border-rose-100 uppercase tracking-tighter">
+                                        Target Bulanan
+                                    </span>
+                                    <span class="inline-flex items-center text-[10px] font-black px-3 py-1 rounded-full bg-slate-50 text-slate-500 border-2 border-slate-100 uppercase tracking-tighter">
+                                        {{ targetForm.hafalan_desc }}
+                                    </span>
                                 </div>
-                                <div class="col-span-2">
-                                    <label
-                                        class="text-[9px] font-bold text-slate-400 uppercase text-center block mb-1">Target
-                                        Halaman</label>
-                                    <div class="flex items-center gap-2">
-                                        <input v-model.number="targetForm.manzil" type="number"
-                                            class="w-full p-3 border rounded-xl font-bold text-slate-700 text-center text-lg focus:border-primary outline-none">
-                                        <div class="text-xs font-bold text-slate-400">Hal</div>
+                                <h3 class="font-black text-slate-900 text-2xl leading-tight">
+                                    {{ targetForm.full_name }}
+                                </h3>
+                                <p class="text-[11px] text-slate-400 mt-2 font-bold uppercase tracking-widest flex items-center gap-2">
+                                    <span class="material-symbols-outlined text-xs">track_changes</span>
+                                    <span>Sesuaikan capaian hafalan santri</span>
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Scrollable Body -->
+                        <div class="flex-1 overflow-y-auto p-8 pt-2 space-y-6">
+                            <div class="space-y-6 pb-6">
+                                <!-- Sabaq -->
+                                <div class="p-5 rounded-3xl bg-slate-50 border border-slate-100">
+                                    <label class="block text-[10px] font-black text-slate-400 mb-4 tracking-widest flex items-center gap-2">
+                                        <span class="size-2 rounded-full bg-blue-500"></span>
+                                        TARGET SABAQ (HAFALAN BARU)
+                                    </label>
+                                    <div class="flex items-center gap-4">
+                                        <input v-model.number="targetForm.sabaq" type="number"
+                                            class="w-full h-14 rounded-2xl border-2 border-white bg-white shadow-sm font-black text-2xl text-slate-800 text-center focus:border-rose-300 outline-none">
+                                        <div class="text-xs font-bold text-slate-400">Hal/Bulan</div>
                                     </div>
                                 </div>
-                            </div>
-                            <p class="text-[10px] text-slate-400 mt-1">*Total Hafalan: {{ targetForm.totalPages }}
-                                Halaman</p>
-                        </div>
 
-                        <div>
-                            <label class="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Target Tilawah (Baca
-                                Al-Quran)</label>
-                            <div class="flex items-center gap-2">
-                                <input v-model.number="targetForm.tilawah" type="number"
-                                    class="w-full p-3 border rounded-xl font-bold text-slate-700 text-center text-lg focus:border-primary outline-none">
-                                <div class="text-xs font-bold text-slate-400 whitespace-nowrap">Hal/Bulan</div>
-                            </div>
-                        </div>
+                                <!-- Manzil -->
+                                <div class="p-5 rounded-3xl bg-slate-50 border border-slate-100">
+                                    <label class="block text-[10px] font-black text-slate-400 mb-4 tracking-widest flex items-center gap-2">
+                                        <span class="size-2 rounded-full bg-emerald-500"></span>
+                                        TARGET MANZIL (MUROJAAH)
+                                    </label>
+                                    <div class="space-y-4">
+                                        <div class="grid grid-cols-3 gap-3">
+                                            <div class="col-span-1">
+                                                <p class="text-[9px] font-bold text-slate-400 mb-2 text-center uppercase">Persen %</p>
+                                                <input v-model.number="targetForm.pct" @input="recalcManzil(targetForm.pct)"
+                                                    type="number"
+                                                    class="w-full h-14 rounded-2xl border-2 border-white bg-white shadow-sm font-black text-lg text-slate-800 text-center focus:border-rose-300 outline-none">
+                                            </div>
+                                            <div class="col-span-2">
+                                                <p class="text-[9px] font-bold text-slate-400 mb-2 text-center uppercase">Target Halaman</p>
+                                                <div class="flex items-center gap-2">
+                                                    <input v-model.number="targetForm.manzil" type="number"
+                                                        class="w-full h-14 rounded-2xl border-2 border-white bg-white shadow-sm font-black text-2xl text-slate-800 text-center focus:border-rose-300 outline-none">
+                                                    <div class="text-xs font-bold text-slate-400">Hal</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="bg-rose-50/50 p-3 rounded-xl border border-rose-100 flex items-center justify-between">
+                                            <span class="text-[10px] font-bold text-rose-600 uppercase">Total Hafalan:</span>
+                                            <span class="text-[10px] font-black text-rose-700">{{ targetForm.totalPages }} Halaman</span>
+                                        </div>
+                                    </div>
+                                </div>
 
-                        <div class="pt-2">
-                            <button @click="saveTarget"
-                                class="w-full py-4 rounded-2xl bg-primary text-white font-bold hover:bg-blue-800 shadow-lg shadow-blue-900/20 transition-all active:scale-[0.98]">
-                                Simpan Target
-                            </button>
+                                <!-- Tilawah -->
+                                <div class="p-5 rounded-3xl bg-slate-50 border border-slate-100">
+                                    <label class="block text-[10px] font-black text-slate-400 mb-4 tracking-widest flex items-center gap-2">
+                                        <span class="size-2 rounded-full bg-amber-500"></span>
+                                        TARGET TILAWAH (BACA QURAN)
+                                    </label>
+                                    <div class="flex items-center gap-4">
+                                        <input v-model.number="targetForm.tilawah" type="number"
+                                            class="w-full h-14 rounded-2xl border-2 border-white bg-white shadow-sm font-black text-2xl text-slate-800 text-center focus:border-rose-300 outline-none">
+                                        <div class="text-xs font-bold text-slate-400">Hal/Bulan</div>
+                                    </div>
+                                </div>
+
+                                <div class="pt-4 flex gap-3">
+                                    <button @click="closeModal"
+                                        class="flex-1 py-4 rounded-2xl border border-slate-200 font-bold text-slate-600 hover:bg-slate-50 transition">Batal</button>
+                                    <button @click="saveTarget"
+                                        class="flex-1 py-4 rounded-2xl bg-primary text-white font-bold hover:bg-blue-800 shadow-xl shadow-blue-900/20 transition flex items-center justify-center gap-2">
+                                        <span>Simpan Target</span>
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- FORM BULK TARGET (Integrated v32) -->
-                    <div v-if="modalState.view === 'bulk-target'" class="p-6 space-y-6">
-                        <p
-                            class="text-xs text-slate-500 bg-blue-50 p-3 rounded-xl border border-blue-100 flex items-start gap-2">
-                            <span class="material-symbols-outlined text-blue-500 text-sm mt-0.5">info</span>
-                            Centang kriteria yang ingin diperbarui untuk {{ selectedSantriIds.length }} santri.
-                        </p>
-
-                        <div class="space-y-4">
-                            <!-- Sabaq -->
-                            <div class="p-3 rounded-xl border border-slate-100 bg-slate-50/50">
-                                <label class="flex items-center gap-3 cursor-pointer mb-3">
-                                    <input type="checkbox" v-model="bulkTargetForm.updateSabaq"
-                                        class="size-5 rounded border-slate-300 text-primary">
-                                    <span class="text-xs font-bold text-slate-700">TARGET SABAQ</span>
-                                </label>
-                                <div v-if="bulkTargetForm.updateSabaq" class="flex items-center gap-2">
-                                    <input type="number" v-model.number="bulkTargetForm.sabaq"
-                                        class="flex-1 p-3 border rounded-xl font-bold text-center bg-white">
-                                    <span class="text-xs font-bold text-slate-400">HAL</span>
-                                </div>
+                    <!-- FORM BULK TARGET (v37 Immersive) -->
+                    <div v-if="modalState.view === 'bulk-target'" class="h-full flex flex-col">
+                        <!-- Immersive Header -->
+                        <div class="relative w-full shrink-0 min-h-[160px] flex flex-col justify-end p-8 pb-6 overflow-hidden bg-white">
+                            <div class="absolute top-0 left-0 w-full p-6 pb-0 z-[100]">
+                                <button @click="closeModal"
+                                    class="text-slate-900 hover:text-primary transition active:scale-95 flex items-center justify-center p-2 -ml-3">
+                                    <span class="material-symbols-outlined text-4xl font-light">chevron_left</span>
+                                </button>
                             </div>
 
-                            <!-- Manzil -->
-                            <div class="p-3 rounded-xl border border-slate-100 bg-slate-50/50">
-                                <label class="flex items-center gap-3 cursor-pointer mb-3">
-                                    <input type="checkbox" v-model="bulkTargetForm.updateManzil"
-                                        class="size-5 rounded border-slate-300 text-primary">
-                                    <span class="text-xs font-bold text-slate-700">TARGET MANZIL</span>
-                                </label>
-                                <div v-if="bulkTargetForm.updateManzil" class="flex items-center gap-2">
-                                    <input type="number" v-model.number="bulkTargetForm.manzil"
-                                        class="flex-1 p-3 border rounded-xl font-bold text-center bg-white">
-                                    <span class="text-xs font-bold text-slate-400">HAL</span>
+                            <div class="absolute -top-10 -right-10 size-48 bg-rose-500/10 rounded-full blur-3xl opacity-50"></div>
+                            <div class="absolute -bottom-10 -left-10 size-48 bg-pink-500/10 rounded-full blur-3xl opacity-50"></div>
+                            
+                            <div class="relative z-10">
+                                <div class="flex items-center gap-2 mb-3 mt-10">
+                                    <span class="inline-flex items-center text-[10px] font-black px-3 py-1 rounded-full bg-rose-50 text-rose-600 border-2 border-rose-100 uppercase tracking-tighter">
+                                        Target Massal
+                                    </span>
+                                    <span class="inline-flex items-center text-[10px] font-black px-3 py-1 rounded-full bg-slate-50 text-slate-500 border-2 border-slate-100 uppercase tracking-tighter font-mono">
+                                        {{ selectedSantriIds.length }} Terpilih
+                                    </span>
                                 </div>
-                            </div>
-
-                            <!-- Tilawah -->
-                            <div class="p-3 rounded-xl border border-slate-100 bg-slate-50/50">
-                                <label class="flex items-center gap-3 cursor-pointer mb-3">
-                                    <input type="checkbox" v-model="bulkTargetForm.updateTilawah"
-                                        class="size-5 rounded border-slate-300 text-primary">
-                                    <span class="text-xs font-bold text-slate-700">TARGET TILAWAH</span>
-                                </label>
-                                <div v-if="bulkTargetForm.updateTilawah" class="flex items-center gap-2">
-                                    <input type="number" v-model.number="bulkTargetForm.tilawah"
-                                        class="flex-1 p-3 border rounded-xl font-bold text-center bg-white">
-                                    <span class="text-xs font-bold text-slate-400">HAL</span>
-                                </div>
+                                <h3 class="font-black text-slate-900 text-2xl leading-tight">
+                                    Update Target Strategis
+                                </h3>
+                                <p class="text-[11px] text-slate-400 mt-2 font-bold uppercase tracking-widest flex items-center gap-2">
+                                    <span class="material-symbols-outlined text-xs">info</span>
+                                    <span>Centang kriteria yang ingin diperbarui</span>
+                                </p>
                             </div>
                         </div>
 
-                        <button @click="applyBulkTarget"
-                            class="w-full bg-slate-900 text-white py-4 rounded-2xl font-bold shadow-xl hover:bg-slate-800 transition-all active:scale-[0.98]">
-                            Terapkan ke {{ selectedSantriIds.length }} Santri
-                        </button>
+                        <!-- Scrollable Body -->
+                        <div class="flex-1 overflow-y-auto p-8 pt-2 space-y-6">
+                            <div class="space-y-4">
+                                <!-- Sabaq Bulk -->
+                                <div class="p-5 rounded-3xl bg-slate-50 border border-slate-100 transition-all" :class="{'ring-2 ring-blue-500/20 bg-blue-50/30': bulkTargetForm.updateSabaq}">
+                                    <label class="flex items-center gap-3 cursor-pointer mb-4">
+                                        <input type="checkbox" v-model="bulkTargetForm.updateSabaq" class="size-6 rounded-lg border-slate-300 text-primary">
+                                        <span class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Target Sabaq</span>
+                                    </label>
+                                    <div v-if="bulkTargetForm.updateSabaq" class="flex items-center gap-4 animate-in slide-in-from-top-1 duration-200">
+                                        <input type="number" v-model.number="bulkTargetForm.sabaq"
+                                            class="flex-1 h-14 rounded-2xl border-2 border-white bg-white shadow-sm font-black text-2xl text-center focus:border-rose-300 outline-none">
+                                        <span class="text-xs font-bold text-slate-400">Hal</span>
+                                    </div>
+                                </div>
+
+                                <!-- Manzil Bulk -->
+                                <div class="p-5 rounded-3xl bg-slate-50 border border-slate-100 transition-all" :class="{'ring-2 ring-emerald-500/20 bg-emerald-50/30': bulkTargetForm.updateManzil}">
+                                    <label class="flex items-center gap-3 cursor-pointer mb-4">
+                                        <input type="checkbox" v-model="bulkTargetForm.updateManzil" class="size-6 rounded-lg border-slate-300 text-primary">
+                                        <span class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Target Manzil</span>
+                                    </label>
+                                    <div v-if="bulkTargetForm.updateManzil" class="flex items-center gap-4 animate-in slide-in-from-top-1 duration-200">
+                                        <input type="number" v-model.number="bulkTargetForm.manzil"
+                                            class="flex-1 h-14 rounded-2xl border-2 border-white bg-white shadow-sm font-black text-2xl text-center focus:border-rose-300 outline-none">
+                                        <span class="text-xs font-bold text-slate-400">Hal</span>
+                                    </div>
+                                </div>
+
+                                <!-- Tilawah Bulk -->
+                                <div class="p-5 rounded-3xl bg-slate-50 border border-slate-100 transition-all" :class="{'ring-2 ring-amber-500/20 bg-amber-50/30': bulkTargetForm.updateTilawah}">
+                                    <label class="flex items-center gap-3 cursor-pointer mb-4">
+                                        <input type="checkbox" v-model="bulkTargetForm.updateTilawah" class="size-6 rounded-lg border-slate-300 text-primary">
+                                        <span class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Target Tilawah</span>
+                                    </label>
+                                    <div v-if="bulkTargetForm.updateTilawah" class="flex items-center gap-4 animate-in slide-in-from-top-1 duration-200">
+                                        <input type="number" v-model.number="bulkTargetForm.tilawah"
+                                            class="flex-1 h-14 rounded-2xl border-2 border-white bg-white shadow-sm font-black text-2xl text-center focus:border-rose-300 outline-none">
+                                        <span class="text-xs font-bold text-slate-400">Hal</span>
+                                    </div>
+                                </div>
+
+                                <div class="pt-4">
+                                    <button @click="applyBulkTarget"
+                                        class="w-full py-5 rounded-3xl bg-slate-900 text-white font-black text-sm uppercase tracking-widest hover:bg-slate-800 shadow-xl transition-all active:scale-[0.98]">
+                                        Terapkan Ke {{ selectedSantriIds.length }} Santri
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- GRADING MODAL -->
@@ -1691,7 +1866,7 @@
 
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js?v=3.25').then(reg => {
+                navigator.serviceWorker.register('sw.js?v=3.26').then(reg => {
                     console.log('SW Registered!', reg);
 
                     // 1. Check if update is already waiting (e.g. from previous visit)

@@ -65,6 +65,8 @@ const PengumumanView = {
                 });
             }
         });
+    
+        // ===== NAVIGATION HISTORY MANAGEMENT =====
 
         // Pagination pages
         const pageNumbers = computed(() => {
@@ -171,14 +173,14 @@ const PengumumanView = {
         </div>
 
         <!-- Announcement List -->
-        <div v-else class="space-y-4">
+        <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div v-for="item in paginatedList" :key="item._id"
-                class="bg-white rounded-2xl border border-slate-100 card-shadow overflow-hidden group hover:shadow-md transition-all duration-200">
+                class="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden group hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1 transition-all duration-300">
 
                 <!-- Card Body -->
-                <div class="p-5 cursor-pointer" @click="$emit('open-detail', item)">
-                    <div class="flex items-start justify-between gap-3 mb-3">
-                        <div class="flex flex-wrap gap-1.5">
+                <div class="p-6 cursor-pointer" @click="$emit('open-detail', item)">
+                    <div class="flex items-start justify-between gap-3 mb-4">
+                        <div class="flex flex-wrap gap-2">
                             <!-- Kategori Badge -->
                             <span :class="[
                                 'inline-flex items-center text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider',
@@ -236,26 +238,27 @@ const PengumumanView = {
             </div>
 
             <!-- Pagination -->
-            <div v-if="totalPages > 1" class="flex items-center justify-center gap-2 pt-4">
+            <div v-if="totalPages > 1" class="col-span-full flex items-center justify-center gap-2 pt-8">
                 <button @click="$emit('go-page', currentPage - 1)"
                     :disabled="currentPage <= 1"
-                    class="size-9 rounded-xl border border-slate-200 bg-white text-slate-500 flex items-center justify-center transition disabled:opacity-30 disabled:cursor-not-allowed hover:bg-slate-50 active:scale-95">
+                    class="size-10 rounded-2xl border border-slate-200 bg-white text-slate-500 flex items-center justify-center transition disabled:opacity-30 disabled:cursor-not-allowed hover:bg-slate-50 active:scale-95">
                     <span class="material-symbols-outlined text-lg">chevron_left</span>
                 </button>
-                <button v-for="p in pageNumbers" :key="p"
-                    @click="$emit('go-page', p)"
-                    :class="p === currentPage
-                        ? 'bg-primary text-white border-primary shadow-sm'
-                        : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'"
-                    class="size-9 rounded-xl border text-sm font-bold flex items-center justify-center transition active:scale-95">
-                    {{ p }}
-                </button>
+                <div class="flex items-center bg-white border border-slate-100 p-1 rounded-2xl">
+                    <button v-for="p in pageNumbers" :key="p"
+                        @click="$emit('go-page', p)"
+                        :class="p === currentPage
+                            ? 'bg-primary text-white shadow-lg shadow-primary/20'
+                            : 'text-slate-600 hover:bg-slate-50'"
+                        class="size-8 rounded-xl text-xs font-black flex items-center justify-center transition active:scale-95">
+                        {{ p }}
+                    </button>
+                </div>
                 <button @click="$emit('go-page', currentPage + 1)"
                     :disabled="currentPage >= totalPages"
-                    class="size-9 rounded-xl border border-slate-200 bg-white text-slate-500 flex items-center justify-center transition disabled:opacity-30 disabled:cursor-not-allowed hover:bg-slate-50 active:scale-95">
+                    class="size-10 rounded-2xl border border-slate-200 bg-white text-slate-500 flex items-center justify-center transition disabled:opacity-30 disabled:cursor-not-allowed hover:bg-slate-50 active:scale-95">
                     <span class="material-symbols-outlined text-lg">chevron_right</span>
                 </button>
-                <span class="text-xs text-slate-400 ml-1">{{ currentPage }} / {{ totalPages }}</span>
             </div>
         </div>
 
@@ -269,241 +272,199 @@ const PengumumanView = {
                     <span class="material-symbols-outlined text-2xl">add</span>
                 </button>
             </div>
-
             <!-- FORM MODAL -->
             <Transition name="modal-fade">
                 <div v-if="showFormModal"
-                    class="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md"
+                    class="fixed inset-0 z-[10000] flex flex-col md:items-center md:justify-center bg-black/40 backdrop-blur-md"
                     @click.self="$emit('close-form')">
 
-                    <!-- Modal Card — centered -->
-                    <div class="relative bg-white rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl ring-1 ring-black/10 animate-scale-in">
-
-                        <!-- Modal Header -->
-                        <div class="sticky top-0 bg-white/95 backdrop-blur-sm px-6 pt-5 pb-4 border-b border-slate-100 flex items-center justify-between z-10 rounded-t-3xl">
+                    <!-- Modal Card -->
+                    <div class="relative bg-white md:rounded-[40px] w-full max-w-2xl h-full md:h-auto md:max-h-[85vh] flex flex-col shadow-2xl animate-scale-in overflow-hidden">
+                        
+                        <!-- Header with Back Button -->
+                        <div class="px-8 pt-8 pb-4 shrink-0 flex items-start gap-4">
+                            <button @click="$emit('close-form')"
+                                class="text-slate-900 hover:text-primary transition active:scale-90">
+                                <span class="material-symbols-outlined text-4xl font-light">chevron_left</span>
+                            </button>
                             <div>
-                                <h3 class="font-black text-slate-800 text-base">
-                                    {{ form._id ? 'Edit Pengumuman' : 'Buat Pengumuman Baru' }}
+                                <h3 class="font-black text-slate-800 text-2xl leading-tight">
+                                    {{ form._id ? 'Edit Pengumuman' : 'Buat Pengumuman' }}
                                 </h3>
-                                <p v-if="!form._id" class="text-[11px] text-slate-400 mt-0.5">
-                                    Notifikasi otomatis dikirim ke semua target saat publish
+                                <p class="text-[11px] text-slate-400 mt-1 font-bold uppercase tracking-widest">
+                                    {{ form._id ? 'Perbarui informasi detail' : 'Kirim informasi terbaru' }}
                                 </p>
                             </div>
-                            <button @click="$emit('close-form')"
-                                class="size-9 rounded-full hover:bg-slate-100 flex items-center justify-center transition text-slate-400 active:scale-90">
-                                <span class="material-symbols-outlined">close</span>
-                            </button>
                         </div>
 
-                        <!-- Modal Body -->
-                        <div class="p-6 space-y-5">
+                        <!-- Scrollable Form Body -->
+                        <div class="flex-1 overflow-y-auto p-8 pt-2 space-y-6">
 
-                            <!-- Judul -->
-                            <div>
-                                <label class="block text-xs font-bold text-slate-700 mb-1.5">Judul Pengumuman <span class="text-red-400">*</span></label>
+                            <!-- Judul Item -->
+                            <div class="group">
+                                <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 group-focus-within:text-primary transition-colors">Judul Pengumuman</label>
                                 <input :value="form.judul" @input="$emit('update:form-judul', $event.target.value)"
-                                    placeholder="Contoh: Libur Pondok Hari Raya Idul Fitri"
-                                    class="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-medium focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition bg-slate-50/50" />
+                                    placeholder="Masukkan judul yang menarik..."
+                                    class="w-full px-5 py-4 rounded-2xl border-2 border-slate-100 text-sm font-bold focus:outline-none focus:border-primary/30 focus:bg-white transition bg-slate-50/50" />
                             </div>
 
-                            <!-- Kategori & Target -->
+                            <!-- Kategori & Target Row -->
                             <div class="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label class="block text-xs font-bold text-slate-700 mb-1.5">Kategori</label>
+                                    <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Kategori</label>
                                     <select :value="form.kategori" @change="$emit('update:form-kategori', $event.target.value)"
-                                        class="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-medium bg-white focus:outline-none focus:border-primary transition">
-                                        <option value="info">Info</option>
-                                        <option value="penting">Penting</option>
-                                        <option value="darurat">Darurat</option>
+                                        class="w-full px-5 py-4 rounded-2xl border-2 border-slate-100 text-sm font-bold bg-slate-50/50 focus:outline-none focus:border-primary/30 transition">
+                                        <option value="info">✨ Informasi</option>
+                                        <option value="penting">⚠️ Penting</option>
+                                        <option value="darurat">🚨 Darurat</option>
                                     </select>
                                 </div>
                                 <div>
-                                    <label class="block text-xs font-bold text-slate-700 mb-1.5">Target Penerima</label>
+                                    <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Target Penerima</label>
                                     <select :value="form.target" @change="$emit('update:form-target', $event.target.value)"
-                                        class="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-medium bg-white focus:outline-none focus:border-primary transition">
-                                        <option value="semua">Semua</option>
-                                        <option value="guru">Guru saja</option>
-                                        <option value="wali">Wali Santri saja</option>
+                                        class="w-full px-5 py-4 rounded-2xl border-2 border-slate-100 text-sm font-bold bg-slate-50/50 focus:outline-none focus:border-primary/30 transition">
+                                        <option value="semua">👥 Semua</option>
+                                        <option value="guru">👨‍🏫 Guru</option>
+                                        <option value="wali">👨‍👩‍👧‍👦 Wali Santri</option>
                                     </select>
                                 </div>
                             </div>
 
-                            <!-- Rich Text Editor -->
+                            <!-- Rich Text Editor Section -->
                             <div>
-                                <div class="flex items-center justify-between mb-1.5">
-                                    <label class="block text-xs font-bold text-slate-700">Isi Pengumuman <span class="text-red-400">*</span></label>
-                                    <!-- Inline Upload Loading Indicator -->
-                                    <span v-if="fileUpload.isInlineUploading" class="text-[10px] font-bold text-primary flex items-center gap-1 animate-pulse">
-                                        <div class="size-3 border-2 border-primary/20 border-t-primary rounded-full animate-spin"></div>
-                                        Menyisipkan gambar...
+                                <div class="flex items-center justify-between mb-2">
+                                    <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest">Konten / Isi</label>
+                                    <span v-if="fileUpload.isInlineUploading" class="text-[10px] font-black text-primary animate-pulse flex items-center gap-1">
+                                        <span class="material-symbols-outlined text-xs">sync</span> Menyisipkan gambar...
                                     </span>
                                 </div>
 
-                                <!-- Toolbar -->
-                                <div class="flex items-center gap-1 flex-wrap p-2 bg-slate-50 rounded-t-xl border border-b-0 border-slate-200">
-                                    <button @click="execCmd('bold')" type="button"
-                                        class="size-8 rounded-lg hover:bg-white hover:shadow-sm flex items-center justify-center font-black text-slate-600 text-sm transition" title="Tebal">
-                                        <strong>B</strong>
-                                    </button>
-                                    <button @click="execCmd('italic')" type="button"
-                                        class="size-8 rounded-lg hover:bg-white hover:shadow-sm flex items-center justify-center text-slate-600 text-sm italic transition" title="Miring">
-                                        <em>I</em>
-                                    </button>
-                                    <button @click="execCmd('underline')" type="button"
-                                        class="size-8 rounded-lg hover:bg-white hover:shadow-sm flex items-center justify-center text-slate-600 text-sm underline transition" title="Garis bawah">
-                                        U
-                                    </button>
-                                    <div class="w-px h-5 bg-slate-200 mx-0.5"></div>
-                                    <button @click="execCmd('insertUnorderedList')" type="button"
-                                        class="size-8 rounded-lg hover:bg-white hover:shadow-sm flex items-center justify-center transition" title="Poin-poin">
-                                        <span class="material-symbols-outlined text-base text-slate-600">format_list_bulleted</span>
-                                    </button>
-                                    <button @click="execCmd('insertOrderedList')" type="button"
-                                        class="size-8 rounded-lg hover:bg-white hover:shadow-sm flex items-center justify-center transition" title="Daftar bernomor">
-                                        <span class="material-symbols-outlined text-base text-slate-600">format_list_numbered</span>
-                                    </button>
-                                    <div class="w-px h-5 bg-slate-200 mx-0.5"></div>
-                                    <button @click="execCmd('justifyLeft')" type="button"
-                                        class="size-8 rounded-lg hover:bg-white hover:shadow-sm flex items-center justify-center transition" title="Rata kiri">
-                                        <span class="material-symbols-outlined text-base text-slate-600">format_align_left</span>
-                                    </button>
-                                    <button @click="execCmd('justifyCenter')" type="button"
-                                        class="size-8 rounded-lg hover:bg-white hover:shadow-sm flex items-center justify-center transition" title="Rata tengah">
-                                        <span class="material-symbols-outlined text-base text-slate-600">format_align_center</span>
-                                    </button>
-                                    <button @click="execCmd('justifyRight')" type="button"
-                                        class="size-8 rounded-lg hover:bg-white hover:shadow-sm flex items-center justify-center transition" title="Rata kanan">
-                                        <span class="material-symbols-outlined text-base text-slate-600">format_align_right</span>
-                                    </button>
-                                    <div class="w-px h-5 bg-slate-200 mx-0.5"></div>
-                                    <button @click="execCmd('removeFormat')" type="button"
-                                        class="size-8 rounded-lg hover:bg-white hover:shadow-sm flex items-center justify-center transition" title="Hapus format">
-                                        <span class="material-symbols-outlined text-base text-slate-400">format_clear</span>
-                                    </button>
-                                    <div class="w-px h-5 bg-slate-200 mx-0.5"></div>
-                                    
-                                    <!-- Embedded Image Button -->
-                                    <div class="relative overflow-hidden size-8 rounded-lg hover:bg-white hover:shadow-sm flex items-center justify-center transition group">
-                                        <span class="material-symbols-outlined text-base text-primary">image</span>
-                                        <input type="file" accept="image/*" @change="handleInlineImage" 
-                                            class="absolute inset-0 opacity-0 cursor-pointer" title="Sematkan Gambar" />
+                                <div class="border-2 border-slate-100 rounded-[24px] overflow-hidden focus-within:border-primary/30 transition-all">
+                                    <!-- Rich Toolbar -->
+                                    <div class="flex items-center gap-1 flex-wrap p-2 bg-slate-50/80 border-b border-slate-100">
+                                        <button @click="execCmd('bold')" type="button" class="size-9 rounded-xl hover:bg-white hover:shadow-sm flex items-center justify-center font-black text-slate-600 transition" title="Tebal">B</button>
+                                        <button @click="execCmd('italic')" type="button" class="size-9 rounded-xl hover:bg-white hover:shadow-sm flex items-center justify-center italic text-slate-600 transition" title="Miring">I</button>
+                                        <button @click="execCmd('underline')" type="button" class="size-9 rounded-xl hover:bg-white hover:shadow-sm flex items-center justify-center underline text-slate-600 transition" title="Garis Bawah">U</button>
+                                        <div class="w-px h-5 bg-slate-200 mx-1"></div>
+                                        <button @click="execCmd('insertUnorderedList')" type="button" class="size-9 rounded-xl hover:bg-white flex items-center justify-center text-slate-600 transition" title="Poin"><span class="material-symbols-outlined text-lg">format_list_bulleted</span></button>
+                                        <button @click="execCmd('insertOrderedList')" type="button" class="size-9 rounded-xl hover:bg-white flex items-center justify-center text-slate-600 transition" title="Nomor"><span class="material-symbols-outlined text-lg">format_list_numbered</span></button>
+                                        <div class="w-px h-5 bg-slate-200 mx-1"></div>
+                                        <div class="relative overflow-hidden size-9 rounded-xl hover:bg-white flex items-center justify-center text-primary transition group">
+                                            <span class="material-symbols-outlined text-lg">image</span>
+                                            <input type="file" accept="image/*" @change="handleInlineImage" class="absolute inset-0 opacity-0 cursor-pointer" />
+                                        </div>
+                                    </div>
+                                    <!-- Editable Content -->
+                                    <div ref="editorRef" contenteditable="true" @input="onEditorInput" 
+                                        class="min-h-[220px] p-5 text-sm text-slate-700 focus:outline-none bg-white leading-relaxed"
+                                        style="word-break: break-word;">
                                     </div>
                                 </div>
-
-                                <!-- Editable content area -->
-                                <div ref="editorRef"
-                                    contenteditable="true"
-                                    @input="onEditorInput"
-                                    data-placeholder="Tulis isi pengumuman di sini..."
-                                    class="min-h-[180px] px-4 py-3 rounded-b-xl border border-slate-200 text-sm text-slate-700 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition leading-relaxed"
-                                    style="word-break: break-word; empty-cells: show;">
-                                </div>
-                                <p class="text-[10px] text-slate-400 mt-1.5">
-                                    💡 Seleksi teks lalu klik tombol format di toolbar
-                                </p>
                             </div>
 
-                            <!-- File Upload Section -->
-                            <div class="pt-2">
-                                <label class="block text-xs font-bold text-slate-700 mb-2">Lampiran (Foto/File)</label>
+                            <!-- Lampiran Item -->
+                            <div>
+                                <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Lampiran File Utama</label>
                                 
-                                <!-- File Preview / Info -->
-                                <div v-if="form.file_url" class="mb-3 p-3 rounded-xl border border-slate-100 bg-slate-50 flex items-center justify-between gap-3">
+                                <div v-if="form.file_url" class="p-4 rounded-2xl bg-primary/5 border-2 border-primary/10 flex items-center justify-between group">
                                     <div class="flex items-center gap-3 overflow-hidden">
-                                        <div v-if="fileUpload.preview" class="size-12 rounded-lg bg-white border border-slate-200 overflow-hidden shrink-0">
-                                            <img :src="fileUpload.preview" class="w-full h-full object-cover" />
-                                        </div>
-                                        <div v-else class="size-12 rounded-lg bg-white border border-slate-200 flex items-center justify-center shrink-0">
-                                            <span class="material-symbols-outlined text-slate-400">description</span>
+                                        <img v-if="fileUpload.preview" :src="fileUpload.preview" class="size-12 rounded-xl object-cover border-2 border-white shadow-sm" />
+                                        <div v-else class="size-12 rounded-xl bg-white flex items-center justify-center shadow-sm">
+                                            <span class="material-symbols-outlined text-primary">description</span>
                                         </div>
                                         <div class="overflow-hidden">
                                             <p class="text-xs font-bold text-slate-700 truncate">{{ form.file_name || 'File terlampir' }}</p>
-                                            <p class="text-[10px] text-slate-400">Siap untuk disimpan</p>
+                                            <p class="text-[10px] text-primary font-bold uppercase tracking-tighter">Siap diunggah</p>
                                         </div>
                                     </div>
-                                    <button @click="$emit('remove-file')" class="size-8 rounded-full hover:bg-red-50 text-slate-400 hover:text-red-500 flex items-center justify-center transition">
-                                        <span class="material-symbols-outlined text-base">delete</span>
+                                    <button @click="$emit('remove-file')" class="size-9 rounded-full hover:bg-red-50 text-slate-300 hover:text-red-500 transition active:scale-90">
+                                        <span class="material-symbols-outlined text-lg">delete</span>
                                     </button>
                                 </div>
 
-                                <!-- Upload Button -->
-                                <div v-if="!form.file_url" class="relative">
-                                    <input type="file" @change="$emit('handle-file', $event)" 
-                                        class="absolute inset-0 opacity-0 cursor-pointer z-10" 
-                                        :disabled="fileUpload.isUploading" />
-                                    <div :class="[
-                                        'w-full py-4 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center gap-2 transition-all',
-                                        fileUpload.isUploading ? 'bg-slate-50 border-slate-200' : 'bg-white border-slate-200 hover:border-primary hover:bg-blue-50/30'
-                                    ]">
+                                <div v-else class="relative">
+                                    <input type="file" @change="$emit('handle-file', $event)" class="absolute inset-0 opacity-0 cursor-pointer z-10" :disabled="fileUpload.isUploading" />
+                                    <div class="py-10 border-2 border-dashed border-slate-200 rounded-[32px] flex flex-col items-center justify-center gap-3 bg-slate-50/50 hover:bg-primary/5 hover:border-primary/20 transition-all duration-300">
                                         <template v-if="fileUpload.isUploading">
-                                            <div class="size-6 border-2 border-primary/20 border-t-primary rounded-full animate-spin"></div>
-                                            <span class="text-xs font-bold text-slate-400">Mengunggah...</span>
+                                            <div class="size-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
+                                            <span class="text-xs font-bold text-slate-400">Sedang mengunggah...</span>
                                         </template>
                                         <template v-else>
-                                            <span class="material-symbols-outlined text-slate-400">cloud_upload</span>
-                                            <span class="text-xs font-bold text-slate-500">Klik untuk pilih file (Maks 10MB)</span>
+                                            <div class="size-14 rounded-full bg-white shadow-sm flex items-center justify-center text-slate-400">
+                                                <span class="material-symbols-outlined text-2xl">cloud_upload</span>
+                                            </div>
+                                            <div class="text-center">
+                                                <p class="text-xs font-black text-slate-600">Klik untuk upload lampiran</p>
+                                                <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-1">Maksimal 10MB</p>
+                                            </div>
                                         </template>
                                     </div>
                                 </div>
                             </div>
+                        </div>
 
-                            <!-- Action Buttons -->
-                            <div class="flex gap-3 pt-2 pb-1">
-                                <button @click="$emit('close-form')"
-                                    class="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50 transition active:scale-95">
-                                    Batal
-                                </button>
-                                <button @click="$emit('save')"
-                                    :disabled="isLoading"
-                                    class="flex-1 py-3 rounded-xl bg-primary text-white font-bold text-sm shadow-lg shadow-blue-900/20 hover:bg-blue-800 active:scale-95 transition flex items-center justify-center gap-2 disabled:opacity-60">
-                                    <span v-if="isLoading" class="size-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-                                    <span class="material-symbols-outlined text-base" v-else>send</span>
-                                    {{ form._id ? 'Simpan' : 'Publish' }}
-                                </button>
-                            </div>
+                        <!-- Modal Footer -->
+                        <div class="p-8 pb-10 bg-white border-t border-slate-50 flex gap-4 shrink-0">
+                            <button @click="$emit('close-form')" class="flex-1 py-4 rounded-2xl border-2 border-slate-100 text-slate-500 font-black text-xs uppercase tracking-widest hover:bg-slate-50 transition active:scale-95">
+                                Batal
+                            </button>
+                            <button @click="$emit('save')" :disabled="isLoading" 
+                                class="flex-[2] py-4 rounded-2xl bg-slate-900 text-white font-black text-xs uppercase tracking-widest shadow-xl shadow-slate-900/20 hover:bg-primary transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-3">
+                                <span v-if="isLoading" class="size-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                                <span v-else class="material-symbols-outlined text-lg">send</span>
+                                {{ form._id ? 'Simpan Perubahan' : 'Publish Pengumuman' }}
+                            </button>
                         </div>
                     </div>
                 </div>
-            </Transition>
+            </Transition>sition>
 
             <!-- DETAIL MODAL -->
             <Transition name="modal-fade">
                 <div v-if="showDetailModal && detailItem"
-                    class="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md"
+                    class="fixed inset-0 z-[10000] flex flex-col md:items-center md:justify-center bg-black/40 backdrop-blur-md"
                     @click.self="$emit('close-detail')">
 
                     <!-- Modal Card -->
-                    <div class="relative bg-white rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl ring-1 ring-black/10 animate-scale-in">
-
-                        <!-- Header -->
-                        <div class="sticky top-0 bg-white/95 backdrop-blur-sm px-6 pt-5 pb-4 border-b border-slate-100 z-10 rounded-t-3xl">
-                            <div class="flex items-start justify-between gap-3">
-                                <div class="flex flex-wrap gap-1.5 mt-0.5">
-                                    <span :class="[
-                                        'inline-flex items-center text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider',
-                                        detailItem.kategori === 'darurat' ? 'bg-red-50 text-red-600 border border-red-100' :
-                                        detailItem.kategori === 'penting' ? 'bg-orange-50 text-orange-600 border border-orange-100' :
-                                        'bg-blue-50 text-blue-600 border border-blue-100'
-                                    ]">
-                                        {{ detailItem.kategori === 'darurat' ? 'Darurat' : detailItem.kategori === 'penting' ? 'Penting' : 'Info' }}
-                                    </span>
-                                    <span class="inline-flex items-center text-[10px] font-bold px-2.5 py-1 rounded-full bg-slate-50 text-slate-500 border border-slate-100 uppercase tracking-wider">
-                                        {{ detailItem.target === 'semua' ? 'Semua' : detailItem.target === 'guru' ? 'Guru' : 'Wali' }}
-                                    </span>
-                                </div>
+                    <div class="relative bg-white md:rounded-[40px] w-full max-w-2xl h-full md:h-auto md:max-h-[85vh] flex flex-col shadow-2xl animate-scale-in overflow-hidden">
+                        
+                        <!-- Header Immersive Section -->
+                        <div class="relative w-full shrink-0 min-h-[160px] flex flex-col justify-end p-8 pb-6 overflow-hidden">
+                             <!-- Back Button Section (Dedicated Top Row) -->
+                             <div class="absolute top-0 left-0 w-full p-6 pb-0 z-[100]">
                                 <button @click="$emit('close-detail')"
-                                    class="size-9 rounded-full hover:bg-slate-100 flex items-center justify-center transition text-slate-400 shrink-0 active:scale-90">
-                                    <span class="material-symbols-outlined">close</span>
+                                    class="text-slate-900 hover:text-primary transition active:scale-95 flex items-center justify-center p-2 -ml-3">
+                                    <span class="material-symbols-outlined text-4xl font-light">chevron_left</span>
                                 </button>
-                            </div>
-                            <h3 class="font-black text-slate-800 text-lg mt-3 leading-snug">{{ detailItem.judul }}</h3>
-                            <p class="text-[11px] text-slate-400 mt-1 flex items-center gap-1" v-html="formatDate(detailItem.created_at)">
-                            </p>
+                             </div>
+
+                             <!-- Blurred decoration -->
+                             <div class="absolute -top-10 -right-10 size-48 bg-primary/10 rounded-full blur-3xl opacity-50"></div>
+                             <div class="absolute -bottom-10 -left-10 size-48 bg-blue-400/10 rounded-full blur-3xl opacity-50"></div>
+                             
+                             <div class="flex flex-wrap gap-2 mb-3 mt-12">
+                                <span :class="[
+                                    'inline-flex items-center text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-tighter border-2',
+                                    detailItem.kategori === 'darurat' ? 'bg-red-50 text-red-600 border-red-100' :
+                                    detailItem.kategori === 'penting' ? 'bg-orange-50 text-orange-600 border-orange-100' :
+                                    'bg-primary/5 text-primary border-primary/10'
+                                ]">
+                                    {{ detailItem.kategori === 'darurat' ? 'Darurat' : detailItem.kategori === 'penting' ? 'Penting' : 'Info' }}
+                                </span>
+                                <span class="inline-flex items-center text-[10px] font-black px-3 py-1 rounded-full bg-slate-50 text-slate-500 border-2 border-slate-100 uppercase tracking-tighter">
+                                    Target: {{ detailItem.target }}
+                                </span>
+                             </div>
+                             <h3 class="font-black text-slate-800 text-xl md:text-2xl leading-tight">{{ detailItem.judul }}</h3>
+                             <p class="text-[11px] text-slate-400 mt-2 font-bold uppercase tracking-widest flex items-center gap-2">
+                                <span class="material-symbols-outlined text-xs">schedule</span>
+                                <span v-html="formatDate(detailItem.created_at)"></span>
+                             </p>
                         </div>
 
-                        <!-- Content -->
-                        <div class="p-6">
-                            <div class="prose prose-sm max-w-none text-slate-700 leading-relaxed text-sm announcement-content"
+                        <!-- Scrollable Body -->
+                        <div class="flex-1 overflow-y-auto p-8 pt-2">
+                            <div class="prose prose-slate max-w-none text-slate-600 leading-[1.8] text-[15px] announcement-content"
                                  v-html="sanitizeHtml(detailItem.isi)">
                             </div>
 

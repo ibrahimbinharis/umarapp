@@ -279,22 +279,23 @@ const SantriView = {
                         <template v-if="!showTrash">
                             <a v-if="item.phone" :href="'https://wa.me/' + formatWANumber(item.phone)"
                                 target="_blank"
+                                @click="$emit('toggle-dropdown', null)"
                                 class="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-green-50 hover:text-green-600 transition text-left">
-                                <span class="material-symbols-outlined text-base">chat</span> WhatsApp
+                                <span class="material-symbols-outlined text-base font-bold">chat</span> WhatsApp
                             </a>
                             <template v-if="userSession.role === 'admin' || userSession.role === 'guru'">
-                                <button @click="$emit('open-modal', item); $emit('toggle-dropdown', null)"
+                                <button @click.stop="$emit('toggle-dropdown', null); $emit('open-modal', item)"
                                     class="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-blue-50 hover:text-blue-600 transition text-left w-full">
                                     <span class="material-symbols-outlined text-base">edit</span> Edit
                                 </button>
-                                <button @click="$emit('delete', item); $emit('toggle-dropdown', null)"
+                                <button @click.stop="$emit('toggle-dropdown', null); $emit('delete', item)"
                                     class="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-red-50 hover:text-red-500 transition text-left w-full">
                                     <span class="material-symbols-outlined text-base">delete</span> Hapus
                                 </button>
                             </template>
                         </template>
                         <template v-else>
-                            <button @click="$emit('restore', item); $emit('toggle-dropdown', null)"
+                            <button @click.stop="$emit('toggle-dropdown', null); $emit('restore', item)"
                                 class="flex items-center gap-2 px-4 py-2 text-xs font-bold text-slate-600 hover:bg-green-50 hover:text-green-600 transition text-left w-full">
                                 <span class="material-symbols-outlined text-base">restore_from_trash</span> Pulihkan
                             </button>

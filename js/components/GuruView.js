@@ -75,14 +75,15 @@ const GuruView = {
                         class="absolute right-9 -top-1 w-32 bg-white border border-slate-100 shadow-xl rounded-xl z-50 flex flex-col py-1 overflow-hidden animate-in fade-in zoom-in-95 duration-100 origin-top-right">
                         <a v-if="user.phone" :href="'https://wa.me/' + formatWANumber(user.phone)"
                             target="_blank"
+                            @click.stop="$emit('toggle-dropdown', null)"
                             class="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-green-50 hover:text-green-600 transition text-left">
                             <span class="material-symbols-outlined text-base">chat</span> WhatsApp
                         </a>
-                        <button @click="$emit('open-modal', user); $emit('toggle-dropdown', null)"
+                        <button @click.stop="$emit('toggle-dropdown', null); $emit('open-modal', user)"
                             class="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-blue-50 hover:text-blue-600 transition text-left w-full">
                             <span class="material-symbols-outlined text-base">edit</span> Edit
                         </button>
-                        <button @click="$emit('delete', user._id); $emit('toggle-dropdown', null)"
+                        <button @click.stop="$emit('toggle-dropdown', null); $emit('delete', user._id)"
                             class="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-red-50 hover:text-red-500 transition text-left w-full">
                             <span class="material-symbols-outlined text-base">delete</span> Hapus
                         </button>
