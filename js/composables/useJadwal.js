@@ -232,6 +232,20 @@ function useJadwal(uiData, DB, modalState, userSession) {
         });
     };
 
+    /**
+     * Duplicate jadwal
+     * @param {Object} jadwal - Item to duplicate
+     */
+    const duplicateJadwal = (jadwal) => {
+        // Use existing modal logic to populate form
+        openJadwalModal(jadwal);
+        
+        // Force reset ID so it's treated as a NEW record on save
+        jadwalForm.id = null;
+        modalState.isEdit = false;
+        modalState.title = 'Salin Jadwal';
+    };
+
     // ===== RETURN =====
     return {
         // State
@@ -252,6 +266,7 @@ function useJadwal(uiData, DB, modalState, userSession) {
         closeJadwalModal,
         saveJadwal,
         deleteJadwal,
+        duplicateJadwal,
         setDayFilter
     };
 }

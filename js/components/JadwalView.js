@@ -6,6 +6,7 @@ const JadwalView = {
         jadwalGenderFilter: { type: String, required: true },
         openJadwalModal: Function,
         deleteJadwal: Function,
+        duplicateJadwal: Function,
         userSession: Object,
         activeDropdown: [String, Number, null],
         isModalOpen: Boolean,
@@ -136,13 +137,17 @@ const JadwalView = {
                     <!-- Dropdown Menu -->
                     <div v-if="activeDropdown === item._id"
                         class="absolute right-9 -top-1 w-32 bg-white border border-slate-100 shadow-xl rounded-xl z-50 flex flex-col py-1 overflow-hidden animate-in fade-in zoom-in-95 duration-100 origin-top-right">
-                        <button @click="openJadwalModal(item); $emit('toggle-dropdown', null)"
-                            class="flex items-center gap-2 px-4 py-1.5 text-xs font-bold text-slate-600 hover:bg-blue-50 hover:text-blue-600 transition text-left w-full">
-                            <span class="material-symbols-outlined text-base">edit</span> Edit
+                        <button @click.stop="$emit('toggle-dropdown', null); duplicateJadwal(item)"
+                            class="flex items-center gap-2 px-4 py-1.5 text-xs font-bold text-slate-600 hover:bg-emerald-50 hover:text-emerald-600 transition text-left w-full border-b border-slate-50 last:border-0">
+                            <span class="material-symbols-outlined text-base text-emerald-500">content_copy</span> Salin
                         </button>
-                        <button @click="deleteJadwal(item._id); $emit('toggle-dropdown', null)"
+                        <button @click.stop="$emit('toggle-dropdown', null); openJadwalModal(item)"
+                            class="flex items-center gap-2 px-4 py-1.5 text-xs font-bold text-slate-600 hover:bg-blue-50 hover:text-blue-600 transition text-left w-full border-b border-slate-50 last:border-0">
+                            <span class="material-symbols-outlined text-base text-blue-500">edit</span> Edit
+                        </button>
+                        <button @click.stop="$emit('toggle-dropdown', null); deleteJadwal(item._id)"
                             class="flex items-center gap-2 px-4 py-1.5 text-xs font-bold text-slate-600 hover:bg-red-50 hover:text-red-500 transition text-left w-full">
-                            <span class="material-symbols-outlined text-base">delete</span> Hapus
+                            <span class="material-symbols-outlined text-base text-red-400">delete</span> Hapus
                         </button>
                     </div>
                 </div>
