@@ -36,6 +36,11 @@ function useJadwal(uiData, DB, modalState, userSession) {
     });
 
     /**
+     * Dropdown states
+     */
+    const isMapelDropdownOpen = ref(false);
+
+    /**
      * My Schedule Toggle
      */
     const isMyScheduleOnly = ref(false);
@@ -114,6 +119,12 @@ function useJadwal(uiData, DB, modalState, userSession) {
             .filter(name => name) // Filter out empty names
             .sort((a, b) => a.localeCompare(b));
     });
+
+    const getBookName = (mapelName) => {
+        if (!uiData?.mapel) return null;
+        const mapel = uiData.mapel.find(m => m.name === mapelName);
+        return mapel?.book_name || null;
+    };
 
     // ===== METHODS =====
 
@@ -254,12 +265,14 @@ function useJadwal(uiData, DB, modalState, userSession) {
         dayFilter,
         jadwalGenderFilter,
         isMyScheduleOnly,
+        isMapelDropdownOpen,
 
         // Computed
         filteredJadwalList,
         mapelOptions,
         kelasOptions,
         guruOptions,
+        getBookName,
 
         // Methods
         openJadwalModal,
