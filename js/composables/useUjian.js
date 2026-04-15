@@ -15,7 +15,7 @@ function useUjian(uiData, DB, userSession, refreshData, quranControls = null, cu
     // ===== STATE =====
     const ujianForm = reactive({
         // Tabs
-        tab: 'bulanan', // bulanan | semester
+        tab: 'bulanan', // bulanan | semester | juz
 
         // Common Fields
         santri_id: '',
@@ -51,12 +51,18 @@ function useUjian(uiData, DB, userSession, refreshData, quranControls = null, cu
     const filteredUjian = computed(() => {
         if (!uiData.ujian || !uiData.ujian.length) return [];
 
-        const isSemester = ujianForm.tab === 'semester';
-
         // Filter based on active tab type
         let list = uiData.ujian.filter(u => {
             const typeLower = (u.type || '').toLowerCase();
-            const isTypeMatch = isSemester ? typeLower.includes('semester') : !typeLower.includes('semester');
+            
+            let isTypeMatch = false;
+            if (ujianForm.tab === 'juz') {
+                isTypeMatch = typeLower.includes('juz');
+            } else if (ujianForm.tab === 'semester') {
+                isTypeMatch = typeLower.includes('semester');
+            } else {
+                isTypeMatch = !typeLower.includes('semester') && !typeLower.includes('juz');
+            }
 
             if (!isTypeMatch) return false;
 
@@ -196,6 +202,8 @@ function useUjian(uiData, DB, userSession, refreshData, quranControls = null, cu
                 navControls.goToJuz(juz);
             }
             viewRef.value = 'quran';
+            // v37: Push State for better navigation (Back returns to Ujian)
+            window.history.pushState({ view: 'quran', from: 'ujian' }, '', '#quran');
             // Use closure modalState if available
             if (modalState) modalState.isOpen = false;
         }
@@ -231,6 +239,8 @@ function useUjian(uiData, DB, userSession, refreshData, quranControls = null, cu
                 if (quranControls && quranControls.setPage && currentViewRef) {
                     quranControls.setPage(page);
                     currentViewRef.value = 'quran';
+                    // v37: Push State for better navigation (Back returns to Ujian)
+                    window.history.pushState({ view: 'quran', from: 'ujian' }, '', '#quran');
                 } else {
                     console.warn("Navigation controls not found");
                 }
@@ -387,6 +397,7 @@ function useUjian(uiData, DB, userSession, refreshData, quranControls = null, cu
 
             // --- NORMAL UJIAN MODE ---
             const isSemester = ujianForm.tab === 'semester';
+            const isJuz = ujianForm.tab === 'juz';
             let payload = {
                 santri_id: ujianForm.santri_id,
                 date: ujianForm.date,
@@ -394,11 +405,16 @@ function useUjian(uiData, DB, userSession, refreshData, quranControls = null, cu
                 meta: {}
             };
 
-            if (isSemester) {
-                payload.type = ujianForm.s_type === 'quran' ? 'Ujian Semester (Quran)' : 'Ujian Semester (Mapel)';
+            if (isSemester || isJuz) {
+                if (isJuz) {
+                    payload.type = 'Ujian Juz (Quran)';
+                } else {
+                    payload.type = ujianForm.s_type === 'quran' ? 'Ujian Semester (Quran)' : 'Ujian Semester (Mapel)';
+                }
                 payload.score = parseFloat(ujianForm.s_score);
 
-                if (ujianForm.s_type === 'quran') {
+                // For 'juz' tab, it's ALWAYS quran type
+                if (isJuz || ujianForm.s_type === 'quran') {
                     if (!ujianForm.s_juz) throw new Error("Pilih Juz dahulu");
                     payload.detail = `Juz ${ujianForm.s_juz}`;
                     payload.meta.juz = ujianForm.s_juz;
@@ -509,9 +525,14 @@ function useUjian(uiData, DB, userSession, refreshData, quranControls = null, cu
         // Semester: "Ujian Semester (Quran)" or "Ujian Semester (Mapel)"
         // Bulanan: "Ujian Al-Quran" or "Ujian Pelajaran"
 
-        if (item.type.includes('Semester')) {
-            ujianForm.tab = 'semester';
-            if (item.type.includes('Quran')) {
+        if (item.type.includes('Semester') || item.type.includes('Juz')) {
+            if (item.type.includes('Juz')) {
+                ujianForm.tab = 'juz';
+            } else {
+                ujianForm.tab = 'semester';
+            }
+            
+            if (item.type.includes('Quran') || item.type.includes('Juz')) {
                 ujianForm.s_type = 'quran';
                 ujianForm.s_juz = item.meta?.juz || null;
                 ujianForm.s_salah = item.meta?.salah || 0;

@@ -643,28 +643,21 @@ const UangSakuView = {
 
         <!-- v37: BULK ACTION BOTTOM SHEET / DESKTOP POPUP -->
         <Teleport to="body">
-            <!-- Backdrop (Desktop/Mobile overlay) -->
-            <Transition name="fade">
-                <div v-if="isBulkMode && (userSession.role === 'admin' || userSession.role === 'guru')" 
-                    @click="$emit('bulk-cancel')"
-                    class="fixed inset-0 z-[250] bg-slate-900/40 backdrop-blur-[2px]"></div>
-            </Transition>
-
             <!-- Sheet / Popup Container -->
-            <Transition :name="isMobile ? 'slide-up' : 'fade'">
+            <Transition name="slide-up">
                 <div v-if="isBulkMode && (userSession.role === 'admin' || userSession.role === 'guru')"
-                    class="fixed z-[300] bg-white shadow-2xl transition-all duration-200 overflow-hidden
+                    class="fixed z-[300] bg-white shadow-2xl overflow-visible
                            bottom-0 left-0 right-0 rounded-t-[32px] border-t border-slate-100
-                           md:bottom-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 
-                           md:w-full md:max-w-md md:rounded-[28px] md:border md:shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)]">
+                           md:bottom-6 md:top-auto md:left-1/2 md:-translate-x-1/2 md:translate-y-0
+                           md:w-full md:max-w-xl md:rounded-3xl md:border md:shadow-[0_-20px_60px_-15px_rgba(0,0,0,0.2)] pb-safe">
 
-                    <!-- Handle (Click to close - Mobile Only) -->
-                    <div v-if="isMobile" @click="$emit('bulk-cancel')" class="flex justify-center pt-3 pb-2 cursor-pointer active:opacity-50 transition-opacity">
-                        <div class="w-12 h-1.5 bg-slate-200 rounded-full"></div>
+                    <!-- Handle / Click to close (Desktop & Mobile) -->
+                    <div @click="$emit('bulk-cancel')" class="flex justify-center pt-3 pb-2 cursor-pointer hover:opacity-75 active:opacity-50 transition-opacity">
+                        <div class="w-12 h-1.5 bg-slate-300 rounded-full"></div>
                     </div>
 
                     <!-- Compact Form -->
-                    <div class="px-4 pb-6 space-y-3" :class="isMobile ? 'pt-2' : 'pt-6'">
+                    <div class="px-4 pb-6 space-y-3 pt-2">
 
                         <!-- Header row -->
                         <div class="flex items-center gap-2">
@@ -724,7 +717,7 @@ const UangSakuView = {
 
         <!-- Add Transaction Modal -->
         <Teleport to="body">
-            <transition name="fade">
+            <transition name="modal-fade">
                 <div v-if="isTxModalOpen" class="fixed inset-0 z-[60] flex items-center justify-center p-4">
                     <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" @click="closeModal"></div>
                     <div class="bg-white w-full max-w-sm rounded-[24px] shadow-2xl relative z-10 overflow-hidden text-left flex flex-col max-h-[90vh] animate-scale-in">

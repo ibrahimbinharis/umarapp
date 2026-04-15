@@ -1622,58 +1622,59 @@
                     </div>
 
                     <!-- GRADING MODAL -->
-                    <div v-if="modalState.view === 'grading'" class="p-6 space-y-6">
-                        <!-- Manual Score Input -->
-                        <div
-                            class="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex items-center justify-between">
-                            <div class="flex flex-col">
-                                <label class="font-bold text-slate-700 text-sm">Nilai Manual</label>
-                                <span class="text-[10px] text-slate-500 uppercase font-black">Skala 0-100</span>
+                    <div v-if="modalState.view === 'grading'" class="flex flex-col h-full bg-white">
+                        <!-- Scrollable Body -->
+                        <div class="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
+                            <!-- Manual Score Input -->
+                            <div
+                                class="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex items-center justify-between">
+                                <div class="flex flex-col">
+                                    <label class="font-bold text-slate-700 text-sm">Nilai Manual</label>
+                                    <span class="text-[10px] text-slate-500 uppercase font-black">Skala 0-100</span>
+                                </div>
+                                <input v-model.number="ujianForm.s_score_manual" type="number" min="0" max="100"
+                                    class="w-24 px-3 py-3 text-center font-bold text-xl rounded-xl border border-slate-200 focus:ring-2 focus:ring-primary focus:border-primary">
                             </div>
-                            <input v-model.number="ujianForm.s_score_manual" type="number" min="0" max="100"
-                                class="w-24 px-3 py-3 text-center font-bold text-xl rounded-xl border border-slate-200 focus:ring-2 focus:ring-primary focus:border-primary">
-                        </div>
 
-                        <!-- Grade Buttons Grid -->
-                        <div class="space-y-3">
-                            <label class="text-xs font-bold text-slate-400 uppercase tracking-wider">Pilih
-                                Predikat</label>
-                            <div class="grid grid-cols-3 gap-2">
-                                <!-- Helper to set grade -->
-                                <button v-for="g in ['A+', 'A', 'B+', 'B', 'B-', 'C']" :key="g" @click="setGrade(g)"
-                                    class="py-3 rounded-xl border-2 font-bold transition flex items-center justify-center text-sm"
-                                    :class="ujianForm.s_grade === g ? 'bg-primary text-white border-primary shadow-lg' : 'bg-white text-slate-600 border-slate-100 hover:border-blue-200'">
-                                    {{ g }}
+                            <!-- Grade Buttons Grid -->
+                            <div class="space-y-3">
+                                <label class="text-xs font-bold text-slate-400 uppercase tracking-wider">Pilih
+                                    Predikat</label>
+                                <div class="grid grid-cols-3 gap-2">
+                                    <!-- Helper to set grade -->
+                                    <button v-for="g in ['A+', 'A', 'B+', 'B', 'B-', 'C']" :key="g" @click="setGrade(g)"
+                                        class="py-3 rounded-xl border-2 font-bold transition flex items-center justify-center text-sm"
+                                        :class="ujianForm.s_grade === g ? 'bg-primary text-white border-primary shadow-lg' : 'bg-white text-slate-600 border-slate-100 hover:border-blue-200'">
+                                        {{ g }}
+                                    </button>
+                                </div>
+
+                                <!-- Centang Special Case (Only visible in Hafalan mode) -->
+                                <button v-if="currentView === 'hafalan'" @click="setGrade('Centang')"
+                                    class="w-full mt-2 p-3 rounded-xl border-2 font-bold transition flex items-center justify-center gap-2"
+                                    :class="ujianForm.s_grade === 'Centang' ? 'bg-orange-500 text-white border-orange-500 shadow-lg' : 'bg-white text-orange-500 border-orange-100 hover:border-orange-200 text-sm'">
+                                    <span class="material-symbols-outlined text-xl">check_circle</span> Selesai
                                 </button>
                             </div>
-
-                            <!-- Centang Special Case (Only visible in Hafalan mode) -->
-                            <button v-if="currentView === 'hafalan'" @click="setGrade('Centang')"
-                                class="w-full mt-2 p-3 rounded-xl border-2 font-bold transition flex items-center justify-center gap-2"
-                                :class="ujianForm.s_grade === 'Centang' ? 'bg-orange-500 text-white border-orange-500 shadow-lg' : 'bg-white text-orange-500 border-orange-100 hover:border-orange-200 text-sm'">
-                                <span class="material-symbols-outlined text-xl">check_circle</span> Selesai
-                            </button>
                         </div>
 
-                        <!-- Reset / Delete -->
-                        <div class="pt-4 border-t">
-                            <button @click="setGrade(null); submitUjian()"
-                                class="w-full p-3 rounded-xl border border-red-100 text-red-500 font-bold hover:bg-red-50 flex items-center justify-center gap-2">
-                                <span class="material-symbols-outlined">delete</span> Hapus
-                            </button>
-                        </div>
-
-                        <!-- Save & Nav Buttons -->
-                        <div class="flex flex-col gap-2 pt-2">
+                        <!-- Sticky Bottom Actions -->
+                        <div class="p-6 bg-white border-t border-slate-50 flex flex-col gap-3 shrink-0 shadow-[0_-10px_20px_-10px_rgba(0,0,0,0.05)]">
                             <button @click="submitUjian(); closeModal()"
-                                class="w-full py-3 rounded-xl bg-primary text-white font-bold hover:bg-blue-800 shadow-lg shadow-blue-900/20 transition flex items-center justify-center gap-2">
-                                Simpan
+                                class="w-full py-4 rounded-2xl bg-primary text-white font-bold hover:bg-blue-800 shadow-xl shadow-blue-900/20 transition flex items-center justify-center gap-2">
+                                Simpan Penilaian
                             </button>
 
-                            <button @click="selectUjianJuz(ujianForm.s_juz, true)"
-                                class="w-full py-3 rounded-xl bg-slate-800 text-white font-bold hover:bg-slate-900 transition flex items-center justify-center gap-2">
-                                Lihat Al-Qur'an
-                            </button>
+                            <div class="grid grid-cols-2 gap-3">
+                                <button @click="selectUjianJuz(ujianForm.s_juz, true)"
+                                    class="py-3 rounded-xl bg-slate-800 text-white font-bold hover:bg-slate-900 transition flex items-center justify-center gap-2 text-sm">
+                                    Lihat Qur'an
+                                </button>
+                                <button @click="setGrade(null); submitUjian()"
+                                    class="py-3 rounded-xl border border-red-100 text-red-500 font-bold hover:bg-red-50 flex items-center justify-center gap-2 text-sm">
+                                    <span class="material-symbols-outlined text-sm">delete</span> Hapus
+                                </button>
+                            </div>
                         </div>
                     </div>
 
@@ -1907,7 +1908,7 @@
 
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js?v=3.26').then(reg => {
+                navigator.serviceWorker.register('sw.js?v=3.29').then(reg => {
                     console.log('SW Registered!', reg);
 
                     // 1. Check if update is already waiting (e.g. from previous visit)

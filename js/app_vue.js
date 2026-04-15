@@ -366,8 +366,12 @@ createApp({
             } else {
                 ujian.calcSemesterScore();
             }
-            // Go back to Ujian View
-            currentView.value = 'ujian';
+            // Go back to Ujian View with History Clean-up
+            if (window.history.state && window.history.state.from === 'ujian') {
+                window.history.back();
+            } else {
+                navigateTo('ujian');
+            }
             showExamControls.value = false;
         };
 
@@ -542,12 +546,18 @@ createApp({
                 window.showAlert("Lengkapi data jadwal", "Peringatan", "warning");
                 return;
             }
+
+            // v37: Find teacher username for strict access control in Absensi
+            const guruObj = (uiData.guru || []).find(g => g.full_name === jadwalForm.teacher);
+            const teacherUsername = guruObj ? guruObj.username : null;
+
             const payload = {
                 day: jadwalForm.day,
                 mapel: jadwalForm.mapel,
                 time: `${jadwalForm.time_start} - ${jadwalForm.time_end}`,
                 class_name: jadwalForm.class_name,
                 teacher: jadwalForm.teacher,
+                username: teacherUsername, // Explicit identifier
                 __type: 'jadwal' // Explicit type for create
             };
             if (jadwalForm.id) await DB.update(jadwalForm.id, payload);

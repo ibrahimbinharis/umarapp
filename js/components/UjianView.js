@@ -77,6 +77,53 @@ const UjianView = {
             return mapel?.book_name || null;
         };
 
+        // Mapel custom dropdown state
+        const mapelDropdownOpen = ref(false);
+        const mapelSearch = ref('');
+        const mapelTarget = ref('b'); // 'b' for bulanan, 's' for semester
+
+        // All mapel from uiData
+        const allMapelOptions = Vue.computed(() => {
+            return props.uiData?.mapel || [];
+        });
+
+        // Filtered based on search
+        const filteredMapelOptions = Vue.computed(() => {
+            const q = mapelSearch.value.toLowerCase();
+            if (!q) return allMapelOptions.value;
+            return allMapelOptions.value.filter(m =>
+                m.name.toLowerCase().includes(q) ||
+                (m.book_name || '').toLowerCase().includes(q)
+            );
+        });
+
+        // Get currently selected mapel object for bulanan or semester
+        const selectedMapelObj = Vue.computed(() => {
+            const key = mapelTarget.value === 'b' ? props.ujianForm.b_mapel : props.ujianForm.s_mapel;
+            return allMapelOptions.value.find(m => m.name === key) || null;
+        });
+
+        const openMapelDropdown = (target) => {
+            mapelTarget.value = target;
+            mapelSearch.value = '';
+            mapelDropdownOpen.value = true;
+        };
+
+        const selectMapel = (m) => {
+            if (mapelTarget.value === 'b') {
+                props.ujianForm.b_mapel = m.name;
+            } else {
+                props.ujianForm.s_mapel = m.name;
+            }
+            mapelDropdownOpen.value = false;
+            mapelSearch.value = '';
+        };
+
+        const clearMapel = (target) => {
+            if (target === 'b') props.ujianForm.b_mapel = '';
+            else props.ujianForm.s_mapel = '';
+        };
+
         return {
             getSantriName,
             formatDate,
@@ -86,7 +133,15 @@ const UjianView = {
             selectedSantriLabel,
             selectSantri,
             clearSantri,
-            getBookName
+            getBookName,
+            mapelDropdownOpen,
+            mapelSearch,
+            mapelTarget,
+            filteredMapelOptions,
+            selectedMapelObj,
+            openMapelDropdown,
+            selectMapel,
+            clearMapel
         };
     },
     template: `
@@ -99,6 +154,10 @@ const UjianView = {
                 :class="ujianForm.tab === 'bulanan' ? 'bg-primary text-white shadow' : 'text-slate-500 hover:bg-slate-50'"
                 class="flex-1 py-3 rounded-xl text-sm font-bold transition-all">Ujian
                 Bulanan</button>
+            <button @click="ujianForm.tab = 'juz'"
+                :class="ujianForm.tab === 'juz' ? 'bg-primary text-white shadow' : 'text-slate-500 hover:bg-slate-50'"
+                class="flex-1 py-3 rounded-xl text-sm font-bold transition-all">Ujian
+                Juz</button>
             <button @click="ujianForm.tab = 'semester'"
                 :class="ujianForm.tab === 'semester' ? 'bg-primary text-white shadow' : 'text-slate-500 hover:bg-slate-50'"
                 class="flex-1 py-3 rounded-xl text-sm font-bold transition-all">Ujian
@@ -194,35 +253,31 @@ const UjianView = {
                     <div v-if="ujianForm.tab === 'bulanan'" class="space-y-4 pt-2">
                         <!-- Bulanan Quran -->
                         <div v-if="ujianForm.b_type === 'quran'" class="space-y-4">
+                            <!-- Simplified Sabaq Progress -->
                             <div v-if="selectedSantriBulananStats"
-                                class="bg-blue-50 rounded-xl p-4 border border-blue-100">
-                                <div class="flex justify-between items-end mb-2">
-                                    <div>
-                                        <p
-                                            class="text-[10px] font-bold text-blue-400 uppercase tracking-wider">
-                                            Capaian Sabaq Bulan Ini</p>
-                                        <p class="text-2xl font-black text-blue-700 leading-none mt-1">
-                                            {{ selectedSantriBulananStats.sabaq.current }} <span
-                                                class="text-sm font-bold text-blue-400">/ {{
-                                                selectedSantriBulananStats.sabaq.target }}
-                                                Hal</span>
-                                        </p>
+                                class="flex items-center gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex justify-between items-center mb-2 px-0.5">
+                                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-tight">Capaian Sabaq</span>
+                                        <span class="text-[11px] font-black text-primary">
+                                            {{ selectedSantriBulananStats.sabaq.current }} <span class="text-slate-300 font-medium">/ {{ selectedSantriBulananStats.sabaq.target }} Hal</span>
+                                        </span>
                                     </div>
-                                    <button @click="$emit('start-bulanan-exam')"
-                                        class="size-10 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-lg shadow-blue-200 hover:scale-105 active:scale-95 transition">
-                                        <span class="material-symbols-outlined">play_arrow</span>
-                                    </button>
-                                </div>
-                                <!-- Progress Bar -->
-                                <div class="w-full bg-blue-200 rounded-full h-2 overflow-hidden">
-                                    <div class="bg-blue-600 h-full rounded-full transition-all duration-500"
-                                        :style="{ width: selectedSantriBulananStats.sabaq.percent + '%' }">
+                                    <div class="h-2 w-full bg-slate-200 rounded-full overflow-hidden">
+                                        <div class="h-full bg-primary rounded-full transition-all duration-700"
+                                            :style="{ width: selectedSantriBulananStats.sabaq.percent + '%' }">
+                                        </div>
                                     </div>
                                 </div>
-                                <p class="text-[10px] text-blue-400 mt-2 italic text-center">
-                                    Materi ujian diambil dari awal setoran bulan ini
-                                </p>
+                                <button @click="$emit('start-bulanan-exam')"
+                                    class="size-10 rounded-full bg-primary text-white flex items-center justify-center shadow-lg shadow-primary/20 hover:bg-blue-800 transition-all active:scale-95 group"
+                                    title="Mulai Ujian">
+                                    <span class="material-symbols-outlined text-2xl group-hover:scale-110 transition-transform">play_arrow</span>
+                                </button>
                             </div>
+                            <p v-if="selectedSantriBulananStats" class="text-[10px] text-slate-400 mt-[-8px] ml-4 italic">
+                                * Materi diambil dari awal setoran bulan ini
+                            </p>
 
                             <div v-else
                                 class="p-4 bg-slate-50 rounded-xl border border-slate-200 text-sm text-slate-400 italic text-center">
@@ -246,13 +301,30 @@ const UjianView = {
                             </div>
                         </div>
                         <!-- Bulanan Mapel -->
-                        <div v-else>
-                            <label class="block text-xs font-bold text-slate-400 mb-1">MATA
-                                PELAJARAN</label>
-                            <select v-model="ujianForm.b_mapel"
-                                class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm">
-                                <option v-for="m in mapelList" :value="m">{{ m }}</option>
-                            </select>
+                        <div v-else class="relative">
+                            <label class="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-wider">Mata Pelajaran</label>
+
+                            <!-- Trigger Button -->
+                            <button @click="openMapelDropdown('b')"
+                                class="w-full px-4 py-3 rounded-xl border text-sm font-bold bg-white text-left flex justify-between items-center transition gap-2"
+                                :class="ujianForm.b_mapel ? 'border-slate-200' : 'border-slate-200 text-slate-400'">
+                                <div class="flex-1 min-w-0">
+                                    <div class="truncate" :class="ujianForm.b_mapel ? 'text-slate-800' : 'text-slate-400'">
+                                        {{ ujianForm.b_mapel || 'Pilih Mata Pelajaran...' }}
+                                    </div>
+                                    <div v-if="ujianForm.b_mapel && getBookName(ujianForm.b_mapel)" class="text-[10px] text-blue-500 font-medium flex items-center gap-1 mt-0.5">
+                                        <span class="material-symbols-outlined text-[11px]">auto_stories</span>
+                                        {{ getBookName(ujianForm.b_mapel) }}
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-1 flex-shrink-0">
+                                    <button v-if="ujianForm.b_mapel" @click.stop="clearMapel('b')"
+                                        class="size-5 rounded-full bg-slate-100 hover:bg-red-100 hover:text-red-500 flex items-center justify-center transition">
+                                        <span class="material-symbols-outlined text-[13px]">close</span>
+                                    </button>
+                                    <span v-else class="material-symbols-outlined text-slate-400 text-lg">expand_more</span>
+                                </div>
+                            </button>
                         </div>
 
                         <!-- Score -->
@@ -275,6 +347,83 @@ const UjianView = {
                                     'text-amber-500': ujianForm.b_score >= 70 && ujianForm.b_score < 75,
                                     'text-red-500': ujianForm.b_score < 70
                                 }">
+                        </div>
+                    </div>
+
+                    <!-- UJIAN JUZ FORM -->
+                    <div v-else-if="ujianForm.tab === 'juz'" class="space-y-4 pt-2">
+                        <div v-if="!ujianForm.santri_id"
+                            class="text-center py-8 text-slate-400 italic bg-slate-50 rounded-xl">
+                            Pilih
+                            Santri dahulu untuk melihat progres</div>
+                        <div v-else class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                            <div class="flex justify-between items-center mb-3">
+                                <h4
+                                    class="font-bold text-xs text-slate-500 flex items-center gap-2">
+                                    <span class="material-symbols-outlined text-sm">grid_view</span>
+                                    Progress Kelulusan (Klik Juz untuk Ujian)
+                                </h4>
+                                <div v-if="ujianForm.s_juz" class="flex gap-2">
+                                    <button
+                                        @click="$emit('select-ujian-juz', ujianForm.s_juz, true)"
+                                        class="size-8 rounded-full bg-primary text-white flex items-center justify-center hover:bg-blue-800 transition shadow-md"
+                                        title="Mulai Ujian">
+                                        <span
+                                            class="material-symbols-outlined text-[20px]">play_arrow</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="flex flex-wrap gap-2 justify-center">
+                                <button v-for="j in 30" :key="j" @click="$emit('select-ujian-juz', j)"
+                                    class="size-9 rounded-full text-xs font-bold flex flex-col items-center justify-center transition-all shadow-sm border"
+                                    :class="[
+                                            ujianForm.s_juz === j ? 'ring-2 ring-offset-1 ring-primary scale-110 z-10' : '',
+                                            selectedSantriProgress[j] ? 
+                                                (selectedSantriProgress[j] === 'Centang' ? 'bg-orange-500 text-white border-orange-500' :
+                                                ['A+','A'].includes(selectedSantriProgress[j]) ? 'bg-blue-500 text-white border-blue-600' : 
+                                                selectedSantriProgress[j] === 'C' ? 'bg-red-500 text-white border-red-600' : 
+                                                selectedSantriProgress[j] === 'B-' ? 'bg-amber-400 text-white border-amber-500' :
+                                                'bg-emerald-500 text-white border-emerald-600') 
+                                                : 'bg-white text-slate-300 border-slate-200 hover:bg-slate-100'
+                                        ]">
+                                    <span v-if="selectedSantriProgress[j] === 'Centang'"
+                                        class="material-symbols-outlined text-base">check_circle</span>
+                                    <span v-else>{{ j }}</span>
+                                    <span
+                                        v-if="selectedSantriProgress[j] && selectedSantriProgress[j] !== 'Centang'"
+                                        class="text-[8px] leading-none opacity-80 mt-[-2px]">{{
+                                        selectedSantriProgress[j] }}</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div v-if="ujianForm.s_juz"
+                            class="animate-scale-in bg-white border border-blue-100 p-4 rounded-xl shadow-sm">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="font-bold text-blue-800 text-sm">Penilaian Juz {{
+                                    ujianForm.s_juz }}</span>
+                            </div>
+                            <div class="flex items-center gap-4">
+                                <div class="flex-1">
+                                    <label
+                                        class="block text-[10px] font-bold text-slate-400 mb-1 uppercase">Salah (Baris)</label>
+                                    <input v-model="ujianForm.s_salah" @input="$emit('calc-semester-score')"
+                                        type="number"
+                                        class="w-full px-4 py-2 rounded-xl border border-slate-200 font-bold text-center text-red-500 bg-slate-50">
+                                </div>
+                                <div class="flex-1">
+                                    <label
+                                        class="block text-[10px] font-bold text-slate-400 mb-1 uppercase">Nilai Akhir</label>
+                                    <input :value="ujianForm.s_score" readonly
+                                        class="w-full px-4 py-2 rounded-xl border border-slate-200 font-black text-xl text-center bg-slate-50"
+                                        :class="{
+                                            'text-blue-600': ujianForm.s_score >= 80,
+                                            'text-emerald-600': ujianForm.s_score >= 75 && ujianForm.s_score < 80,
+                                            'text-amber-500': ujianForm.s_score >= 70 && ujianForm.s_score < 75,
+                                            'text-red-500': ujianForm.s_score < 70
+                                        }">
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -359,13 +508,30 @@ const UjianView = {
 
                         <!-- Semester Mapel -->
                         <div v-else class="space-y-4">
-                            <div>
-                                <label class="block text-xs font-bold text-slate-400 mb-1">MATA
-                                    PELAJARAN</label>
-                                <select v-model="ujianForm.s_mapel"
-                                    class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm">
-                                    <option v-for="m in mapelList" :value="m">{{ m }}</option>
-                                </select>
+                            <div class="relative">
+                                <label class="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-wider">Mata Pelajaran</label>
+
+                                <!-- Trigger Button -->
+                                <button @click="openMapelDropdown('s')"
+                                    class="w-full px-4 py-3 rounded-xl border text-sm font-bold bg-white text-left flex justify-between items-center transition gap-2"
+                                    :class="ujianForm.s_mapel ? 'border-slate-200' : 'border-slate-200'">
+                                    <div class="flex-1 min-w-0">
+                                        <div class="truncate" :class="ujianForm.s_mapel ? 'text-slate-800' : 'text-slate-400'">
+                                            {{ ujianForm.s_mapel || 'Pilih Mata Pelajaran...' }}
+                                        </div>
+                                        <div v-if="ujianForm.s_mapel && getBookName(ujianForm.s_mapel)" class="text-[10px] text-blue-500 font-medium flex items-center gap-1 mt-0.5">
+                                            <span class="material-symbols-outlined text-[11px]">auto_stories</span>
+                                            {{ getBookName(ujianForm.s_mapel) }}
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-1 flex-shrink-0">
+                                        <button v-if="ujianForm.s_mapel" @click.stop="clearMapel('s')"
+                                            class="size-5 rounded-full bg-slate-100 hover:bg-red-100 hover:text-red-500 flex items-center justify-center transition">
+                                            <span class="material-symbols-outlined text-[13px]">close</span>
+                                        </button>
+                                        <span v-else class="material-symbols-outlined text-slate-400 text-lg">expand_more</span>
+                                    </div>
+                                </button>
                             </div>
                             <div>
                                 <label class="block text-xs font-bold text-slate-400 mb-1">NILAI
@@ -389,7 +555,7 @@ const UjianView = {
                         </button>
                         <button @click="$emit('submit-ujian')"
                             class="flex-[2] bg-primary text-white py-3 rounded-xl font-bold shadow-lg shadow-blue-900/20 hover:bg-blue-800 transition active:scale-95 flex items-center justify-center">
-                            {{ ujianEditingId ? 'Update Data' : 'Simpan Nilai ' + (ujianForm.tab === 'bulanan' ? 'Bulanan' : 'Semester') }}
+                            {{ ujianEditingId ? 'Update Data' : 'Simpan Nilai ' + (ujianForm.tab === 'bulanan' ? 'Bulanan' : (ujianForm.tab === 'juz' ? 'Kelulusan' : 'Semester')) }}
                         </button>
                     </div>
                 </div>
@@ -484,5 +650,68 @@ const UjianView = {
 
         </div>
     </div>
+
+    <!-- ===== MAPEL DROPDOWN PANEL (Teleport - Bottom Sheet) ===== -->
+    <Teleport to="body">
+        <Transition name="backdrop-fade">
+            <div v-if="mapelDropdownOpen" @click="mapelDropdownOpen = false"
+                class="fixed inset-0 z-[400] bg-slate-900/30 backdrop-blur-[2px]"></div>
+        </Transition>
+        <Transition name="slide-up">
+            <div v-if="mapelDropdownOpen"
+                class="fixed bottom-0 left-0 right-0 z-[401] bg-white rounded-t-3xl shadow-2xl max-h-[70vh] flex flex-col pb-safe
+                       md:bottom-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-full md:max-w-sm md:rounded-3xl md:max-h-[80vh]">
+
+                <!-- Handle -->
+                <div class="flex justify-center pt-3 pb-1 flex-shrink-0">
+                    <div class="w-10 h-1.5 bg-slate-200 rounded-full"></div>
+                </div>
+
+                <!-- Header + Search -->
+                <div class="px-5 pt-2 pb-3 border-b border-slate-50 flex-shrink-0">
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Pilih Mata Pelajaran</p>
+                    <div class="flex items-center gap-2 bg-slate-50 px-3 py-2 rounded-xl border border-slate-100">
+                        <span class="material-symbols-outlined text-slate-400 text-lg">search</span>
+                        <input v-model="mapelSearch"
+                            autofocus
+                            placeholder="Cari mapel atau nama kitab..."
+                            class="bg-transparent flex-1 text-sm font-medium outline-none placeholder:text-slate-300 text-slate-700">
+                        <button v-if="mapelSearch" @click="mapelSearch = ''"
+                            class="size-6 flex items-center justify-center text-slate-300 hover:text-red-500 transition-colors">
+                            <span class="material-symbols-outlined text-base">close</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- List -->
+                <div class="flex-1 overflow-y-auto custom-scrollbar py-2">
+                    <div v-for="m in filteredMapelOptions" :key="m._id || m.name"
+                        @click="selectMapel(m)"
+                        class="px-5 py-3 flex items-center gap-3 hover:bg-blue-50 active:bg-blue-100 cursor-pointer border-b border-slate-50 last:border-0 transition-colors group">
+                        <!-- Icon -->
+                        <div class="size-9 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0 group-hover:bg-blue-100 transition">
+                            <span class="material-symbols-outlined text-primary text-lg">menu_book</span>
+                        </div>
+                        <!-- Text -->
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-bold text-slate-800 group-hover:text-primary transition-colors truncate">{{ m.name }}</p>
+                            <p v-if="m.book_name" class="text-[10px] text-blue-400 font-medium flex items-center gap-1 mt-0.5">
+                                <span class="material-symbols-outlined text-[11px]">auto_stories</span>
+                                {{ m.book_name }}
+                            </p>
+                            <p v-else class="text-[10px] text-slate-300 italic">Tidak ada nama kitab</p>
+                        </div>
+                        <!-- Active check -->
+                        <span v-if="(mapelTarget === 'b' ? ujianForm.b_mapel : ujianForm.s_mapel) === m.name"
+                            class="material-symbols-outlined text-primary text-xl flex-shrink-0">check_circle</span>
+                    </div>
+                    <div v-if="filteredMapelOptions.length === 0"
+                        class="py-10 text-center text-slate-400 text-sm italic">
+                        Tidak ditemukan "{{ mapelSearch }}"
+                    </div>
+                </div>
+            </div>
+        </Transition>
+    </Teleport>
     `
 };

@@ -82,8 +82,13 @@ const AbsensiView = {
         const displayedJadwal = computed(() => {
             if (!isMyScheduleOnly.value) return props.dailyJadwal;
             const myUsername = props.userSession?.username;
+            const myFullName = props.userSession?.full_name;
             if (!myUsername) return props.dailyJadwal;
-            return props.dailyJadwal.filter(j => j.username === myUsername);
+
+            return props.dailyJadwal.filter(j => {
+                return (j.username && j.username === myUsername) || 
+                       (!j.username && j.teacher === myFullName);
+            });
         });
 
         const isToday = computed(() => {
@@ -435,10 +440,9 @@ const AbsensiView = {
                                         {{ getBookName(j.mapel) }}
                                     </p>
                                     <div class="flex items-center text-[10px] md:text-xs text-slate-400 gap-2">
-                                        <span>{{ formatDateLong(j.date) }}</span>
+                                        <span>Guru: {{ j.teacher_name }}</span>
                                         <span class="material-symbols-outlined text-[4px] mx-1 opacity-50">circle</span>
-                                        <span class="material-symbols-outlined text-[14px]">edit_document</span>
-                                        <span>Diinput oleh: {{ j.input_by_name || j.input_by || 'Sistem' }}</span>
+                                        <span>Oleh: {{ j.input_by_name || j.input_by || 'Sistem' }}</span>
                                     </div>
                                 </div>
 

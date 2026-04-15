@@ -188,7 +188,7 @@ const SantriView = {
 
         <!-- ===== PDF FILTER BOTTOM SHEET ===== -->
         <teleport to="body">
-            <transition name="fade">
+            <transition name="backdrop-fade">
                 <div v-if="showPdfSheet" class="fixed inset-0 z-[9998] bg-black/40 backdrop-blur-sm" @click="showPdfSheet = false"></div>
             </transition>
             <transition name="slide-up">

@@ -552,7 +552,7 @@ const DashboardView = {
             <!-- HEADER SECTION: Countdown & Profile/Bell Row -->
             <div class="relative px-5 pt-1">
                 <!-- HOLIDAY COUNTDOWN (Simple & Centered) -->
-                <transition name="fade">
+                <transition name="backdrop-fade">
                     <div v-if="holidayCountdown" 
                         class="flex justify-center mb-3 animate-in fade-in slide-in-from-top-4 duration-700">
                         <div class="px-3 py-1 bg-white/10 backdrop-blur-sm rounded-full border border-white/20 flex items-center gap-2">
