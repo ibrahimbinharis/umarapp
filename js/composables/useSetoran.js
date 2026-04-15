@@ -209,9 +209,10 @@ function useSetoran(uiData, DB, refreshData, userSession, appConfig) {
         if (!setoranForm.santri_id) return null;
 
         const type = setoranForm.setoran_type;
+        const lookupType = (type === 'Sabqi') ? 'Sabaq' : (type === 'Robt' ? 'Sabqi' : type);
         const allRecords = (uiData.setoran || []);
         const records = allRecords
-            .filter(d => d.santri_id === setoranForm.santri_id && d.setoran_type === type)
+            .filter(d => d.santri_id === setoranForm.santri_id && d.setoran_type === lookupType)
             .sort((a, b) => {
                 const da = new Date((a.setoran_date || '2000-01-01') + 'T' + (a.setoran_time || '00:00'));
                 const db = new Date((b.setoran_date || '2000-01-01') + 'T' + (b.setoran_time || '00:00'));
@@ -221,37 +222,8 @@ function useSetoran(uiData, DB, refreshData, userSession, appConfig) {
         const last = records[0];
         if (!last) return null;
 
-        // v37: Smart Detail Inference (For Sabqi/Robt without range info)
+        // v37: Simplified detail for preview reference only
         let detail = formatSetoranDetail(last);
-        if ((type === 'Sabqi' || type === 'Robt') && !last.surah_from_latin) {
-            // Try to infer from Sabaq history relative to this record
-            const limit = type === 'Sabqi' ? 2 : 4;
-            const refDate = new Date((last.setoran_date || '2000-01-01') + 'T' + (last.setoran_time || '00:00'));
-            
-            const sabaqHistory = allRecords
-                .filter(d => 
-                    d.santri_id === last.santri_id && 
-                    d.setoran_type === 'Sabaq' &&
-                    new Date((d.setoran_date || '2000-01-01') + 'T' + (d.setoran_time || '00:00')) < refDate
-                )
-                .sort((a, b) => {
-                    const da = new Date((a.setoran_date || '2000-01-01') + 'T' + (a.setoran_time || '00:00'));
-                    const db = new Date((b.setoran_date || '2000-01-01') + 'T' + (b.setoran_time || '00:00'));
-                    return db - da;
-                })
-                .slice(0, limit);
-
-            if (sabaqHistory.length > 0) {
-                const newest = sabaqHistory[0];
-                const oldest = sabaqHistory[sabaqHistory.length - 1];
-                const sNameStart = (oldest.surah_from_latin || 'Surat').replace(/^\d+\.\s*/, '');
-                const sNameEnd = (newest.surah_to_latin || 'Surat').replace(/^\d+\.\s*/, '');
-                const range = (oldest.surah_from === newest.surah_to)
-                    ? `${sNameStart}: ${oldest.ayat_from}-${newest.ayat_to}`
-                    : `${sNameStart} ${oldest.ayat_from} - ${sNameEnd} ${newest.ayat_to}`;
-                detail = `${range}, ${last.pages} Hal`;
-            }
-        }
 
         return {
             ...last,
@@ -749,11 +721,6 @@ function useSetoran(uiData, DB, refreshData, userSession, appConfig) {
 
         autoCalcInfo.value.visible = true;
         autoCalcInfo.value.text = `Akurasi Baris: <b>${final} Hal</b> (Halaman ${metaStart.p} - ${metaEnd.p})`;
-
-        if (window._autoCalcTimer) clearTimeout(window._autoCalcTimer);
-        window._autoCalcTimer = setTimeout(() => {
-            autoCalcInfo.value.visible = false;
-        }, 8000);
     };
 
     /**
@@ -776,8 +743,17 @@ function useSetoran(uiData, DB, refreshData, userSession, appConfig) {
         const limitCount = type === 'Sabqi' ? 2 : 4;
 
         // Get history for this santri & Sabaq type
+        const currentRefDate = new Date((setoranForm.setoran_date || '2000-01-01') + 'T' + (setoranForm.setoran_time || '00:00'));
+        
         const history = (uiData.setoran || [])
-            .filter(s => s.santri_id === setoranForm.santri_id && s.setoran_type === sourceType)
+            .filter(s => {
+                const isMatch = s.santri_id === setoranForm.santri_id && s.setoran_type === sourceType;
+                if (!isMatch) return false;
+                
+                // v37: Safe filtering (only include records before or at the current setoran time)
+                const sDate = new Date((s.setoran_date || '2000-01-01') + 'T' + (s.setoran_time || '00:00'));
+                return sDate <= currentRefDate;
+            })
             .sort((a, b) => {
                 const da = new Date((a.setoran_date || '2000-01-01') + 'T' + (a.setoran_time || '00:00'));
                 const db = new Date((b.setoran_date || '2000-01-01') + 'T' + (b.setoran_time || '00:00'));
@@ -791,10 +767,9 @@ function useSetoran(uiData, DB, refreshData, userSession, appConfig) {
         const sumPages = records.reduce((acc, curr) => acc + (parseFloat(curr.pages) || 0), 0);
 
         // Default to 1 if no history, otherwise use sum
-        let finalPages = sumPages > 0 ? sumPages : 1;
+        let finalPages = sumPages > 0 ? parseFloat(sumPages.toFixed(1)) : 1;
 
         // Construct info message and range detail
-        let infoText = '';
         if (records.length > 0) {
             const newest = records[0];
             const oldest = records[records.length - 1];
@@ -802,8 +777,11 @@ function useSetoran(uiData, DB, refreshData, userSession, appConfig) {
             // Set Form Data for persistence
             setoranForm.surah_from = oldest.surah_from || 1;
             setoranForm.ayat_from = oldest.ayat_from || 1;
+            setoranForm.surah_from_latin = oldest.surah_from_latin || '';
+            
             setoranForm.surah_to = newest.surah_to || 1;
             setoranForm.ayat_to = newest.ayat_to || 1;
+            setoranForm.surah_to_latin = newest.surah_to_latin || '';
 
             const sNameStart = (oldest.surah_from_latin || 'Surat').replace(/^\d+\.\s*/, '');
             const sNameEnd = (newest.surah_to_latin || 'Surat').replace(/^\d+\.\s*/, '');
@@ -823,12 +801,6 @@ function useSetoran(uiData, DB, refreshData, userSession, appConfig) {
         autoCalcInfo.value.text = infoText;
 
         updateGrade();
-
-        // Auto-hide info
-        if (window._infoTimer) clearTimeout(window._infoTimer);
-        window._infoTimer = setTimeout(() => {
-            autoCalcInfo.value.visible = false;
-        }, 8000);
     };
 
 
