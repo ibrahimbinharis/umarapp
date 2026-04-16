@@ -23,7 +23,8 @@ const NotificationService = {
             uang_saku: { enabled: true, targets: ['wali'] },
             uang_saku_low: { enabled: true, targets: ['wali'], min_balance_threshold: 10000 },
             pengumuman: { enabled: true, targets: ['wali', 'guru', 'admin'] },
-            alert_harian: { enabled: true, targets: ['wali', 'guru', 'admin'] }
+            alert_harian: { enabled: true, targets: ['wali', 'guru', 'admin'] },
+            absensi: { enabled: true, targets: ['wali'] }
         };
 
         // Merge default dengan yang tersimpan di DB
@@ -360,6 +361,48 @@ const NotificationService = {
             title: `Peringatan: Saldo Menipis`,
             message: `Mohon perhatian, sisa saldo Uang Saku Ananda ${santri.full_name} saat ini tinggal ${formattedSaldo}. Silakan melakukan pengisian ulang.`,
             type: 'warning',
+            relatedId: santri._id,
+            role: 'wali'
+        });
+    },
+
+    /**
+     * Beri tahu Wali saat Santri diabsen (H, S, I, A)
+     */
+    async notifyAbsensi(santri, status, date, sourceId, mapel) {
+        if (!this.isTypeAllowed('absensi', 'wali')) return;
+
+        let waliId = santri.wali_id;
+        if (!waliId) {
+            const { data } = await sb.from('santri').select('wali_id').eq('_id', santri._id).maybeSingle();
+            if (data) waliId = data.wali_id;
+        }
+        if (!waliId) return;
+
+        const { data: user } = await sb.from('users').select('role').eq('_id', waliId).maybeSingle();
+        if (!user || user.role !== 'wali') return;
+
+        let statusLabel = "";
+        let type = "info";
+        switch(status) {
+            case 'H': statusLabel = "Hadir"; type = "success"; break;
+            case 'S': statusLabel = "Sakit"; type = "warning"; break;
+            case 'I': statusLabel = "Izin"; type = "info"; break;
+            case 'A': statusLabel = "Alpa"; type = "danger"; break;
+            default: return;
+        }
+
+        // Format date to short local
+        const dateObj = new Date(date);
+        const dayFormatted = dateObj.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+
+        await this.create({
+            id: `abs_${sourceId}_${santri._id}_${date.replace(/-/g, '')}`,
+            sourceId: `${sourceId}_${date.replace(/-/g, '')}`, 
+            userId: waliId,
+            title: `Absensi: ${santri.full_name}`,
+            message: `${mapel} | Status: ${statusLabel} (${dayFormatted})`,
+            type: type,
             relatedId: santri._id,
             role: 'wali'
         });

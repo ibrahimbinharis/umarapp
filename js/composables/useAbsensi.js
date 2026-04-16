@@ -340,6 +340,17 @@ function useAbsensi(uiData, DB, modalState, userSession) {
                 window.showAlert('Absensi berhasil disimpan!', 'Sukses', 'info');
             }
 
+            // --- v37: Send Direct Notifications to Wali for ALL statuses ---
+            if (window.NotificationService) {
+                for (const s of absensiState.santriList) {
+                    const status = details[s._id];
+                    if (status) { // Send for H, S, I, A
+                        // We use schedule id + date as source for potential recall/grouping
+                        await window.NotificationService.notifyAbsensi(s, status, payload.date, jId, payload.mapel);
+                    }
+                }
+            }
+
             // Refresh data
             if (window.refreshData) {
                 window.refreshData();
