@@ -296,17 +296,31 @@ function useSetoran(uiData, DB, refreshData, userSession, appConfig) {
         const activeSantri = (uiData.santri || []).find(s => s.santri_id === setoranForm.santri_id);
         if (!activeSantri) return { pct: 0, current: 0, target: 0, show: false, unit: '' };
 
-        // Target calculation
+        // 1. Determine Total Juz (Completion Check)
+        let totalJuz = 0;
+        if (activeSantri.hafalan_manual) {
+            const match = activeSantri.hafalan_manual.match(/(\d+)/);
+            if (match) totalJuz = parseInt(match[1]);
+        }
+        if (activeSantri.hafalan_progress && typeof activeSantri.hafalan_progress === 'object') {
+            const keys = Object.keys(activeSantri.hafalan_progress).filter(k => activeSantri.hafalan_progress[k]);
+            if (keys.length > totalJuz) totalJuz = keys.length;
+        }
+
+        // 2. Target calculation
         const type = setoranForm.setoran_type;
         let target = 0;
         let unit = '';
 
-        if (type === 'Sabaq') { target = activeSantri.target_sabaq || 20; unit = 'Hal'; }
+        if (type === 'Sabaq') { 
+            target = totalJuz >= 30 ? 0 : (activeSantri.target_sabaq || 20); 
+            unit = 'Hal'; 
+        }
         else if (type === 'Manzil') { target = activeSantri.target_manzil || 20; unit = 'Hal'; }
         else if (type === 'Tilawah') { target = activeSantri.target_tilawah || 600; unit = 'Hal'; }
         else return { pct: 0, current: 0, target: 0, show: false, unit: '' };
 
-        if (!target || target <= 0) return { pct: 0, current: 0, target: 0, show: false, unit: '' };
+        if (!target && target !== 0) return { pct: 0, current: 0, target: 0, show: false, unit: '' };
 
         // Current month achievement
         const now = new Date();
@@ -326,7 +340,7 @@ function useSetoran(uiData, DB, refreshData, userSession, appConfig) {
             return acc + val;
         }, 0);
 
-        const pct = Math.min(100, Math.round((current / target) * 100));
+        const pct = target === 0 ? 100 : Math.min(100, Math.round((current / target) * 100));
 
         return {
             pct,

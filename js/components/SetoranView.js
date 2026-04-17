@@ -184,7 +184,10 @@ const SetoranView = {
                 <div v-if="santriTargetProgress.show" class="space-y-1.5">
                     <div class="flex justify-between items-end text-[10px] font-bold">
                         <span class="text-slate-400">TARGET BULAN INI</span>
-                        <span class="text-primary uppercase tracking-wider">{{ santriTargetProgress.current }} / {{ santriTargetProgress.target }} {{ santriTargetProgress.unit }}</span>
+                        <span class="text-primary uppercase tracking-wider">
+                            <template v-if="santriTargetProgress.target === 0">Khatam</template>
+                            <template v-else>{{ santriTargetProgress.current }} / {{ santriTargetProgress.target }} {{ santriTargetProgress.unit }}</template>
+                        </span>
                     </div>
                     <div class="h-1.5 bg-slate-200 rounded-full overflow-hidden shadow-inner flex">
                         <div class="h-full bg-primary transition-all duration-1000 relative" 

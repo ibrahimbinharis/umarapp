@@ -115,20 +115,45 @@ const TargetView = {
                             <span class="text-[10px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">{{ s.kelas || '-' }}</span>
                         </div>
                         
-                        <!-- Mini Badges -->
-                        <div class="flex items-center gap-2 flex-wrap">
-                            <span class="text-[10px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded border border-blue-100 font-bold">
-                                S: {{ s.view_sabaq }}
+                        <!-- Progress Bar (v37) -->
+                        <div class="mt-2 w-full bg-slate-100 h-1.5 rounded-full overflow-hidden flex">
+                            <template v-if="s.isKhatam">
+                                <div class="h-full bg-amber-400 transition-all duration-500" :style="{ width: '100%' }"></div>
+                            </template>
+                            <template v-else>
+                                <div class="h-full bg-blue-500 transition-all duration-500" :style="{ width: s.prog_sabaq + '%' }"></div>
+                                <div class="h-full bg-purple-500 transition-all duration-500" :style="{ width: s.prog_manzil + '%' }"></div>
+                            </template>
+                        </div>
+
+                        <!-- Mini Badges & Progress -->
+                        <div class="flex items-center gap-1.5 flex-wrap mt-2">
+                            <!-- SABAQ / KHATAM Badge -->
+                            <span v-if="s.isKhatam" class="text-[9px] px-1.5 py-0.5 rounded-md font-black border bg-amber-500 text-white border-amber-400 flex items-center gap-1">
+                                <span class="material-symbols-outlined text-[10px]">workspace_premium</span> KHATAM
                             </span>
-                            <span class="text-[10px] bg-purple-50 text-purple-600 px-1.5 py-0.5 rounded border border-purple-100 font-bold">
-                                M: {{ s.view_manzil }}
+                            <span v-else class="text-[9px] px-1.5 py-0.5 rounded-md font-black border transition-colors"
+                                :class="s.prog_sabaq >= 100 ? 'bg-emerald-500 text-white border-emerald-400' : 'bg-blue-50 text-blue-600 border-blue-100'">
+                                S: {{ s.ach_sabaq }}/{{ s.view_sabaq }}
                             </span>
-                            <span class="text-[10px] bg-emerald-50 text-emerald-600 px-1.5 py-0.5 rounded border border-emerald-100 font-bold">
-                                T: {{ s.view_tilawah }}
+
+                            <!-- MANZIL Badge -->
+                            <span class="text-[9px] px-1.5 py-0.5 rounded-md font-black border transition-colors"
+                                :class="s.prog_manzil >= 100 ? 'bg-emerald-500 text-white border-emerald-400' : 'bg-purple-50 text-purple-600 border-purple-100'">
+                                M: {{ s.ach_manzil }}/{{ s.view_manzil }}
                             </span>
-                             <span class="text-[10px] text-slate-400 font-bold pl-1 border-l border-slate-200">
-                                {{ s.hafalan_manual || '0 Juz' }}
+
+                            <!-- TILAWAH Badge -->
+                            <span class="text-[9px] bg-slate-50 text-slate-500 px-1.5 py-0.5 rounded-md border border-slate-100 font-black">
+                                T: {{ s.ach_tilawah }}/{{ s.view_tilawah }}
                             </span>
+
+                             <div class="flex items-center gap-1.5 ml-1 pl-2 border-l border-slate-200">
+                                <span class="text-[10px] text-slate-700 font-black">{{ s.hafalan_manual || '0 Juz' }}</span>
+                                <div class="w-12 bg-slate-100 h-1 rounded-full overflow-hidden">
+                                    <div class="h-full" :class="s.isKhatam ? 'bg-amber-400' : 'bg-rose-400'" :style="{ width: (parseInt(s.hafalan_manual) || 0) * 3.33 + '%' }"></div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>

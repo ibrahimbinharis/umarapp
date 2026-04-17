@@ -610,8 +610,13 @@ const RekapView = {
                                     </div>
                                 </td>
                                 <td v-if="row.show_sabaq" class="px-4 py-3 text-center">
-                                    <div class="font-bold text-blue-600">{{ row.sabaq_act }} / {{
-                                        row.sabaq_tgt }} <span class="text-[9px] font-normal">Hal</span></div>
+                                    <div v-if="row.juzCompleted >= 30" class="flex flex-col items-center gap-0.5">
+                                        <span class="px-2 py-0.5 rounded-md bg-amber-500 text-white text-[8px] font-black uppercase tracking-widest shadow-sm">Khatam</span>
+                                        <span v-if="row.sabaq_act > 0" class="text-[9px] text-blue-500 font-bold mt-0.5">+{{ row.sabaq_act }} Hal</span>
+                                    </div>
+                                    <div v-else class="font-bold text-blue-600">
+                                        {{ row.sabaq_act }} / {{ row.sabaq_tgt }} <span class="text-[9px] font-normal">Hal</span>
+                                    </div>
                                 </td>
                                 <td v-if="row.show_manzil" class="px-4 py-3 text-center">
                                     <div class="font-bold text-emerald-600">{{ row.manzil_act }} / {{
@@ -767,10 +772,11 @@ const RekapView = {
                             </div>
                             <div class="flex items-baseline gap-1">
                                 <span class="text-xl font-bold text-slate-800">
-                                    {{ m === 'ujian' ? rekapHafalanData[0].ujian_avg : rekapHafalanData[0][m + '_act'] }}
+                                    {{ m === 'sabaq' && rekapHafalanData[0].juzCompleted >= 30 ? 'Khatam' : (m === 'ujian' ? rekapHafalanData[0].ujian_avg : rekapHafalanData[0][m + '_act']) }}
                                 </span>
-                                <span v-if="m !== 'ujian'" class="text-[10px] text-slate-400 font-medium">/ {{ rekapHafalanData[0][m + '_tgt'] }}</span>
+                                <span v-if="m !== 'ujian' && !(m === 'sabaq' && rekapHafalanData[0].juzCompleted >= 30)" class="text-[10px] text-slate-400 font-medium">/ {{ rekapHafalanData[0][m + '_tgt'] }}</span>
                             </div>
+                            <div v-if="m === 'sabaq' && rekapHafalanData[0].juzCompleted >= 30" class="text-[8px] font-black text-amber-500 uppercase tracking-tighter mt-1">Hafalan Selesai</div>
                             <div v-if="rekapHafalanData[0].comparison && rekapHafalanData[0].comparison[m]" 
                                 class="flex items-center gap-1 mt-1 text-[9px] font-bold"
                                 :class="rekapHafalanData[0].comparison[m].status === 'up' ? 'text-emerald-500' : (rekapHafalanData[0].comparison[m].status === 'down' ? 'text-red-500' : 'text-slate-400')">

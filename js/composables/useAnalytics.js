@@ -52,22 +52,21 @@ function useAnalytics(uiData, userSession) {
 
         const { setoran, ujian, pelanggaran } = contextData;
 
-        // 1. Target Sabaq
-        const targetSabaq = parseInt(santri.target_sabaq) || 20;
-
-        // 2. Target Manzil
+        // 1. Determine Total Juz (Completion Check)
         let totalJuz = 0;
         if (santri.hafalan_manual) {
             const match = santri.hafalan_manual.match(/(\d+)/);
             if (match) totalJuz = parseInt(match[1]);
         }
-
-        // v36 logic: If hafalan_progress is object, count keys
         if (santri.hafalan_progress && typeof santri.hafalan_progress === 'object') {
             const keys = Object.keys(santri.hafalan_progress).filter(k => santri.hafalan_progress[k]);
             if (keys.length > totalJuz) totalJuz = keys.length;
         }
 
+        // 2. Target Sabaq (v37: Force 0 if Khatam)
+        const targetSabaq = totalJuz >= 30 ? 0 : (parseInt(santri.target_sabaq) || 20);
+
+        // 3. Target Manzil
         const manzilPct = parseInt(santri.target_manzil_pct) || 20;
         const calcTargetManzil = (totalJuz * 20) * (manzilPct / 100);
         const targetManzil = Math.max(20, Math.round(calcTargetManzil));
@@ -97,10 +96,11 @@ function useAnalytics(uiData, userSession) {
         const totalPointsPelanggaran = myPelanggaran.reduce((acc, curr) => acc + (parseInt(curr.points) || 0), 0);
 
         // --- Weighted Scoring ---
-        let scoreSabaqWeighted = visibility.sabaq && targetSabaq > 0 ? (actualSabaq / targetSabaq) * 100 * (weights.sabaq / 100) : 0;
-        let scoreManzilWeighted = visibility.manzil && targetManzil > 0 ? (actualManzil / targetManzil) * 100 * (weights.manzil / 100) : 0;
+        // v37: If target is 0 (Khatam), student gets 100% achievement for that category
+        let scoreSabaqWeighted = visibility.sabaq ? (targetSabaq === 0 ? 100 : (actualSabaq / targetSabaq) * 100) * (weights.sabaq / 100) : 0;
+        let scoreManzilWeighted = visibility.manzil ? (targetManzil === 0 ? 100 : (actualManzil / targetManzil) * 100) * (weights.manzil / 100) : 0;
         let scoreUjianWeighted = visibility.ujian ? avgUjian * (weights.ujian / 100) : 0;
-        let scoreTilawahWeighted = visibility.tilawah && targetTilawah > 0 ? (actualTilawah / targetTilawah) * 100 * (weights.tilawah / 100) : 0;
+        let scoreTilawahWeighted = visibility.tilawah ? (targetTilawah === 0 ? 100 : (actualTilawah / targetTilawah) * 100) * (weights.tilawah / 100) : 0;
 
         let finalScore = scoreSabaqWeighted + scoreManzilWeighted + scoreUjianWeighted + scoreTilawahWeighted;
         finalScore -= totalPointsPelanggaran;

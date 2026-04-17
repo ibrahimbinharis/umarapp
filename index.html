@@ -1464,14 +1464,26 @@
                         <!-- Scrollable Body -->
                         <div class="flex-1 overflow-y-auto p-8 pt-2 custom-scrollbar">
                             <div class="space-y-6 pb-6 mt-4">
+                                <!-- Khatam Notice (Subtle v37) -->
+                                <div v-if="targetForm.isKhatam" class="mb-6 p-4 rounded-2xl bg-amber-50 border border-amber-200 flex items-center gap-3">
+                                    <div class="size-10 rounded-xl bg-amber-100 flex items-center justify-center shrink-0">
+                                        <span class="material-symbols-outlined text-amber-600 text-xl">workspace_premium</span>
+                                    </div>
+                                    <div class="flex-1">
+                                        <h4 class="text-sm font-bold text-amber-900 leading-tight">Status Khatam 30 Juz</h4>
+                                        <p class="text-[11px] text-amber-700 font-medium">Santri ini telah menyelesaikan seluruh setoran hafalan.</p>
+                                    </div>
+                                </div>
+
                                 <!-- Sabaq -->
-                                <div class="p-5 rounded-3xl bg-slate-50 border border-slate-100">
+                                <div class="p-5 rounded-3xl bg-slate-50 border border-slate-100 transition-all" :class="{'opacity-50 grayscale select-none': targetForm.isKhatam}">
                                     <label class="block text-[10px] font-black text-slate-400 mb-4 tracking-widest flex items-center gap-2">
                                         <span class="size-2 rounded-full bg-blue-500"></span>
                                         TARGET SABAQ (HAFALAN BARU)
+                                        <span v-if="targetForm.isKhatam" class="ml-auto text-blue-600 font-black italic">Hafalan Selesai</span>
                                     </label>
                                     <div class="flex items-center gap-4">
-                                        <input v-model.number="targetForm.sabaq" type="number"
+                                        <input v-model.number="targetForm.sabaq" type="number" :disabled="targetForm.isKhatam"
                                             class="w-full h-14 rounded-2xl border-2 border-white bg-white shadow-sm font-black text-2xl text-slate-800 text-center focus:border-rose-300 outline-none">
                                         <div class="text-xs font-bold text-slate-400">Hal/Bulan</div>
                                     </div>
@@ -1908,7 +1920,7 @@
 
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js?v=3.31').then(reg => {
+                navigator.serviceWorker.register('sw.js?v=3.32').then(reg => {
                     console.log('SW Registered!', reg);
 
                     // 1. Check if update is already waiting (e.g. from previous visit)

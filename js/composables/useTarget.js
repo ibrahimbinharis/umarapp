@@ -16,9 +16,6 @@ function useTarget(uiData, DB, modalState) {
 
     // ===== STATE =====
 
-    /**
-     * Target form state
-     */
     const targetForm = reactive({
         id: null,
         sabaq: 20,
@@ -27,7 +24,8 @@ function useTarget(uiData, DB, modalState) {
         pct: 20,
         totalPages: 0,
         full_name: '',
-        hafalan_desc: ''
+        hafalan_desc: '',
+        isKhatam: false
     });
 
     /**
@@ -53,17 +51,33 @@ function useTarget(uiData, DB, modalState) {
     // ===== COMPUTED =====
 
     /**
-     * Santri list with their target values computed
+     * Santri list with their target values AND current month achievements computed
      */
     const santriWithTarget = computed(() => {
         const santriData = uiData.santri || [];
-
+        const setoranData = uiData.setoran || [];
+        
+        // Get start and end of current month
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        
         return santriData.map(s => {
             const defaults = getTargetDefaults(s);
-            const sabaq = s.target_sabaq || defaults.sabaq;
+            const sabaq = defaults.isKhatam ? 0 : (s.target_sabaq || defaults.sabaq);
             const manzil = s.target_manzil || defaults.manzil;
             const tilawah = s.target_tilawah || 600;
             const pct = s.target_manzil_pct || 20;
+
+            // Calculate current month's achievement (v37)
+            const sMonthRecords = setoranData.filter(r => {
+                const rDate = new Date(r.setoran_date);
+                return (String(r.santri_id) === String(s._id) || String(r.santri_id) === String(s.nis)) &&
+                       rDate >= startOfMonth && rDate <= now && r._deleted !== true;
+            });
+
+            const currentSabaq = sMonthRecords.filter(r => r.setoran_type === 'Sabaq').reduce((sum, r) => sum + (parseFloat(r.pages) || 0), 0);
+            const currentManzil = sMonthRecords.filter(r => r.setoran_type === 'Manzil' || r.setoran_type === 'Sabqi').reduce((sum, r) => sum + (parseFloat(r.pages) || 0), 0);
+            const currentTilawah = sMonthRecords.filter(r => r.setoran_type === 'Tilawah' || r.setoran_type === 'Binadzor').reduce((sum, r) => sum + (parseFloat(r.pages) || 0), 0);
 
             return {
                 ...s,
@@ -71,7 +85,17 @@ function useTarget(uiData, DB, modalState) {
                 view_manzil: manzil,
                 view_tilawah: tilawah,
                 view_pct: pct,
-                view_total_pages: defaults.totalPages
+                view_total_pages: defaults.totalPages,
+                isKhatam: defaults.isKhatam,
+                // Achievements
+                ach_sabaq: Math.round(currentSabaq * 10) / 10,
+                ach_manzil: Math.round(currentManzil * 10) / 10,
+                ach_tilawah: Math.round(currentTilawah * 10) / 10,
+                // Progress Percent (capped at 100)
+                // If sabaq is 0 (khatam), progress is automatically 100%
+                prog_sabaq: sabaq === 0 ? 100 : Math.min(100, (currentSabaq / (sabaq || 1)) * 100),
+                prog_manzil: Math.min(100, (currentManzil / (manzil || 1)) * 100),
+                prog_overall: Math.min(100, ((currentSabaq + currentManzil) / ((sabaq + manzil) || 1)) * 100)
             };
         }).sort((a, b) => (a.full_name || '').localeCompare(b.full_name || ''));
     });
@@ -83,18 +107,6 @@ function useTarget(uiData, DB, modalState) {
      * @param {Object} santri - Santri object
      */
     const getTargetDefaults = (santri) => {
-        // Sabaq Logic: Based on class
-        let sabaq = 20; // Default
-        const kelasStr = String(santri.kelas || '');
-
-        if (kelasStr.includes('1')) {
-            sabaq = 10; // Class 1 gets lower target
-        }
-        if (kelasStr.toLowerCase().includes('tahfidz')) {
-            sabaq = 20; // Tahfidz class gets standard target
-        }
-
-        // Manzil Logic: Percentage of total hafalan
         // 1 Juz = 20 Pages
         let totalJuz = 0;
         if (santri.hafalan_manual) {
@@ -105,10 +117,21 @@ function useTarget(uiData, DB, modalState) {
         }
 
         const totalPages = totalJuz * 20;
+
+        // Sabaq Logic: Based on class AND Completion Status
+        let sabaq = 20; // Default
+        const kelasStr = String(santri.kelas || '');
+
+        if (totalJuz >= 30) {
+            sabaq = 0; // Khatam = No more sabaq required
+        } else if (kelasStr.includes('1')) {
+            sabaq = 10; // Class 1 gets lower target
+        }
+
         const pct = santri.target_manzil_pct || 20; // Default 20% or custom
         const manzil = Math.round(totalPages * (pct / 100));
 
-        return { sabaq, manzil, totalPages };
+        return { sabaq, manzil, totalPages, isKhatam: totalJuz >= 30 };
     };
 
     // ===== METHODS =====
@@ -123,7 +146,10 @@ function useTarget(uiData, DB, modalState) {
         targetForm.id = santri._id;
         targetForm.full_name = santri.full_name;
         targetForm.hafalan_desc = santri.hafalan_manual || '0 Juz';
-        targetForm.sabaq = santri.target_sabaq || defaults.sabaq;
+        targetForm.isKhatam = defaults.isKhatam;
+        
+        // v37: Strictly override to 0 if khatam
+        targetForm.sabaq = defaults.isKhatam ? 0 : (santri.target_sabaq || defaults.sabaq);
         targetForm.manzil = santri.target_manzil || defaults.manzil;
         targetForm.tilawah = santri.target_tilawah || 600;
         targetForm.pct = santri.target_manzil_pct || 20;

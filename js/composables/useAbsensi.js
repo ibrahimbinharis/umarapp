@@ -342,12 +342,11 @@ function useAbsensi(uiData, DB, modalState, userSession) {
 
             // --- v37: Send Direct Notifications to Wali for ALL statuses ---
             if (window.NotificationService) {
+                const mName = absensiState.activeJadwal?.mapel || '-';
                 for (const s of absensiState.santriList) {
-                    const status = details[s._id];
-                    if (status) { // Send for H, S, I, A
-                        // We use schedule id + date as source for potential recall/grouping
-                        await window.NotificationService.notifyAbsensi(s, status, payload.date, jId, payload.mapel);
-                    }
+                    const status = formState.value[s._id] || 'H';
+                    // We use schedule id + date as source for potential recall/grouping
+                    await window.NotificationService.notifyAbsensi(s, status, payload.date, jId, mName);
                 }
             }
 
