@@ -2,73 +2,54 @@
  * useTarget Composable
  * 
  * Manages Target (Monthly Quran Goals) for students
- * - Sabaq: New memorization target (pages/month)
- * - Manzil: Review target (pages/month)  
- * - Auto-calculation based on total hafalan
- * - Class-based defaults
- * 
- * Dependencies: DB (from core.js), uiData (from parent)
+ * Unified UI: Uses Bottom Sheet for both Single and Bulk edits
  */
 
-function useTarget(uiData, DB, modalState) {
-    // Get Vue from global (loaded via CDN)
-    const { reactive, computed, ref, watch, nextTick, onUnmounted } = Vue;
+function useTarget(uiData, DB, modalState, refreshUI) {
+    const { reactive, computed, ref, onUnmounted } = Vue;
 
     // ===== STATE =====
+    const selectedSantriIds = ref([]);
+    const isBulkSaving = ref(false);
+    const selectionMode = ref(false);
 
-    const targetForm = reactive({
-        id: null,
+    const bulkTargetForm = reactive({
         sabaq: 20,
         manzil: 20,
         tilawah: 600,
-        pct: 20,
-        totalPages: 0,
-        full_name: '',
-        hafalan_desc: '',
-        isKhatam: false
+        pct: 20
     });
 
-    /**
-     * Modal state
-     */
-    const targetModalState = reactive({
-        isOpen: false,
-        isBulkOpen: false,
-        selectionMode: false
-    });
-
-    const selectedSantriIds = ref([]);
-
-    const bulkTargetForm = reactive({
-        updateSabaq: false,
-        updateManzil: false,
-        updateTilawah: false,
-        sabaq: 20,
-        manzil: 20,
-        tilawah: 600
-    });
+    const targetFilterGender = ref('all');
+    const targetFilterKelas = ref('all');
 
     // ===== COMPUTED =====
 
-    /**
-     * Santri list with their target values AND current month achievements computed
-     */
     const santriWithTarget = computed(() => {
-        const santriData = uiData.santri || [];
+        let santriData = uiData.santri || [];
         const setoranData = uiData.setoran || [];
+
+        if (targetFilterGender.value !== 'all') {
+            santriData = santriData.filter(s => s.gender === targetFilterGender.value);
+        }
+        if (targetFilterKelas.value !== 'all') {
+            santriData = santriData.filter(s => s.kelas === targetFilterKelas.value);
+        }
         
-        // Get start and end of current month
         const now = new Date();
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
         
         return santriData.map(s => {
             const defaults = getTargetDefaults(s);
-            const sabaq = defaults.isKhatam ? 0 : (s.target_sabaq || defaults.sabaq);
-            const manzil = s.target_manzil || defaults.manzil;
-            const tilawah = s.target_tilawah || 600;
-            const pct = s.target_manzil_pct || 20;
+            const sabaq = defaults.isKhatam ? 0 : (s.target_sabaq != null ? s.target_sabaq : defaults.sabaq);
+            let manzil = s.target_manzil != null ? s.target_manzil : defaults.manzil;
+            
+            // v37 Unified Rule: Enforce minimal 20 pages globally
+            if (manzil < 20) manzil = 20;
 
-            // Calculate current month's achievement (v37)
+            const tilawah = s.target_tilawah != null ? s.target_tilawah : 600;
+            const pct = s.target_manzil_pct != null ? s.target_manzil_pct : 20;
+
             const sMonthRecords = setoranData.filter(r => {
                 const rDate = new Date(r.setoran_date);
                 return (String(r.santri_id) === String(s._id) || String(r.santri_id) === String(s.nis)) &&
@@ -87,12 +68,9 @@ function useTarget(uiData, DB, modalState) {
                 view_pct: pct,
                 view_total_pages: defaults.totalPages,
                 isKhatam: defaults.isKhatam,
-                // Achievements
                 ach_sabaq: Math.round(currentSabaq * 10) / 10,
                 ach_manzil: Math.round(currentManzil * 10) / 10,
                 ach_tilawah: Math.round(currentTilawah * 10) / 10,
-                // Progress Percent (capped at 100)
-                // If sabaq is 0 (khatam), progress is automatically 100%
                 prog_sabaq: sabaq === 0 ? 100 : Math.min(100, (currentSabaq / (sabaq || 1)) * 100),
                 prog_manzil: Math.min(100, (currentManzil / (manzil || 1)) * 100),
                 prog_overall: Math.min(100, ((currentSabaq + currentManzil) / ((sabaq + manzil) || 1)) * 100)
@@ -102,34 +80,27 @@ function useTarget(uiData, DB, modalState) {
 
     // ===== HELPER FUNCTIONS =====
 
-    /**
-     * Calculate default targets based on student data
-     * @param {Object} santri - Santri object
-     */
     const getTargetDefaults = (santri) => {
-        // 1 Juz = 20 Pages
         let totalJuz = 0;
         if (santri.hafalan_manual) {
             const match = santri.hafalan_manual.match(/(\d+)/);
-            if (match) {
-                totalJuz = parseInt(match[1]);
-            }
+            if (match) totalJuz = parseInt(match[1]);
         }
-
         const totalPages = totalJuz * 20;
 
-        // Sabaq Logic: Based on class AND Completion Status
-        let sabaq = 20; // Default
+        let sabaq = 20;
         const kelasStr = String(santri.kelas || '');
-
         if (totalJuz >= 30) {
-            sabaq = 0; // Khatam = No more sabaq required
+            sabaq = 0;
         } else if (kelasStr.includes('1')) {
-            sabaq = 10; // Class 1 gets lower target
+            sabaq = 10;
         }
 
-        const pct = santri.target_manzil_pct || 20; // Default 20% or custom
-        const manzil = Math.round(totalPages * (pct / 100));
+        const pct = santri.target_manzil_pct || 20;
+        let manzil = Math.round(totalPages * (pct / 100));
+        
+        // v37 Unified Rule: Minimal Manzil target is 20 pages
+        if (manzil < 20) manzil = 20;
 
         return { sabaq, manzil, totalPages, isKhatam: totalJuz >= 30 };
     };
@@ -137,44 +108,27 @@ function useTarget(uiData, DB, modalState) {
     // ===== METHODS =====
 
     /**
-     * Open target modal for a santri
-     * @param {Object} santri - Santri object
+     * Unified Target Editor: Handles both Single and Bulk
      */
     const openTargetModal = (santri) => {
         if (!santri) return;
-        const defaults = getTargetDefaults(santri);
-        targetForm.id = santri._id;
-        targetForm.full_name = santri.full_name;
-        targetForm.hafalan_desc = santri.hafalan_manual || '0 Juz';
-        targetForm.isKhatam = defaults.isKhatam;
         
-        // v37: Strictly override to 0 if khatam
-        targetForm.sabaq = defaults.isKhatam ? 0 : (santri.target_sabaq || defaults.sabaq);
-        targetForm.manzil = santri.target_manzil || defaults.manzil;
-        targetForm.tilawah = santri.target_tilawah || 600;
-        targetForm.pct = santri.target_manzil_pct || 20;
-        targetForm.totalPages = defaults.totalPages;
+        // Populate form with current values
+        bulkTargetForm.sabaq = santri.view_sabaq;
+        bulkTargetForm.manzil = santri.view_manzil;
+        bulkTargetForm.tilawah = santri.view_tilawah;
+        bulkTargetForm.pct = santri.view_pct;
+
+        // Set selection
+        selectedSantriIds.value = [santri._id];
         
-        if (modalState) {
-            modalState.isOpen = true;
-            modalState.view = 'target-form';
-            modalState.title = 'Atur Target Bulanan';
-        }
+        // v37: Close dropdown if active
+        if (window.activeDropdown) window.activeDropdown = null;
     };
 
-    const closeTargetModal = () => {
-        if (modalState) modalState.isOpen = false;
-        targetForm.id = null;
-    };
-
-    /**
-     * Bulk Selection Methods
-     */
     const toggleSelectionMode = () => {
-        targetModalState.selectionMode = !targetModalState.selectionMode;
-        if (!targetModalState.selectionMode) {
-            selectedSantriIds.value = [];
-        }
+        selectionMode.value = !selectionMode.value;
+        selectedSantriIds.value = [];
     };
 
     const toggleSantriSelection = (id) => {
@@ -194,105 +148,43 @@ function useTarget(uiData, DB, modalState) {
         }
     };
 
-    const openBulkTargetModal = () => {
-        if (selectedSantriIds.value.length === 0) {
-            window.showAlert('Pilih minimal satu santri', 'Peringatan', 'warning');
-            return;
-        }
-        if (modalState) {
-            modalState.isOpen = true;
-            modalState.view = 'bulk-target';
-            modalState.title = 'Set Target Massal';
-        }
-    };
-
-    const closeBulkTargetModal = () => {
-        if (modalState) modalState.isOpen = false;
-    };
-
     const applyBulkTarget = async () => {
-        if (selectedSantriIds.value.length === 0) return;
-
-        const payload = {};
-        if (bulkTargetForm.updateSabaq) payload.target_sabaq = parseInt(bulkTargetForm.sabaq) || 0;
-        if (bulkTargetForm.updateManzil) payload.target_manzil = parseInt(bulkTargetForm.manzil) || 0;
-        if (bulkTargetForm.updateTilawah) payload.target_tilawah = parseInt(bulkTargetForm.tilawah) || 0;
-
-        if (Object.keys(payload).length === 0) {
-            window.showAlert('Pilih minimal satu kriteria target untuk diupdate', 'Peringatan', 'warning');
-            return;
-        }
-
+        if (!selectedSantriIds.value.length) return;
+        isBulkSaving.value = true;
+        
         try {
-            showLoading(true, `Mengupdate ${selectedSantriIds.value.length} santri...`);
-
-            // Sequential update for safety with current architecture
+            let count = 0;
             for (const id of selectedSantriIds.value) {
-                await DB.update(id, {
-                    ...payload,
-                    updated_at: new Date().toISOString()
-                });
-            }
-
-            if (window.refreshData) window.refreshData();
-
-            window.showAlert('Target massal berhasil diterapkan!', 'Sukses', 'info');
-            closeBulkTargetModal();
-            toggleSelectionMode(); // Exit selection mode
-        } catch (error) {
-            console.error('Bulk update error:', error);
-            window.showAlert('Gagal update massal: ' + error.message, 'Error', 'danger');
-        } finally {
-            showLoading(false);
-        }
-    };
-
-    /**
-     * Recalculate manzil based on percentage change
-     * @param {number} pct - New percentage value
-     */
-    const recalcManzil = (pct) => {
-        const p = parseFloat(pct) || 0;
-        const totalPages = targetForm.totalPages || 0;
-        targetForm.manzil = Math.round(totalPages * (p / 100));
-    };
-
-    /**
-     * Save target for santri
-     */
-    const saveTarget = async () => {
-        return window.withSaving(async () => {
-            if (!targetForm.id) { window.showAlert('Santri ID tidak ditemukan', 'Error', 'danger'); return; }
-            try {
-                const payload = {
-                    target_sabaq: parseInt(targetForm.sabaq) || 0,
-                    target_manzil: parseInt(targetForm.manzil) || 0,
-                    target_tilawah: parseInt(targetForm.tilawah) || 600,
-                    target_manzil_pct: parseFloat(targetForm.pct) || 20
+                const updateData = {
+                    target_sabaq: parseInt(bulkTargetForm.sabaq) || 0,
+                    target_manzil: parseInt(bulkTargetForm.manzil) || 0,
+                    target_tilawah: parseInt(bulkTargetForm.tilawah) || 600,
+                    target_manzil_pct: parseFloat(bulkTargetForm.pct) || 20
                 };
-                await DB.update(targetForm.id, payload);
-                if (window.refreshData) window.refreshData();
-                window.showAlert('Target berhasil disimpan!', 'Sukses', 'info');
-                closeTargetModal();
-            } catch (error) {
-                window.showAlert('Gagal menyimpan target: ' + error.message, 'Error', 'danger');
+                await DB.update(id, updateData);
+                count++;
             }
-        });
+            
+            if (refreshUI) await refreshUI();
+            window.showToast(count > 1 ? `${count} target santri diperbarui` : 'Target santri diperbarui', 'success');
+            
+            // Clean up
+            selectionMode.value = false;
+            selectedSantriIds.value = [];
+
+        } catch (error) {
+            console.error('Save target error:', error);
+            window.showAlert('Gagal menyimpan: ' + error.message, 'Error', 'danger');
+        } finally {
+            isBulkSaving.value = false;
+        }
     };
 
-    /**
-     * Reset target to defaults
-     * @param {string} santriId - Santri ID
-     */
     const resetTarget = async (santriId) => {
-        if (!santriId) {
-            window.showAlert('Santri ID tidak ditemukan', 'Error', 'danger');
-            return;
-        }
-
+        if (!santriId) return;
         window.showConfirm({
             title: 'Reset Target',
-            message: 'Reset target santri ini ke default sistem?',
+            message: 'Reset target ke default sistem?',
             confirmText: 'Ya, Reset',
             type: 'warning',
             onConfirm: async () => {
@@ -304,62 +196,29 @@ function useTarget(uiData, DB, modalState) {
                         target_manzil_pct: null
                     };
                     await DB.update(santriId, payload);
-                    if (window.refreshData) window.refreshData();
-                    window.showAlert('Target berhasil direset ke default!', 'Sukses', 'info');
+                    if (refreshUI) await refreshUI();
+                    window.showToast('Target berhasil direset', 'success');
                 } catch (error) {
-                    console.error('Error resetting target:', error);
-                    window.showAlert('Gagal mereset target: ' + error.message, 'Error', 'danger');
+                    window.showAlert('Gagal mereset: ' + error.message, 'Error', 'danger');
                 }
             }
         });
     };
 
-    // --- Back Navigation Logic (v37) ---
-    const handlePopState = (e) => {
-        if (modalState.isOpen && (modalState.view === 'target-form' || modalState.view === 'bulk-target')) {
-            modalState.isOpen = false;
-        }
-    };
-
-    watch(() => modalState.isOpen, (newVal) => {
-        const views = ['target-form', 'bulk-target'];
-        if (newVal && views.includes(modalState.view)) {
-            window.history.pushState({ modal: 'target' }, '');
-            window.addEventListener('popstate', handlePopState);
-        } else if (!newVal && views.includes(modalState.view)) {
-            window.removeEventListener('popstate', handlePopState);
-            if (window.history.state && window.history.state.modal === 'target') {
-                window.history.back();
-            }
-        }
-    });
-
-    onUnmounted(() => {
-        window.removeEventListener('popstate', handlePopState);
-    });
-
-    // ===== RETURN =====
     return {
-        // State
-        targetForm,
-        targetModalState,
         selectedSantriIds,
         bulkTargetForm,
-
-        // Computed
+        isBulkSaving,
+        selectionMode,
+        targetFilterGender,
+        targetFilterKelas,
         santriWithTarget,
-
-        // Methods
         openTargetModal,
-        closeTargetModal,
-        saveTarget,
+        saveTarget: applyBulkTarget, // alias for consistency
         resetTarget,
-        recalcManzil,
         toggleSelectionMode,
         toggleSantriSelection,
         selectAllSantri,
-        openBulkTargetModal,
-        closeBulkTargetModal,
         applyBulkTarget
     };
 }

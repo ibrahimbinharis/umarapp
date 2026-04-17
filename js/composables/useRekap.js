@@ -478,7 +478,10 @@ const useRekap = (uiData, userSession) => {
 
         const data = rekapHafalanData.value.map((row, i) => {
             const r = [i + 1, row.nama];
-            if (rekapSettings.visibility.sabaq) r.push(`${row.sabaq_act}/${row.sabaq_tgt}`);
+            if (rekapSettings.visibility.sabaq) {
+                const sText = row.juzCompleted >= 30 ? 'Khatam' : `${row.sabaq_act}/${row.sabaq_tgt}`;
+                r.push(sText);
+            }
             if (rekapSettings.visibility.manzil) r.push(`${row.manzil_act}/${row.manzil_tgt}`);
             if (rekapSettings.visibility.ujian) r.push(row.ujian_avg);
             if (rekapSettings.visibility.tilawah) r.push(`${row.tilawah_act}/${row.tilawah_tgt}`);
@@ -583,7 +586,10 @@ const useRekap = (uiData, userSession) => {
 
         const hafalanRows = [];
         if (settingsToUse.visibility.sabaq) {
-            hafalanRows.push(["1", "Sabaq (Hafalan Baru)", `${santriData.sabaq_tgt} Hal`, `${santriData.sabaq_act} Hal`, `${Math.round((santriData.sabaq_act / (santriData.sabaq_tgt || 1)) * 100)}%`]);
+            const isKhatam = (santriData.juzCompleted || 0) >= 30;
+            const targetText = isKhatam ? 'Khatam' : `${santriData.sabaq_tgt} Hal`;
+            const pctText = isKhatam ? '100%' : `${Math.round((santriData.sabaq_act / (santriData.sabaq_tgt || 1)) * 100)}%`;
+            hafalanRows.push(["1", "Sabaq (Hafalan Baru)", targetText, `${santriData.sabaq_act} Hal`, pctText]);
         }
         if (settingsToUse.visibility.manzil) {
             hafalanRows.push(["2", "Manzil (Murojaah Lama)", `${santriData.manzil_tgt} Hal`, `${santriData.manzil_act} Hal`, `${Math.round((santriData.manzil_act / (santriData.manzil_tgt || 1)) * 100)}%`]);

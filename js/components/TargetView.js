@@ -1,93 +1,118 @@
 const TargetView = {
     props: {
-        santriData: {
-            type: Array,
-            required: true
-        },
-        userSession: {
-            type: Object,
-            required: true
-        },
-        activeDropdown: {
-            type: [String, Number, null]
-        },
-        selectionMode: {
-            type: Boolean,
-            default: false
-        },
-        selectedSantriIds: {
-            type: Array,
-            default: () => []
-        }
+        santriData: { type: Array, required: true },
+        userSession: { type: Object, required: true },
+        activeDropdown: { type: [String, Number, null] },
+        selectionMode: { type: Boolean, default: false },
+        selectedSantriIds: { type: Array, default: () => [] },
+        targetFilterGender: { type: String, default: 'all' },
+        targetFilterKelas: { type: String, default: 'all' },
+        kelasOptions: { type: Array, default: () => [] },
+        bulkTargetForm: { type: Object, default: () => ({}) },
+        isBulkSaving: { type: Boolean, default: false }
     },
-    emits: ['open-target-modal', 'reset-target', 'toggle-dropdown', 'toggle-selection-mode', 'toggle-santri-selection', 'select-all-santri', 'open-bulk-target-modal'],
-    setup(props) {
+    emits: [
+        'open-target-modal', 'reset-target', 'toggle-dropdown', 'toggle-selection-mode', 
+        'toggle-santri-selection', 'select-all-santri', 'open-bulk-target-modal',
+        'update:targetFilterGender', 'update:targetFilterKelas', 'apply-bulk-target'
+    ],
+    setup(props, { emit }) {
         const { ref, computed } = Vue;
         const searchText = ref('');
 
+        const setGenderFilter = (val) => emit('update:targetFilterGender', val);
+        const setKelasFilter = (val) => emit('update:targetFilterKelas', val);
+
         const filteredSantri = computed(() => {
-            if (!searchText.value) return props.santriData;
+            let list = props.santriData || [];
+            if (!searchText.value) return list;
             const q = searchText.value.toLowerCase();
-            return props.santriData.filter(s =>
+            return list.filter(s =>
                 (s.full_name || '').toLowerCase().includes(q) ||
                 (s.nis || '').toString().includes(q)
             );
         });
 
-        // Computed initial helper (if needed, but simpler to just use full_name)
         const getInitials = (name) => {
             if (!name) return '';
-            return name
-                .split(' ')
-                .map(n => n[0])
-                .join('')
-                .toUpperCase()
-                .substring(0, 2);
+            return name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
         };
 
         return {
             searchText,
             filteredSantri,
-            getInitials
+            getInitials,
+            setGenderFilter,
+            setKelasFilter
         };
     },
     template: `
     <div class="fade-in">
-        <!-- Header -->
-        <div class="px-2 mb-4 flex justify-between items-center">
-            <h2 class="text-xl font-bold text-slate-900">Target Hafalan</h2>
-            <button v-if="userSession.role === 'admin'" @click="$emit('toggle-selection-mode')"
-                class="px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-2"
-                :class="selectionMode ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-white border text-slate-600 hover:text-primary'">
-                <span class="material-symbols-outlined text-sm">{{ selectionMode ? 'close' : 'checklist' }}</span>
-                {{ selectionMode ? 'Batal' : 'Edit Massal' }}
-            </button>
-        </div>
-
-        <!-- Search & Select All -->
-        <div class="space-y-3 sticky top-0 z-20 bg-slate-50/80 backdrop-blur-sm pb-3">
-            <div class="bg-white p-2 rounded-xl border border-slate-200 flex items-center gap-2 transition focus-within:ring-2 focus-within:ring-primary/20 shadow-sm">
-                <span class="material-symbols-outlined text-slate-400 ml-2">search</span>
-                <input type="text" v-model="searchText" placeholder="Cari berdasarkan nama atau NIS..."
-                    class="w-full bg-transparent outline-none text-sm placeholder:text-slate-400 font-bold">
-            </div>
-
-            <div v-if="selectionMode" class="flex justify-between items-center px-2">
-                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                    {{ selectedSantriIds.length }} Terpilih
-                </p>
-                <button @click="$emit('select-all-santri', filteredSantri.map(s => s._id))"
-                    class="text-[10px] font-bold text-primary uppercase tracking-widest hover:underline">
-                    {{ selectedSantriIds.length === filteredSantri.length ? 'Batal Semua' : 'Pilih Semua' }}
+        <!-- Unified Fixed Header Area -->
+        <div class="fixed top-0 left-0 right-0 z-40 bg-slate-50/95 backdrop-blur-md pb-4 pt-2 shadow-sm max-w-md mx-auto">
+            <!-- Header Title -->
+            <div class="px-4 mb-4 flex justify-between items-center text-left">
+                <h2 class="text-xl font-bold text-slate-900">Target Hafalan</h2>
+                <button v-if="userSession.role === 'admin'" @click="$emit('toggle-selection-mode')"
+                    class="px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-2"
+                    :class="selectionMode ? 'bg-red-50 text-red-600 border-red-100' : 'bg-white border text-slate-600 hover:text-primary'">
+                    <span class="material-symbols-outlined text-sm">{{ selectionMode ? 'close' : 'checklist' }}</span>
+                    {{ selectionMode ? 'Batal' : 'Edit Massal' }}
                 </button>
             </div>
+
+            <!-- Search & Filter Capsules -->
+            <div class="space-y-3 px-4">
+                <!-- Search -->
+                <div class="bg-white p-2 rounded-xl border border-slate-200 flex items-center gap-2 transition focus-within:ring-2 focus-within:ring-primary/20 shadow-sm text-left">
+                    <span class="material-symbols-outlined text-slate-400 ml-2">search</span>
+                    <input type="text" v-model="searchText" placeholder="Cari santri..."
+                        class="w-full bg-transparent outline-none text-sm font-bold">
+                </div>
+
+                <!-- Gender Capsules -->
+                <div class="flex gap-2 overflow-x-auto no-scrollbar py-1">
+                    <button v-for="tag in [{id:'all', label:'Semua'}, {id:'L', label:'Putra'}, {id:'P', label:'Putri'}]"
+                        @click="setGenderFilter(tag.id)"
+                        class="px-4 py-1.5 rounded-full text-[11px] font-bold whitespace-nowrap transition-all border"
+                        :class="targetFilterGender === tag.id ? 'bg-slate-800 text-white border-slate-800 shadow-sm' : 'bg-white text-slate-500 border-slate-100 hover:border-slate-300'">
+                        {{ tag.label }}
+                    </button>
+                </div>
+
+                <!-- Class Capsules -->
+                <div class="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+                    <button @click="setKelasFilter('all')"
+                        class="px-4 py-1.5 rounded-full text-[11px] font-bold whitespace-nowrap transition-all border"
+                        :class="targetFilterKelas === 'all' ? 'bg-blue-600 text-white border-blue-600 shadow-sm' : 'bg-white text-slate-500 border-slate-100 hover:border-slate-300'">
+                        Semua
+                    </button>
+                    <button v-for="k in kelasOptions" :key="k.name"
+                        @click="setKelasFilter(k.name)"
+                        class="px-4 py-1.5 rounded-full text-[11px] font-bold whitespace-nowrap transition-all border"
+                        :class="targetFilterKelas === k.name ? 'bg-blue-600 text-white border-blue-600 shadow-sm' : 'bg-white text-slate-500 border-slate-100 hover:border-slate-300'">
+                        {{ k.name }}
+                    </button>
+                </div>
+
+                <div v-if="selectionMode" class="flex justify-between items-center px-1 pt-1 opacity-80 text-left">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                        {{ selectedSantriIds.length }} Terpilih
+                    </p>
+                    <button @click="$emit('select-all-santri', filteredSantri.map(s => s._id))"
+                        class="text-[10px] font-bold text-primary uppercase tracking-widest hover:underline">
+                        {{ selectedSantriIds.length === filteredSantri.length ? 'Batal Semua' : 'Pilih Semua' }}
+                    </button>
+                </div>
+            </div>
         </div>
 
-        <div class="space-y-3 pb-32">
+        <!-- List (With top padding to compensate for fixed header) -->
+        <div class="space-y-3 px-2 pt-60" :class="selectedSantriIds.length > 0 ? 'pb-96' : 'pb-32'">
             <!-- List -->
             <div v-for="s in filteredSantri" :key="s._id"
                 @click.stop="selectionMode ? $emit('toggle-santri-selection', s._id) : ((userSession.role === 'admin' || userSession.role === 'guru') ? $emit('toggle-dropdown', s._id) : null)"
-                class="bg-white p-3 rounded-xl border shadow-sm flex items-center justify-between group transition active:scale-[0.98] cursor-pointer"
+                class="bg-white p-3 rounded-xl border shadow-sm flex items-center justify-between group transition active:scale-[0.98] cursor-pointer text-left"
                 :class="[
                     selectionMode ? 'hover:bg-slate-50' : 'hover:border-blue-100',
                     selectedSantriIds.includes(s._id) ? 'border-primary ring-1 ring-primary/10 bg-blue-50/10' : '',
@@ -128,7 +153,6 @@ const TargetView = {
 
                         <!-- Mini Badges & Progress -->
                         <div class="flex items-center gap-1.5 flex-wrap mt-2">
-                            <!-- SABAQ / KHATAM Badge -->
                             <span v-if="s.isKhatam" class="text-[9px] px-1.5 py-0.5 rounded-md font-black border bg-amber-500 text-white border-amber-400 flex items-center gap-1">
                                 <span class="material-symbols-outlined text-[10px]">workspace_premium</span> KHATAM
                             </span>
@@ -137,83 +161,99 @@ const TargetView = {
                                 S: {{ s.ach_sabaq }}/{{ s.view_sabaq }}
                             </span>
 
-                            <!-- MANZIL Badge -->
                             <span class="text-[9px] px-1.5 py-0.5 rounded-md font-black border transition-colors"
                                 :class="s.prog_manzil >= 100 ? 'bg-emerald-500 text-white border-emerald-400' : 'bg-purple-50 text-purple-600 border-purple-100'">
                                 M: {{ s.ach_manzil }}/{{ s.view_manzil }}
                             </span>
 
-                            <!-- TILAWAH Badge -->
                             <span class="text-[9px] bg-slate-50 text-slate-500 px-1.5 py-0.5 rounded-md border border-slate-100 font-black">
                                 T: {{ s.ach_tilawah }}/{{ s.view_tilawah }}
                             </span>
-
-                             <div class="flex items-center gap-1.5 ml-1 pl-2 border-l border-slate-200">
-                                <span class="text-[10px] text-slate-700 font-black">{{ s.hafalan_manual || '0 Juz' }}</span>
-                                <div class="w-12 bg-slate-100 h-1 rounded-full overflow-hidden">
-                                    <div class="h-full" :class="s.isKhatam ? 'bg-amber-400' : 'bg-rose-400'" :style="{ width: (parseInt(s.hafalan_manual) || 0) * 3.33 + '%' }"></div>
-                                </div>
-                            </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Actions -->
-                <div class="relative flex-none" v-if="!selectionMode && (userSession.role === 'guru' || userSession.role === 'admin')">
+                <!-- Dropdown Info trigger (role guru/admin only) -->
+                <div v-if="!selectionMode && (userSession.role === 'admin' || userSession.role === 'guru')" class="relative flex-none">
                     <button @click.stop="$emit('toggle-dropdown', s._id)"
-                        class="size-8 flex items-center justify-center text-slate-300 hover:text-primary hover:bg-slate-50 rounded-full transition">
-                        <span class="material-symbols-outlined text-lg">more_vert</span>
+                        class="size-8 rounded-full flex items-center justify-center text-slate-300 hover:bg-slate-50 hover:text-primary transition">
+                        <span class="material-symbols-outlined">more_vert</span>
                     </button>
-
-                    <!-- Backdrop -->
-                    <div v-if="activeDropdown === s._id" class="fixed inset-0 z-40 cursor-default"
-                        @click.stop="$emit('toggle-dropdown', null)"></div>
-
+                    
                     <!-- Dropdown Menu -->
                     <div v-if="activeDropdown === s._id"
-                        class="absolute right-0 top-8 w-28 bg-white border border-slate-100 shadow-xl rounded-xl z-50 flex flex-col py-1 overflow-hidden animate-in fade-in zoom-in-95 duration-100 origin-top-right">
-                        <button @click.stop="$emit('toggle-dropdown', null); $emit('open-target-modal', s)"
-                            class="flex items-center gap-2 px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50 hover:text-primary transition text-left w-full border-b border-slate-50 last:border-0">
-                            <span class="material-symbols-outlined text-sm text-slate-400">edit_square</span> Edit
+                        class="absolute right-0 top-10 w-44 bg-white border border-slate-100 shadow-2xl rounded-2xl z-50 flex flex-col py-1 overflow-hidden animate-scale-in origin-top-right">
+                        <button @click.stop="$emit('open-target-modal', s)"
+                            class="flex items-center gap-2 px-4 py-2.5 text-xs font-bold text-slate-600 hover:bg-blue-50 hover:text-blue-600 transition text-left">
+                            <span class="material-symbols-outlined text-base">edit</span> Edit Target
                         </button>
-                        <button @click.stop="$emit('toggle-dropdown', null); $emit('reset-target', s._id)"
-                            class="flex items-center gap-2 px-3 py-2 text-xs font-bold text-slate-600 hover:bg-red-50 hover:text-red-500 transition text-left w-full">
-                            <span class="material-symbols-outlined text-sm text-slate-400">restart_alt</span> Reset
+                        <button @click.stop="$emit('reset-target', s._id)"
+                            class="flex items-center gap-2 px-4 py-2.5 text-xs font-bold text-slate-600 hover:bg-red-50 hover:text-red-500 transition text-left">
+                            <span class="material-symbols-outlined text-base">refresh</span> Reset Target
                         </button>
                     </div>
                 </div>
-
             </div>
 
-            <!-- Empty State -->
-            <div v-if="filteredSantri.length === 0" class="text-center py-10">
-                <div class="bg-slate-50 size-16 rounded-full flex items-center justify-center mx-auto mb-3">
-                    <span class="material-symbols-outlined text-3xl text-slate-300">search_off</span>
-                </div>
-                <p class="text-xs font-bold text-slate-400">Tidak ada santri ditemukan</p>
+            <div v-if="!filteredSantri.length" class="text-center py-20">
+                <span class="material-symbols-outlined text-5xl text-slate-200">group_off</span>
+                <p class="mt-2 text-sm text-slate-400 font-bold">Tidak ada santri ditemukan</p>
             </div>
         </div>
 
-        <!-- Floating Bulk Bar -->
-        <teleport to="body">
-            <div v-if="selectionMode" 
-                class="fixed bottom-24 left-4 right-4 z-[100] bg-slate-900/95 backdrop-blur-md text-white rounded-2xl p-4 shadow-2xl flex items-center justify-between border border-white/10 animate-in slide-in-from-bottom-5 duration-300">
-                <div class="min-w-0">
-                    <p class="font-bold text-sm">{{ selectedSantriIds.length }} Santri Terpilih</p>
-                    <p class="text-[10px] text-slate-400 uppercase font-black">Edit Massal</p>
+        <!-- Unified Target Botom Sheet -->
+        <Teleport to="body">
+            <Transition name="slide-up">
+                <div v-if="selectedSantriIds.length > 0"
+                    class="fixed z-[300] bg-white shadow-2xl overflow-visible bottom-0 left-0 right-0 rounded-t-[32px] border-t border-slate-100 md:bottom-6 md:top-auto md:left-1/2 md:-translate-x-1/2 md:translate-y-0 md:w-full md:max-w-xl md:rounded-3xl md:border pb-safe">
+                    
+                    <!-- Handle to Close -->
+                    <div @click="$emit('select-all-santri', [])" class="flex justify-center pt-3 pb-2 cursor-pointer hover:opacity-75">
+                        <div class="w-12 h-1.5 bg-slate-300 rounded-full"></div>
+                    </div>
+
+                    <div class="px-6 pb-8 space-y-4 pt-2 text-left">
+                        <div v-if="selectedSantriIds.length > 1" class="flex items-center gap-2 mb-1">
+                            <span class="bg-red-500 text-white min-w-[20px] h-5 px-1.5 flex items-center justify-center rounded-full text-[10px] font-black shadow-sm">
+                                {{ selectedSantriIds.length }}
+                            </span>
+                        </div>
+                        <div v-else-if="selectedSantriIds.length === 1" class="mb-1">
+                            <h4 class="text-sm font-bold text-slate-800">{{ santriData.find(s => s._id === selectedSantriIds[0])?.full_name }}</h4>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-x-4 gap-y-3">
+                            <div class="space-y-1">
+                                <label class="text-[10px] font-bold text-slate-400 ml-1">Sabaq (Hal/Bulan)</label>
+                                <input type="number" v-model.number="bulkTargetForm.sabaq" 
+                                    class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold focus:outline-none focus:border-primary transition-all">
+                            </div>
+                            <div class="space-y-1">
+                                <label class="text-[10px] font-bold text-slate-400 ml-1">Manzil (Hal/Bulan)</label>
+                                <input type="number" v-model.number="bulkTargetForm.manzil" 
+                                    class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold focus:outline-none focus:border-purple-500 transition-all">
+                            </div>
+                            <div class="space-y-1">
+                                <label class="text-[10px] font-bold text-slate-400 ml-1">Tilawah (Hal/Bulan)</label>
+                                <input type="number" v-model.number="bulkTargetForm.tilawah" 
+                                    class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold focus:outline-none focus:border-emerald-500 transition-all">
+                            </div>
+                            <div class="space-y-1">
+                                <label class="text-[10px] font-bold text-slate-400 ml-1">Manzil (Persen %)</label>
+                                <input type="number" v-model.number="bulkTargetForm.pct" 
+                                    class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold focus:outline-none focus:border-amber-500 transition-all">
+                            </div>
+                        </div>
+
+                        <button @click="$emit('apply-bulk-target')" :disabled="isBulkSaving"
+                            class="w-full py-3.5 rounded-2xl bg-primary text-white font-bold text-sm transition-all active:scale-[0.98] shadow-lg shadow-blue-900/20 flex items-center justify-center gap-3 disabled:opacity-50">
+                            <span v-if="isBulkSaving" class="size-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                            {{ isBulkSaving ? 'Menyimpan...' : (selectedSantriIds.length > 1 ? 'Simpan Target Masal' : 'Simpan Perubahan') }}
+                        </button>
+                    </div>
                 </div>
-                <div class="flex gap-2">
-                    <button @click="$emit('toggle-selection-mode')"
-                        class="px-3 py-2 rounded-xl text-xs font-bold text-slate-300 hover:text-white transition">
-                        Batal
-                    </button>
-                    <button @click="$emit('open-bulk-target-modal')" :disabled="selectedSantriIds.length === 0"
-                        class="px-5 py-2 rounded-xl text-xs font-black bg-white text-slate-900 shadow-xl shadow-white/5 disabled:opacity-50 disabled:cursor-not-allowed transform active:scale-95 transition">
-                        Atur Target ({{ selectedSantriIds.length }})
-                    </button>
-                </div>
-            </div>
-        </teleport>
+            </Transition>
+        </Teleport>
     </div>
     `
 };

@@ -420,12 +420,18 @@
                     <!-- TARGET VIEW (Component) -->
                     <div v-if="currentView === 'target'" class="fade-in">
                         <target-view :santri-data="santriWithTarget" :user-session="userSession"
-                            :active-dropdown="activeDropdown" :selection-mode="targetModalState.selectionMode"
-                            :selected-santri-ids="selectedSantriIds" @open-target-modal="openTargetModal"
+                            :active-dropdown="activeDropdown" :selection-mode="selectionMode"
+                            :selected-santri-ids="selectedSantriIds" 
+                            v-model:target-filter-gender="targetFilterGender"
+                            v-model:target-filter-kelas="targetFilterKelas"
+                            :kelas-options="uiData.kelas"
+                            :bulk-target-form="bulkTargetForm"
+                            :is-bulk-saving="isBulkSaving"
+                            @open-target-modal="openTargetModal"
                             @reset-target="resetTarget" @toggle-dropdown="toggleDropdown"
                             @toggle-selection-mode="toggleSelectionMode"
                             @toggle-santri-selection="toggleSantriSelection" @select-all-santri="selectAllSantri"
-                            @open-bulk-target-modal="openBulkTargetModal"></target-view>
+                            @apply-bulk-target="applyBulkTarget"></target-view>
                     </div>
 
                     <!-- RIWAYAT VIEW SKELETON -->
@@ -1920,7 +1926,7 @@
 
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js?v=3.32').then(reg => {
+                navigator.serviceWorker.register('sw.js?v=3.33').then(reg => {
                     console.log('SW Registered!', reg);
 
                     // 1. Check if update is already waiting (e.g. from previous visit)
