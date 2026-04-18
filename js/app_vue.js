@@ -1433,6 +1433,7 @@ createApp({
         UjianView,
         SetoranView,
         TargetView,
+        HafalanView,
         RekapView,
         RiwayatView,
         JadwalView,

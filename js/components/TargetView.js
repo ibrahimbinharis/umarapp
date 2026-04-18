@@ -48,11 +48,11 @@ const TargetView = {
     },
     template: `
     <div class="fade-in">
-        <!-- Unified Fixed Header Area -->
-        <div class="fixed top-0 left-0 right-0 z-40 bg-slate-50/95 backdrop-blur-md pb-4 pt-2 shadow-sm max-w-md mx-auto">
+        <!-- Unified Static Header Area -->
+        <div class="pb-6 pt-2 px-2">
             <!-- Header Title -->
-            <div class="px-4 mb-4 flex justify-between items-center text-left">
-                <h2 class="text-xl font-bold text-slate-900">Target Hafalan</h2>
+            <div class="mb-6 flex justify-between items-center text-left">
+                <h2 class="text-2xl font-bold text-slate-900 px-1">Target Hafalan</h2>
                 <button v-if="userSession.role === 'admin'" @click="$emit('toggle-selection-mode')"
                     class="px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-2"
                     :class="selectionMode ? 'bg-red-50 text-red-600 border-red-100' : 'bg-white border text-slate-600 hover:text-primary'">
@@ -62,40 +62,42 @@ const TargetView = {
             </div>
 
             <!-- Search & Filter Capsules -->
-            <div class="space-y-3 px-4">
+            <div class="space-y-4">
                 <!-- Search -->
-                <div class="bg-white p-2 rounded-xl border border-slate-200 flex items-center gap-2 transition focus-within:ring-2 focus-within:ring-primary/20 shadow-sm text-left">
+                <div class="bg-white p-2.5 rounded-2xl border border-slate-200 flex items-center gap-2 transition focus-within:ring-2 focus-within:ring-primary/20 shadow-sm text-left">
                     <span class="material-symbols-outlined text-slate-400 ml-2">search</span>
                     <input type="text" v-model="searchText" placeholder="Cari santri..."
                         class="w-full bg-transparent outline-none text-sm font-bold">
                 </div>
 
-                <!-- Gender Capsules -->
-                <div class="flex gap-2 overflow-x-auto no-scrollbar py-1">
-                    <button v-for="tag in [{id:'all', label:'Semua'}, {id:'L', label:'Putra'}, {id:'P', label:'Putri'}]"
-                        @click="setGenderFilter(tag.id)"
-                        class="px-4 py-1.5 rounded-full text-[11px] font-bold whitespace-nowrap transition-all border"
-                        :class="targetFilterGender === tag.id ? 'bg-slate-800 text-white border-slate-800 shadow-sm' : 'bg-white text-slate-500 border-slate-100 hover:border-slate-300'">
-                        {{ tag.label }}
-                    </button>
+                <div class="flex flex-wrap gap-x-6 gap-y-3">
+                    <!-- Gender Capsules -->
+                    <div class="flex gap-2 overflow-x-auto no-scrollbar py-1">
+                        <button v-for="tag in [{id:'all', label:'Semua'}, {id:'L', label:'Putra'}, {id:'P', label:'Putri'}]"
+                            @click="setGenderFilter(tag.id)"
+                            class="px-5 py-2 rounded-full text-[11px] font-bold whitespace-nowrap transition-all border"
+                            :class="targetFilterGender === tag.id ? 'bg-slate-800 text-white border-slate-800 shadow-sm' : 'bg-white text-slate-500 border-slate-100 hover:border-slate-300'">
+                            {{ tag.label }}
+                        </button>
+                    </div>
+
+                    <!-- Class Capsules -->
+                    <div class="flex gap-2 overflow-x-auto no-scrollbar py-1">
+                        <button @click="setKelasFilter('all')"
+                            class="px-5 py-2 rounded-full text-[11px] font-bold whitespace-nowrap transition-all border"
+                            :class="targetFilterKelas === 'all' ? 'bg-blue-600 text-white border-blue-600 shadow-sm' : 'bg-white text-slate-500 border-slate-100 hover:border-slate-300'">
+                            Semua
+                        </button>
+                        <button v-for="k in kelasOptions" :key="k.name"
+                            @click="setKelasFilter(k.name)"
+                            class="px-5 py-2 rounded-full text-[11px] font-bold whitespace-nowrap transition-all border"
+                            :class="targetFilterKelas === k.name ? 'bg-blue-600 text-white border-blue-600 shadow-sm' : 'bg-white text-slate-500 border-slate-100 hover:border-slate-300'">
+                            {{ k.name }}
+                        </button>
+                    </div>
                 </div>
 
-                <!-- Class Capsules -->
-                <div class="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-                    <button @click="setKelasFilter('all')"
-                        class="px-4 py-1.5 rounded-full text-[11px] font-bold whitespace-nowrap transition-all border"
-                        :class="targetFilterKelas === 'all' ? 'bg-blue-600 text-white border-blue-600 shadow-sm' : 'bg-white text-slate-500 border-slate-100 hover:border-slate-300'">
-                        Semua
-                    </button>
-                    <button v-for="k in kelasOptions" :key="k.name"
-                        @click="setKelasFilter(k.name)"
-                        class="px-4 py-1.5 rounded-full text-[11px] font-bold whitespace-nowrap transition-all border"
-                        :class="targetFilterKelas === k.name ? 'bg-blue-600 text-white border-blue-600 shadow-sm' : 'bg-white text-slate-500 border-slate-100 hover:border-slate-300'">
-                        {{ k.name }}
-                    </button>
-                </div>
-
-                <div v-if="selectionMode" class="flex justify-between items-center px-1 pt-1 opacity-80 text-left">
+                <div v-if="selectionMode" class="flex justify-between items-center pt-3 border-t border-slate-100 text-left">
                     <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                         {{ selectedSantriIds.length }} Terpilih
                     </p>
@@ -107,8 +109,8 @@ const TargetView = {
             </div>
         </div>
 
-        <!-- List (With top padding to compensate for fixed header) -->
-        <div class="space-y-3 px-2 pt-60" :class="selectedSantriIds.length > 0 ? 'pb-96' : 'pb-32'">
+        <!-- List -->
+        <div class="space-y-3 px-2" :class="selectedSantriIds.length > 0 ? 'pb-96' : 'pb-32'">
             <!-- List -->
             <div v-for="s in filteredSantri" :key="s._id"
                 @click.stop="selectionMode ? $emit('toggle-santri-selection', s._id) : ((userSession.role === 'admin' || userSession.role === 'guru') ? $emit('toggle-dropdown', s._id) : null)"
@@ -134,10 +136,13 @@ const TargetView = {
                     </div>
 
                     <!-- Info -->
-                    <div class="min-w-0">
+                    <div class="min-w-0 flex-1">
                         <div class="flex items-center gap-2 mb-1">
                             <h4 class="font-bold text-slate-800 text-sm truncate">{{ s.full_name }}</h4>
-                            <span class="text-[10px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">{{ s.kelas || '-' }}</span>
+                            <div class="flex items-center gap-1 shrink-0">
+                                <span class="text-[9px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">{{ s.kelas || '-' }}</span>
+                                <span v-if="s.hafalan_manual" class="text-[9px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100">{{ s.hafalan_manual }}</span>
+                            </div>
                         </div>
                         
                         <!-- Progress Bar (v37) -->
