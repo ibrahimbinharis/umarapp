@@ -1,4 +1,4 @@
-const CACHE_NAME = "v3.34";
+const CACHE_NAME = "v3.35";
 const ASSETS_TO_CACHE = [
     "./",
     "./index.html",
@@ -56,6 +56,7 @@ const ASSETS_TO_CACHE = [
     "./js/components/JadwalView.js",
     "./js/components/PelanggaranView.js",
     "./js/components/TargetView.js",
+    "./js/components/HafalanView.js",
 
     // Services
     "./js/services/NotificationService.js",
