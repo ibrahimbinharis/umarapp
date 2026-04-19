@@ -282,26 +282,8 @@ function useAbsensi(uiData, DB, modalState, userSession) {
             window.showAlert('Jadwal tidak ditemukan', 'Error', 'danger');
             return;
         }
-        // -- GUARD START -- 
-        // Only allow designated teacher or admin to save absensi for this jadwal
-        if (userSession?.value?.role === 'guru') {
-            const jObj = absensiState.activeJadwal;
-            const myUsername = userSession.value.username;
-            const myFullName = userSession.value.full_name;
+        // -- GUARD REMOVED: Allow all Gurus to save absensi --
 
-            // Strict check: if username exists on jadwal, it MUST match. 
-            // Fallback for legacy data: match by full_name
-            const isOwner = jObj && (
-                (jObj.username && jObj.username === myUsername) || 
-                (!jObj.username && jObj.teacher === myFullName)
-            );
-
-            if (!isOwner) {
-                window.showAlert("Akses Ditolak: Anda bukan guru pengampu jadwal ini.", "Peringatan Keamanan", "danger");
-                return false;
-            }
-        }
-        // -- GUARD END --
 
         try {
             const jId = absensiState.activeJadwal._id;
@@ -510,30 +492,8 @@ function useAbsensi(uiData, DB, modalState, userSession) {
      * Delete absensi/jurnal record
      */
     const deleteAbsensi = async (id) => {
-        // -- GUARD START --
-        if (userSession?.value?.role === 'guru') {
-            const existing = (uiData.absensi || []) .find(a => a._id === id);
-            const myUsername = userSession.value.username;
-            const myFullName = userSession.value.full_name;
+        // -- GUARD REMOVED: Allow all Gurus to delete --
 
-            if (existing) {
-                // Find the schedule to check ownership
-                const jObj = (uiData.jadwal || []).find(j => j._id === existing.jadwal_id);
-                
-                // Relaxed: Allow if they are the one who input it OR they are the assigned teacher
-                const isOwner = (existing.input_by === myUsername) || 
-                                (jObj && (
-                                    (jObj.username && jObj.username === myUsername) || 
-                                    (!jObj.username && jObj.teacher === myFullName)
-                                ));
-
-                if (!isOwner) {
-                    window.showAlert("Akses Ditolak: Anda hanya diperbolehkan menghapus data jurnal milik Anda sendiri atau jadwal pengampu Anda.", "Peringatan Keamanan", "danger");
-                    return false;
-                }
-            }
-        }
-        // -- GUARD END --
 
         return new Promise((resolve) => {
             window.showConfirm({
