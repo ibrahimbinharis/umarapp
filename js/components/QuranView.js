@@ -20,7 +20,14 @@ const QuranView = {
         ujianForm: Object,
         showExamControls: Boolean,
         updateSalah: Function,
-        finishExam: Function
+        finishExam: Function,
+        filteredSurahList: Array,
+        filteredJuzList: Array,
+        rightPageImageUrl: String,
+        leftPageImageUrl: String,
+        isDesktop: Boolean,
+        rightPage: Number,
+        leftPage: Number
     },
     components: {
         ExamCounter
@@ -67,17 +74,45 @@ const QuranView = {
         <!-- Quran Info Bar (Top) -->
         <div class="w-full bg-white border-b border-slate-200 px-4 py-2 flex justify-between items-center shadow-sm z-10 sticky top-0">
             <span class="font-bold text-slate-500 text-xs w-1/3 text-left">Juz {{ currentJuz }}</span>
-            <span class="font-bold text-slate-900 text-sm w-1/3 text-center bg-slate-100 rounded-md py-1">{{ quranState.page }}</span>
+            <div class="w-1/3 flex justify-center">
+                <span v-if="!isDesktop" class="font-bold text-slate-900 text-sm bg-slate-100 rounded-md px-4 py-1">
+                    {{ quranState.page }}
+                </span>
+                <div v-else class="flex items-center gap-20 bg-slate-100 rounded-lg px-8 py-1">
+                    <span class="font-bold text-slate-900 text-sm">{{ leftPage || '' }}</span>
+                    <span class="font-bold text-slate-900 text-sm">{{ rightPage }}</span>
+                </div>
+            </div>
             <span class="font-bold text-primary text-xs w-1/3 text-right truncate">{{ currentSurahName }}</span>
         </div>
 
         <!-- Main Viewer Area -->
         <div class="flex-1 relative overflow-y-auto overflow-x-hidden bg-[#fdfaf7] flex flex-col items-center justify-start">
             <div @touchstart="handleTouchStart" @touchmove="handleTouchMove" @touchend="handleTouchEnd"
-                class="w-full min-h-full flex items-start justify-center relative p-0 md:p-0 md:h-full">
-                <img :src="quranImageSrc"
-                    class="w-full h-auto shadow-lg transition-opacity duration-200 select-none border border-[#f0e6d2] md:max-h-full md:max-w-full md:object-contain md:h-full md:w-auto mt-0"
-                    alt="Halaman Quran">
+                class="w-full min-h-full flex items-center justify-center relative p-0 md:p-4 md:h-full">
+                
+                <!-- SINGLE PAGE (Mobile only) -->
+                <div v-if="!isDesktop" class="flex items-center justify-center h-full w-full">
+                    <img :src="quranImageSrc"
+                        class="w-full h-auto shadow-lg transition-opacity duration-200 select-none border border-[#f0e6d2] md:max-h-full md:max-w-fit md:object-contain md:h-full mt-0"
+                        alt="Halaman Quran">
+                </div>
+
+                <!-- DUAL PAGE (Desktop Spread) -->
+                <div v-else class="hidden md:flex flex-row items-center justify-center h-full w-full gap-0 bg-[#fdfaf7]">
+                    <!-- LEFT PAGE (Even) -->
+                    <div class="h-full w-1/2 flex justify-end">
+                        <img v-if="leftPageImageUrl" :src="leftPageImageUrl"
+                            class="h-full w-auto shadow-lg select-none border border-[#f0e6d2] object-contain"
+                            alt="Halaman Kiri">
+                    </div>
+                    <!-- RIGHT PAGE (Odd) -->
+                    <div class="h-full w-1/2 flex justify-start">
+                        <img v-if="rightPageImageUrl" :src="rightPageImageUrl"
+                            class="h-full w-auto shadow-lg select-none border-y border-r border-[#f0e6d2] object-contain"
+                            alt="Halaman Kanan">
+                    </div>
+                </div>
 
                 <!-- Click Areas for Nav (Invisible) -->
                 <div class="absolute inset-0 flex">
@@ -129,10 +164,40 @@ const QuranView = {
                     <!-- 2. Cari Surat & Ayat -->
                     <div class="space-y-3 pt-4 border-t border-dashed">
                         <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Cari Surat & Ayat</label>
-                        <select v-model="quranState.jumpSurah" class="w-full border rounded-lg px-3 py-2 text-sm font-bold bg-white mb-2">
-                            <option value="">Pilih Surat...</option>
-                            <option v-for="s in uiData.surahList" :value="s.no">{{ s.no }}. {{ s.latin }}</option>
-                        </select>
+                        
+                        <!-- Searchable Dropdown -->
+                        <div class="relative">
+                            <div class="flex items-center border rounded-lg bg-white px-3 py-2 focus-within:border-primary transition shadow-sm cursor-pointer"
+                                @click="quranState.isSurahDropdownOpen = !quranState.isSurahDropdownOpen">
+                                <span class="material-symbols-outlined text-slate-400 text-sm mr-2">search</span>
+                                <input type="text" v-model="quranState.jumpSurahSearch" 
+                                    placeholder="Ketik nama surat..."
+                                    class="flex-1 bg-transparent outline-none text-sm font-bold"
+                                    @focus="quranState.isSurahDropdownOpen = true"
+                                    @click.stop>
+                                <!-- Clear Button -->
+                                <button v-if="quranState.jumpSurahSearch" 
+                                    @click.stop="quranState.jumpSurahSearch = ''; quranState.jumpSurah = ''"
+                                    class="flex-none text-slate-400 hover:text-red-500 transition ml-2 flex items-center">
+                                    <span class="material-symbols-outlined text-base">close</span>
+                                </button>
+                            </div>
+                            
+                            <!-- Dropdown List -->
+                            <div v-if="quranState.isSurahDropdownOpen" 
+                                class="absolute left-0 right-0 top-11 bg-white border border-slate-200 rounded-xl shadow-2xl z-50 max-h-60 overflow-y-auto animate-scale-in">
+                                <div v-for="s in filteredSurahList" :key="s.no"
+                                    @click="quranState.jumpSurah = s.no; quranState.jumpSurahSearch = s.latin; quranState.isSurahDropdownOpen = false"
+                                    class="px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-blue-50 hover:text-primary cursor-pointer border-b border-slate-50 last:border-0 flex items-center justify-between text-left">
+                                    <span>{{ s.no }}. {{ s.latin }}</span>
+                                    <span class="text-[10px] text-slate-400 font-normal italic">{{ s.ayat }} Ayat</span>
+                                </div>
+                                <div v-if="filteredSurahList.length === 0" class="p-4 text-center text-xs text-slate-400 font-bold">
+                                    Surat tidak ditemukan
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="flex gap-2">
                             <input v-model="quranState.jumpAyat" type="number"
                                 class="w-full border rounded-lg px-3 py-2 text-sm font-bold bg-white focus:outline-none focus:border-primary"
@@ -144,10 +209,38 @@ const QuranView = {
                     <!-- 3. Indeks Juz -->
                     <div class="space-y-2 pt-4 border-t border-dashed">
                         <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Indeks Juz</label>
-                        <select @change="goToJuz($event.target.value)" class="w-full border rounded-lg px-3 py-2 text-sm font-bold bg-white mb-2">
-                            <option value="">Pilih Juz...</option>
-                            <option v-for="j in 30" :key="j" :value="j">Juz {{ j }}</option>
-                        </select>
+                        
+                        <!-- Searchable Juz Dropdown -->
+                        <div class="relative">
+                            <div class="flex items-center border rounded-lg bg-white px-3 py-2 focus-within:border-primary transition shadow-sm cursor-pointer"
+                                @click="quranState.isJuzDropdownOpen = !quranState.isJuzDropdownOpen">
+                                <span class="material-symbols-outlined text-slate-400 text-sm mr-2">search</span>
+                                <input type="text" v-model="quranState.jumpJuzSearch" 
+                                    placeholder="Cari Juz (1-30)..."
+                                    class="flex-1 bg-transparent outline-none text-sm font-bold"
+                                    @focus="quranState.isJuzDropdownOpen = true"
+                                    @click.stop>
+                                <!-- Clear Button -->
+                                <button v-if="quranState.jumpJuzSearch" 
+                                    @click.stop="quranState.jumpJuzSearch = ''"
+                                    class="flex-none text-slate-400 hover:text-red-500 transition ml-2 flex items-center">
+                                    <span class="material-symbols-outlined text-base">close</span>
+                                </button>
+                            </div>
+                            
+                            <!-- Dropdown List -->
+                            <div v-if="quranState.isJuzDropdownOpen" 
+                                class="absolute left-0 right-0 top-11 bg-white border border-slate-200 rounded-xl shadow-2xl z-50 max-h-60 overflow-y-auto animate-scale-in">
+                                <div v-for="j in filteredJuzList" :key="j"
+                                    @click="goToJuz(j); quranState.jumpJuzSearch = 'Juz ' + j; quranState.isJuzDropdownOpen = false"
+                                    class="px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-blue-50 hover:text-primary cursor-pointer border-b border-slate-50 last:border-0 text-left">
+                                    Juz {{ j }}
+                                </div>
+                                <div v-if="filteredJuzList.length === 0" class="p-4 text-center text-xs text-slate-400 font-bold">
+                                    Juz tidak ditemukan
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- 4. Indeks Surat -->

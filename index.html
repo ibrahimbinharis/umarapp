@@ -742,7 +742,11 @@
                     <!-- QURAN VIEW (Component) -->
                     <div v-if="currentView === 'quran'">
                         <quran-view :ui-data="uiData" :quran-state="quranState" :quran-image-src="quranImageSrc"
-                            :current-surah-name="currentSurahName" :current-juz="currentJuz" :next-q-page="nextQPage"
+                            :right-page-image-url="rightPageImageUrl" :left-page-image-url="leftPageImageUrl"
+                            :is-desktop="isDesktop" :right-page="rightPage" :left-page="leftPage"
+                            :current-surah-name="currentSurahName" :current-juz="currentJuz"
+                            :filtered-surah-list="filteredSurahList"
+                            :filtered-juz-list="filteredJuzList" :next-q-page="nextQPage"
                             :prev-q-page="prevQPage" :go-to-surah="goToSurah" :jump-to-surah-start="jumpToSurahStart"
                             :jump-to-page="jumpToPage" :go-to-juz="goToJuz" :jump-to-ayat="jumpToAyat"
                             :handle-touch-start="handleTouchStart" :handle-touch-move="handleTouchMove"

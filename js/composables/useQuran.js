@@ -32,17 +32,63 @@ function useQuran(uiData) {
         page: 1,
         maxPage: 604,
         showDrawer: false,
-        jumpPage: 1,
-        jumpSurah: '',
+        jumpSurahSearch: '',
+        jumpJuzSearch: '',
         jumpAyat: '',
         touchStartX: 0,
-        touchEndX: 0
+        touchEndX: 0,
+        isSurahDropdownOpen: false,
+        isJuzDropdownOpen: false,
+        windowWidth: window.innerWidth
     });
 
+    // Handle Window Resize
+    const handleResize = () => {
+        quranState.windowWidth = window.innerWidth;
+    };
+    window.addEventListener('resize', handleResize);
+
     // --- COMPUTED ---
-    const quranImageSrc = computed(() => {
-        const p = quranState.page.toString().padStart(3, '0');
+    const isDesktop = computed(() => quranState.windowWidth >= 768);
+
+    const filteredSurahList = computed(() => {
+        const list = uiData.surahList || [];
+        if (!quranState.jumpSurahSearch) return list;
+        const q = quranState.jumpSurahSearch.toLowerCase();
+        return list.filter(s => 
+            s.latin.toLowerCase().includes(q) || 
+            s.no.toString().includes(q)
+        );
+    });
+
+    const filteredJuzList = computed(() => {
+        const list = Array.from({length: 30}, (_, i) => i + 1);
+        if (!quranState.jumpJuzSearch) return list;
+        const q = quranState.jumpJuzSearch.toLowerCase();
+        return list.filter(j => j.toString().includes(q) || `juz ${j}`.includes(q));
+    });
+
+    const getImageUrl = (pNum) => {
+        if (!pNum || pNum > 604) return null;
+        const p = pNum.toString().padStart(3, '0');
         return `https://android.quran.com/data/width_1024/page${p}.png`;
+    };
+
+    const quranImageSrc = computed(() => getImageUrl(quranState.page));
+    const rightPageImageUrl = computed(() => getImageUrl(rightPage.value));
+    const leftPageImageUrl = computed(() => getImageUrl(leftPage.value));
+
+    const rightPage = computed(() => {
+        // Right is always ODD.
+        // If current is even (e.g 2), right is 2-1=1. If current is odd (e.g 1), right is 1.
+        return quranState.page % 2 === 0 ? quranState.page - 1 : quranState.page;
+    });
+
+    const leftPage = computed(() => {
+        // Left is always EVEN.
+        // If current is even (e.g 2), left is 2. If current is odd (e.g 1), left is 1+1=2.
+        const lp = quranState.page % 2 === 0 ? quranState.page : quranState.page + 1;
+        return lp > 604 ? null : lp;
     });
 
     const currentSurahName = computed(() => {
@@ -65,11 +111,21 @@ function useQuran(uiData) {
 
     // --- METHODS ---
     const nextQPage = () => {
-        if (quranState.page < 604) quranState.page++;
+        const step = isDesktop.value ? 2 : 1;
+        if (quranState.page + step <= 604) {
+            quranState.page += step;
+        } else if (quranState.page < 604) {
+            quranState.page = 604;
+        }
     };
 
     const prevQPage = () => {
-        if (quranState.page > 1) quranState.page--;
+        const step = isDesktop.value ? 2 : 1;
+        if (quranState.page - step >= 1) {
+            quranState.page -= step;
+        } else if (quranState.page > 1) {
+            quranState.page = 1;
+        }
     };
 
     const goToSurah = (sNo) => {
@@ -141,8 +197,15 @@ function useQuran(uiData) {
     return {
         quranState,
         quranImageSrc,
+        rightPageImageUrl,
+        leftPageImageUrl,
+        isDesktop,
+        rightPage,
+        leftPage,
         currentSurahName,
         currentJuz,
+        filteredSurahList,
+        filteredJuzList,
         nextQPage,
         prevQPage,
         goToSurah,
