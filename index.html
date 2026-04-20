@@ -70,7 +70,7 @@
 
 
         <!-- LOGIN VIEW (Component) -->
-        <login-view v-if="!loading && currentView === 'login'" :app-name="appName" :app-version="appVersion"
+        <login-view v-if="currentView === 'login'" :app-name="appName" :app-version="appVersion"
             :login-form="loginForm" :is-register-mode="isRegisterMode" @login="handleLogin" @register="handleRegister"
             @toggle-mode="isRegisterMode = !isRegisterMode"></login-view>
 
@@ -78,8 +78,8 @@
         <install-view v-else-if="currentView === 'install'" :app-name="appName" :app-version="appVersion"
             @nav="navigateTo"></install-view>
 
-        <!-- MAIN APP VIEW (Shows for all other views OR during initial loading/skeleton) -->
-        <div v-else-if="currentView && (currentView !== 'login' || loading)" class="flex h-full w-full animate-in fade-in duration-700">
+        <!-- MAIN APP VIEW (Shows for all other views) -->
+        <div v-else-if="currentView && currentView !== 'login' && currentView !== 'install'" class="flex h-full w-full animate-in fade-in duration-700">
 
             <!-- SIDEBAR (Desktop) -->
             <aside v-if="isSidebarVisible"

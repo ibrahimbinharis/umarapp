@@ -188,11 +188,11 @@ const TargetView = {
                     <!-- Dropdown Menu -->
                     <div v-if="activeDropdown === s._id"
                         class="absolute right-0 top-10 w-44 bg-white border border-slate-100 shadow-2xl rounded-2xl z-50 flex flex-col py-1 overflow-hidden animate-scale-in origin-top-right">
-                        <button @click.stop="$emit('open-target-modal', s)"
+                        <button @click.stop="$emit('open-target-modal', s); $emit('toggle-dropdown', null)"
                             class="flex items-center gap-2 px-4 py-2.5 text-xs font-bold text-slate-600 hover:bg-blue-50 hover:text-blue-600 transition text-left">
                             <span class="material-symbols-outlined text-base">edit</span> Edit Target
                         </button>
-                        <button @click.stop="$emit('reset-target', s._id)"
+                        <button @click.stop="$emit('reset-target', s._id); $emit('toggle-dropdown', null)"
                             class="flex items-center gap-2 px-4 py-2.5 text-xs font-bold text-slate-600 hover:bg-red-50 hover:text-red-500 transition text-left">
                             <span class="material-symbols-outlined text-base">refresh</span> Reset Target
                         </button>

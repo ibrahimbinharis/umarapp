@@ -17,9 +17,16 @@ function useJadwal(uiData, DB, modalState, userSession) {
     // ===== STATE =====
 
     /**
-     * Gender Filter (L/P)
+     * Gender Filter (L/P) - Initialized based on userSession gender or 'L'
      */
-    const jadwalGenderFilter = ref('L');
+    const jadwalGenderFilter = ref(userSession?.value?.gender || 'L');
+
+    // Sync filter if profile gender changes (v37)
+    watch(() => userSession?.value?.gender, (newGender) => {
+        if (newGender && userSession.value.role !== 'admin') {
+            jadwalGenderFilter.value = newGender;
+        }
+    });
 
     /**
      * Jadwal form state

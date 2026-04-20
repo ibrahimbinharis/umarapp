@@ -51,8 +51,8 @@ const JadwalView = {
         <div class="bg-white p-4 rounded-xl border border-slate-100 shadow-sm space-y-4">
             <!-- Header Removed -->
 
-            <!-- Gender Filter -->
-            <div class="flex p-1 bg-slate-100 rounded-lg">
+            <!-- Gender Filter (UI Guard) -->
+            <div class="flex p-1 bg-slate-100 rounded-lg" v-if="userSession.role === 'admin' || !userSession.gender">
                 <button @click="$emit('update:jadwalGenderFilter', 'L')"
                     :class="jadwalGenderFilter === 'L' ? 'bg-white text-blue-600 shadow-sm font-bold' : 'text-slate-500 hover:text-slate-700'"
                     class="flex-1 py-1.5 text-xs rounded-md transition-all">
@@ -63,6 +63,13 @@ const JadwalView = {
                     class="flex-1 py-1.5 text-xs rounded-md transition-all">
                     Putri
                 </button>
+            </div>
+            <!-- Simple Indicator for Fixed Gender Guru -->
+            <div v-else class="text-left px-2">
+                <span class="text-[10px] font-black uppercase tracking-widest"
+                    :class="userSession.gender === 'L' ? 'text-blue-600' : 'text-pink-600'">
+                    Jadwal {{ userSession.gender === 'L' ? 'Putra' : 'Putri' }}
+                </span>
             </div>
 
             <!-- Day Filter (Scrollable) -->
@@ -86,8 +93,8 @@ const JadwalView = {
         <!-- Schedule List -->
         <div class="space-y-3 fade-in">
             <div v-for="item in filteredJadwalList" :key="item._id"
-                class="bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex justify-between items-start group hover:border-blue-200 transition cursor-pointer active:scale-[0.98]"
-                @click.stop="userSession.role === 'admin' ? $emit('toggle-dropdown', item._id) : null">
+                class="bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex justify-between items-start group hover:border-blue-200 transition cursor-pointer active:scale-[0.98] text-left"
+                @click.stop="(userSession.role === 'admin' || userSession.role === 'guru') ? $emit('toggle-dropdown', item._id) : null">
                 
                 <div class="space-y-1">
                     <div class="flex items-center gap-2">
@@ -98,7 +105,7 @@ const JadwalView = {
                         <span class="text-[10px] font-bold text-slate-400">{{ item.day }}</span>
                     </div>
                     
-                    <div class="flex flex-col">
+                    <div class="flex flex-col text-left">
                         <h4 class="font-bold text-slate-800">{{ item.mapel }}</h4>
                         <p v-if="getBookName(item.mapel)" class="text-[10px] font-medium text-slate-400 flex items-center gap-1">
                             <span class="material-symbols-outlined text-xs">auto_stories</span>
@@ -123,8 +130,8 @@ const JadwalView = {
                     </div>
                 </div>
 
-                <!-- Admin Actions -->
-                <div v-if="userSession.role === 'admin'" class="relative">
+                <!-- Admin & Guru Actions -->
+                <div v-if="userSession.role === 'admin' || userSession.role === 'guru'" class="relative">
                     <button @click.stop="$emit('toggle-dropdown', item._id)"
                         class="size-8 flex items-center justify-center text-slate-300 hover:text-primary hover:bg-slate-50 rounded-full transition">
                         <span class="material-symbols-outlined text-lg">more_vert</span>
@@ -162,9 +169,9 @@ const JadwalView = {
                 <p class="text-slate-300 text-xs">Silakan tambah jadwal baru</p>
             </div>
         </div>
-        <!-- Floating Action Button (Admin Only) -->
+        <!-- Floating Action Button (Admin & Guru Only) -->
         <teleport to="body">
-            <div class="fixed bottom-24 right-4 z-[9999]" v-if="userSession.role === 'admin' && !isModalOpen">
+            <div class="fixed bottom-24 right-4 z-[9999]" v-if="(userSession.role === 'admin' || userSession.role === 'guru') && !isModalOpen">
                 <button v-if="!isFabClicked" @click="onJadwalFabClick(); openJadwalModal(null)"
                     class="size-14 rounded-full bg-primary text-white shadow-xl flex items-center justify-center transition hover:scale-110 active:scale-95 hover:bg-blue-700">
                     <span class="material-symbols-outlined text-3xl">add</span>
