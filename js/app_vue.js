@@ -2,18 +2,18 @@ const { createApp, ref, reactive, computed, onMounted, watch, nextTick } = Vue;
 
 const MENU_CONFIG = [
     { id: 'dashboard', label: "Home", icon: "home", roles: ['admin', 'guru', 'wali', 'santri'], inBottom: true },
-    { id: 'quran', label: "Al-Quran", icon: "auto_stories", roles: ['admin', 'guru', 'wali', 'santri'], inBottom: true },
-    { id: 'input', label: "Input", icon: "add", roles: ['admin', 'guru'], inBottom: true, highlight: true },
     { id: 'riwayat', label: "Riwayat", icon: "history", roles: ['admin', 'guru', 'wali', 'santri'], inBottom: true },
-    { id: 'master_data', label: "Master Data", icon: "database", roles: ['admin', 'guru'], inBottom: false },
-    { id: 'pengumuman', label: "Pengumuman", icon: "campaign", roles: ['admin', 'guru', 'wali', 'santri'], inBottom: false },
+    { id: 'input', label: "Input", icon: "add", roles: ['admin', 'guru', 'wali', 'santri'], inBottom: true, highlight: true },
+    { id: 'jadwal', label: "Jadwal", icon: "calendar_month", roles: ['admin', 'guru', 'wali', 'santri'], inBottom: false },
     { id: 'absensi', label: "Absensi", icon: "event_available", roles: ['admin', 'guru'], inBottom: true },
+    { id: 'uang_saku', label: "Uang Saku", icon: "account_balance_wallet", roles: ['admin', 'guru', 'wali', 'santri'], inBottom: false },
+    { id: 'rekap', label: "Rekap", icon: "analytics", roles: ['admin', 'guru', 'wali', 'santri'], inBottom: true },
+    { id: 'quran', label: "Al-Quran", icon: "auto_stories", roles: ['admin', 'guru', 'wali', 'santri'], inBottom: false },
     { id: 'hafalan', label: "Hafalan", icon: "menu_book", roles: ['admin', 'guru', 'wali', 'santri'], inBottom: false },
     { id: 'ujian', label: "Ujian", icon: "assignment_turned_in", roles: ['admin', 'guru'], inBottom: false },
-    { id: 'jadwal', label: "Jadwal", icon: "calendar_month", roles: ['admin', 'guru', 'wali', 'santri'], inBottom: false },
     { id: 'pelanggaran', label: "Pelanggaran", icon: "warning", roles: ['admin', 'guru'], inBottom: false },
-    { id: 'rekap', label: "Rekap", icon: "analytics", roles: ['admin', 'guru', 'wali', 'santri'], inBottom: false },
-    { id: 'uang_saku', label: "Uang Saku", icon: "account_balance_wallet", roles: ['admin', 'guru', 'wali', 'santri'], inBottom: false },
+    { id: 'pengumuman', label: "Pengumuman", icon: "campaign", roles: ['admin', 'guru', 'wali', 'santri'], inBottom: false },
+    { id: 'master_data', label: "Master Data", icon: "database", roles: ['admin', 'guru'], inBottom: false },
     { id: 'profile', label: "Pengaturan", icon: "settings", roles: ['admin', 'guru', 'wali', 'santri'], inBottom: false },
     { id: 'connect_santri', label: "Sambungkan Santri", icon: "family_restroom", roles: ['wali'], inBottom: false },
 ];
@@ -611,13 +611,12 @@ createApp({
 
             if (!userSession.value) return [];
 
-            // Special bottom bar for Wali: Home, Hafalan, Rekap, Al-Quran, Profile (and Input if Holiday)
+            // Special bottom bar for Wali: Home, Riwayat, INPUT, Rekap, Profile
             if (userSession.value.role === 'wali' || userSession.value.role === 'santri') {
-                const isHoliday = appConfig.value.isHolidayMode;
-                const simplifiedOrder = ['dashboard', 'hafalan', 'rekap', 'input', 'quran', 'profile'];
+
+                const simplifiedOrder = ['dashboard', 'riwayat', 'input', 'rekap', 'profile'];
 
                 return simplifiedOrder
-                    .filter(id => id !== 'input') // Always remove input from bottom orders for wali/santri
                     .map(id => myMenus.value.find(m => m.id === id))
                     .filter(Boolean);
             }

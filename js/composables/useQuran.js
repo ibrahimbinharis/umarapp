@@ -131,7 +131,6 @@ function useQuran(uiData) {
     const goToSurah = (sNo) => {
         if (sNo && SURAH_PAGE_START[sNo]) {
             quranState.page = SURAH_PAGE_START[sNo];
-            quranState.showDrawer = false;
         }
     };
 
@@ -144,7 +143,7 @@ function useQuran(uiData) {
         const p = parseInt(quranState.jumpPage);
         if (p >= 1 && p <= 604) {
             quranState.page = p;
-            quranState.showDrawer = false;
+            quranState.jumpPage = '';
         } else {
             window.showAlert('Halaman harus 1-604', 'Peringatan', 'warning');
         }
@@ -155,15 +154,21 @@ function useQuran(uiData) {
             const boundary = window.QuranUtils.JUZ_BOUNDARIES[juzNo - 1];
             if (boundary) {
                 quranState.page = boundary;
-                quranState.showDrawer = false;
             }
         }
     };
 
     const jumpToAyat = async () => {
-        const sNo = quranState.jumpSurah;
+        let sNo = quranState.jumpSurah;
+        if (!sNo) {
+            let sFound = 1;
+            for (const [s, pStart] of Object.entries(SURAH_PAGE_START)) {
+                if (quranState.page >= pStart) sFound = s;
+            }
+            sNo = sFound;
+        }
         const ayat = quranState.jumpAyat;
-        if (!sNo) return window.showAlert("Pilih surat dahulu", "Peringatan", "warning");
+        
         if (!ayat) return goToSurah(sNo);
 
         // Use API to find page
@@ -172,7 +177,7 @@ function useQuran(uiData) {
             const json = await res.json();
             if (json.code === 200 && json.data && json.data.page) {
                 quranState.page = json.data.page;
-                quranState.showDrawer = false;
+                quranState.jumpAyat = '';
             } else {
                 window.showAlert("Ayat tidak ditemukan", "Error", "danger");
             }

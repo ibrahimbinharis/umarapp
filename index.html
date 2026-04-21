@@ -178,11 +178,7 @@
                     <!-- Sync Indicator & Profile -->
                     <div class="flex items-center gap-2">
                         <!-- MONITORING BELL (Mobile Header) REMOVED -->
-                        <!-- QURAN MENU BUTTON (Only in Quran View) -->
-                        <button v-if="currentView === 'quran'" @click="quranState.showDrawer = true"
-                            class="mr-2 text-slate-600 hover:text-primary transition flex items-center">
-                            <span class="material-symbols-outlined text-2xl">menu</span>
-                        </button>
+                        <!-- QURAN MENU BUTTON (Removed: Unified toggle now exists in Info Bar) -->
 
                         <!-- Sync Status / Header Actions -->
                         <div v-if="syncState.status === 'uploading'"
@@ -1852,7 +1848,7 @@
 
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js?v=3.36').then(reg => {
+                navigator.serviceWorker.register('sw.js?v=3.37').then(reg => {
                     console.log('SW Registered!', reg);
 
                     // 1. Check if update is already waiting (e.g. from previous visit)

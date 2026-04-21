@@ -71,9 +71,9 @@ function useAnalytics(uiData, userSession) {
         const calcTargetManzil = (totalJuz * 20) * (manzilPct / 100);
         const targetManzil = Math.max(20, Math.round(calcTargetManzil));
 
-        // 3. Actual Sabaq & Manzil
+        // 3. Actual Capaian (Sabqi dipisah murni dari penilaian agar skor tidak membludak)
         const mySetoran = setoran.filter(x => x.santri_id === santri._id || x.santri_id === santri.santri_id || x.santri_id === santri.nis);
-        const actualSabaq = mySetoran.filter(x => x.setoran_type === 'Sabaq' || x.setoran_type === 'Sabqi').reduce((acc, curr) => acc + (parseFloat(curr.pages) || 0), 0);
+        const actualSabaq = mySetoran.filter(x => x.setoran_type === 'Sabaq').reduce((acc, curr) => acc + (parseFloat(curr.pages) || 0), 0);
         const actualManzil = mySetoran.filter(x => x.setoran_type === 'Manzil').reduce((acc, curr) => acc + (parseFloat(curr.pages) || 0), 0);
 
         // 4. Actual Ujian
@@ -205,7 +205,7 @@ function useAnalytics(uiData, userSession) {
             const dailySetoran = setoranByDate.get(dateYMD) || [];
             const dailyUjian = ujianByDate.get(dateYMD) || [];
 
-            const daySabaq = dailySetoran.filter(s => s.setoran_type === 'Sabaq' || s.setoran_type === 'Sabqi').reduce((acc, curr) => acc + (parseFloat(curr.pages) || 0), 0);
+            const daySabaq = dailySetoran.filter(s => s.setoran_type === 'Sabaq').reduce((acc, curr) => acc + (parseFloat(curr.pages) || 0), 0);
             const dayManzil = dailySetoran.filter(s => s.setoran_type === 'Manzil').reduce((acc, curr) => acc + (parseFloat(curr.pages) || 0), 0);
             const dayTilawah = dailySetoran.filter(s => s.setoran_type === 'Tilawah').reduce((acc, curr) => acc + (parseFloat(curr.pages) || 0), 0);
 

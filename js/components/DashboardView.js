@@ -516,6 +516,59 @@ const DashboardView = {
             runAllAnimations(); // Trigger on initial load
         });
 
+        // --- LIVE JADWAL SESSION ---
+        const now = ref(new Date());
+        let clockTimer = null;
+        
+        // Tick every 30 seconds
+        Vue.onMounted(() => {
+            clockTimer = setInterval(() => { now.value = new Date(); }, 30000);
+        });
+        Vue.onUnmounted(() => {
+            if (clockTimer) clearInterval(clockTimer);
+        });
+
+        const parseTime = (str) => {
+            if (!str) return null;
+            const parts = str.trim().split(':');
+            return { h: parseInt(parts[0]), m: parseInt(parts[1] || 0) };
+        };
+
+        const liveSession = computed(() => {
+            const days = ['Ahad', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+            const today = days[now.value.getDay()];
+            const curH = now.value.getHours();
+            const curM = now.value.getMinutes();
+            const curTotal = curH * 60 + curM;
+
+            const jadwalList = props.uiData?.jadwal || [];
+            const myName = props.userSession?.full_name;
+            const myUsername = props.userSession?.username;
+            const isAdmin = props.userSession?.role === 'admin';
+
+            const todayJadwal = jadwalList.filter(j => j.day === today);
+
+            for (const j of todayJadwal) {
+                // Only show own sessions for guru; admin sees all
+                if (!isAdmin && j.teacher !== myName && j.username !== myUsername) continue;
+
+                const times = (j.time || '').split(' - ');
+                if (times.length < 2) continue;
+                const start = parseTime(times[0]);
+                const end = parseTime(times[1]);
+                if (!start || !end) continue;
+
+                const startTotal = start.h * 60 + start.m;
+                const endTotal = end.h * 60 + end.m;
+
+                if (curTotal >= startTotal && curTotal < endTotal) {
+                    const remaining = endTotal - curTotal;
+                    return { ...j, startStr: times[0].trim(), endStr: times[1].trim(), remaining };
+                }
+            }
+            return null;
+        });
+
         return {
             getInitials,
             formatDate,
@@ -525,7 +578,7 @@ const DashboardView = {
             showNotifications,
             notifContainer,
             chartFilter,
-            displayStats, // Export for template
+            displayStats,
             getSantriName: window.getSantriName,
             activeNotifTab,
             currentTabNotifications,
@@ -534,7 +587,9 @@ const DashboardView = {
             hasUnreadAlerts,
             handleNotifClick,
             stripHtml,
-            holidayCountdown
+            holidayCountdown,
+            liveSession,
+            now
         };
     },
     template: `
@@ -714,6 +769,31 @@ const DashboardView = {
                     <div class="w-10 h-1 bg-slate-200 rounded-full hover:bg-slate-300 transition-colors"></div>
                 </div>
             </div>
+
+            <!-- LIVE SESSION CARD (Admin & Guru only) -->
+            <transition name="toast-slide">
+                <div v-if="liveSession && (userSession.role === 'admin' || userSession.role === 'guru')"
+                    class="flex items-center gap-3 px-4 py-3 rounded-2xl border border-emerald-200 bg-emerald-50 mb-6">
+                    <!-- Live dot -->
+                    <span class="relative flex size-2 shrink-0">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full size-2 bg-red-500"></span>
+                    </span>
+                    <!-- Info -->
+                    <div class="flex-1 min-w-0">
+                        <p class="font-bold text-slate-800 text-sm truncate leading-tight">{{ liveSession.mapel }}
+                            <span class="text-slate-400 font-normal text-xs ml-1">· {{ liveSession.class_name }}</span>
+                        </p>
+                        <p class="text-[10px] text-emerald-600 font-semibold">{{ liveSession.startStr }}–{{ liveSession.endStr }} · Sisa {{ liveSession.remaining }} mnt</p>
+                    </div>
+                    <!-- CTA -->
+                    <button @click="$emit('navigate', 'absensi')"
+                        class="shrink-0 flex items-center gap-1 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-[11px] font-bold px-3 py-1.5 rounded-xl shadow-sm transition">
+                        <span class="material-symbols-outlined text-sm">edit_document</span>
+                        Absensi
+                    </button>
+                </div>
+            </transition>
 
             <!-- Top Santri Leaderboard (Visible to All Roles) -->
             <div class="bg-white p-5 rounded-3xl border card-shadow mb-6">
