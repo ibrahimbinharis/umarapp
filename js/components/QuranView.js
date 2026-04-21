@@ -89,27 +89,26 @@ const QuranView = {
         <!-- Main Viewer Area -->
         <div class="flex-1 relative overflow-y-auto overflow-x-hidden bg-[#fdfaf7] flex flex-col items-center justify-start">
             <div @touchstart="handleTouchStart" @touchmove="handleTouchMove" @touchend="handleTouchEnd"
-                class="w-full min-h-full flex items-center justify-center relative p-0 md:p-4 md:h-full">
-                
+                class="w-full min-h-full flex items-start justify-center relative p-0 md:p-4">
                 <!-- SINGLE PAGE (Mobile only) -->
-                <div v-if="!isDesktop" class="flex items-center justify-center h-full w-full">
+                <div v-if="!isDesktop" class="w-full flex justify-center flex-1">
                     <img :src="quranImageSrc"
-                        class="w-full h-auto shadow-lg transition-opacity duration-200 select-none border border-[#f0e6d2] md:max-h-full md:max-w-fit md:object-contain md:h-full mt-0"
+                        class="w-full max-w-lg h-auto shadow-lg transition-opacity duration-200 select-none border border-[#f0e6d2] mt-0 block"
                         alt="Halaman Quran">
                 </div>
 
                 <!-- DUAL PAGE (Desktop Spread) -->
-                <div v-else class="hidden md:flex flex-row items-center justify-center h-full w-full gap-0 bg-[#fdfaf7]">
+                <div v-else class="hidden md:flex flex-row items-start justify-center w-full max-w-6xl gap-0 bg-white shadow-2xl flex-1">
                     <!-- LEFT PAGE (Even) -->
-                    <div class="h-full w-1/2 flex justify-end">
+                    <div class="w-1/2 flex justify-end">
                         <img v-if="leftPageImageUrl" :src="leftPageImageUrl"
-                            class="h-full w-auto shadow-lg select-none border border-[#f0e6d2] object-contain"
+                            class="w-full h-auto select-none border border-[#f0e6d2] block"
                             alt="Halaman Kiri">
                     </div>
                     <!-- RIGHT PAGE (Odd) -->
-                    <div class="h-full w-1/2 flex justify-start">
+                    <div class="w-1/2 flex justify-start">
                         <img v-if="rightPageImageUrl" :src="rightPageImageUrl"
-                            class="h-full w-auto shadow-lg select-none border-y border-r border-[#f0e6d2] object-contain"
+                            class="w-full h-auto select-none border-y border-r border-t border-[#f0e6d2] block"
                             alt="Halaman Kanan">
                     </div>
                 </div>
