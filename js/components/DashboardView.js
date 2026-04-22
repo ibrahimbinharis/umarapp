@@ -550,15 +550,40 @@ const DashboardView = {
             const curTotal = curH * 60 + curM;
 
             const jadwalList = props.uiData?.jadwal || [];
+            const role = props.userSession?.role;
+            const isAdmin = role === 'admin';
+            const isGuru = role === 'guru';
             const myName = props.userSession?.full_name;
             const myUsername = props.userSession?.username;
-            const isAdmin = props.userSession?.role === 'admin';
+
+            // For santri/wali: find the santri's kelas to filter jadwal
+            let santriKelas = null;
+            if (role === 'santri' || role === 'wali') {
+                let linkedSantri = null;
+                if (role === 'wali' && props.activeChildId) {
+                    linkedSantri = (props.uiData?.santri || []).find(
+                        s => s._id === props.activeChildId || s.santri_id === props.activeChildId
+                    );
+                } else if (role === 'santri') {
+                    linkedSantri = (props.uiData?.santri || [])[0];
+                }
+                santriKelas = linkedSantri?.kelas || linkedSantri?.class_id || null;
+            }
 
             const todayJadwal = jadwalList.filter(j => j.day === today);
             const results = [];
 
             for (const j of todayJadwal) {
-                if (!isAdmin && j.teacher !== myName && j.username !== myUsername) continue;
+                if (isAdmin) {
+                    // Admin: semua sesi
+                } else if (isGuru) {
+                    if (j.teacher !== myName && j.username !== myUsername) continue;
+                } else {
+                    // Santri/Wali: sesi kelas mereka ATAU sesi umum (berlaku semua)
+                    if (!santriKelas || (j.class_name !== santriKelas && j.class_name !== 'Umum')) {
+                        continue;
+                    }
+                }
 
                 const times = (j.time || '').split(' - ');
                 if (times.length < 2) continue;
@@ -782,7 +807,7 @@ const DashboardView = {
             </div>
 
             <!-- LIVE SESSIONS (Admin & Guru only) -->
-            <div v-if="liveSessions.length > 0 && (userSession.role === 'admin' || userSession.role === 'guru')" class="mb-6">
+            <div v-if="liveSessions.length > 0" class="mb-6">
                 <!-- Scroll container: full-width snap on mobile, 3-col-peek on desktop -->
                 <div ref="liveScrollEl"
                     class="flex gap-3 overflow-x-auto pb-1 no-scrollbar snap-x snap-mandatory md:snap-none scroll-smooth"
@@ -801,8 +826,9 @@ const DashboardView = {
                             </p>
                             <p class="text-[10px] text-slate-500 font-medium truncate">{{ s.teacher }} · <span class="text-emerald-600 font-semibold">{{ s.startStr }}–{{ s.endStr }} · Sisa {{ s.remaining }} mnt</span></p>
                         </div>
-                        <!-- CTA -->
-                        <button @click="$emit('navigate', 'absensi')"
+                        <!-- CTA (Admin/Guru only) -->
+                        <button v-if="userSession.role === 'admin' || userSession.role === 'guru'"
+                            @click="$emit('navigate', 'absensi')"
                             class="shrink-0 flex items-center gap-1 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-[11px] font-bold px-3 py-1.5 rounded-xl shadow-sm transition">
                             <span class="material-symbols-outlined text-sm">edit_document</span>
                             Absensi
