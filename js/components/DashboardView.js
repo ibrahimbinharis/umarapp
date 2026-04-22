@@ -518,6 +518,8 @@ const DashboardView = {
 
         // --- LIVE JADWAL SESSION ---
         const now = ref(new Date());
+        const liveScrollEl = ref(null);
+        const liveActiveIndex = ref(0);
         let clockTimer = null;
         
         // Tick every 30 seconds
@@ -528,13 +530,19 @@ const DashboardView = {
             if (clockTimer) clearInterval(clockTimer);
         });
 
+        const onLiveScroll = (e) => {
+            const el = e.target;
+            const cardWidth = el.firstElementChild?.offsetWidth || el.offsetWidth;
+            liveActiveIndex.value = Math.round(el.scrollLeft / (cardWidth + 12)); // 12 = gap-3
+        };
+
         const parseTime = (str) => {
             if (!str) return null;
             const parts = str.trim().split(':');
             return { h: parseInt(parts[0]), m: parseInt(parts[1] || 0) };
         };
 
-        const liveSession = computed(() => {
+        const liveSessions = computed(() => {
             const days = ['Ahad', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
             const today = days[now.value.getDay()];
             const curH = now.value.getHours();
@@ -547,9 +555,9 @@ const DashboardView = {
             const isAdmin = props.userSession?.role === 'admin';
 
             const todayJadwal = jadwalList.filter(j => j.day === today);
+            const results = [];
 
             for (const j of todayJadwal) {
-                // Only show own sessions for guru; admin sees all
                 if (!isAdmin && j.teacher !== myName && j.username !== myUsername) continue;
 
                 const times = (j.time || '').split(' - ');
@@ -563,10 +571,10 @@ const DashboardView = {
 
                 if (curTotal >= startTotal && curTotal < endTotal) {
                     const remaining = endTotal - curTotal;
-                    return { ...j, startStr: times[0].trim(), endStr: times[1].trim(), remaining };
+                    results.push({ ...j, startStr: times[0].trim(), endStr: times[1].trim(), remaining });
                 }
             }
-            return null;
+            return results;
         });
 
         return {
@@ -588,7 +596,10 @@ const DashboardView = {
             handleNotifClick,
             stripHtml,
             holidayCountdown,
-            liveSession,
+            liveSessions,
+            liveScrollEl,
+            liveActiveIndex,
+            onLiveScroll,
             now
         };
     },
@@ -770,30 +781,42 @@ const DashboardView = {
                 </div>
             </div>
 
-            <!-- LIVE SESSION CARD (Admin & Guru only) -->
-            <transition name="toast-slide">
-                <div v-if="liveSession && (userSession.role === 'admin' || userSession.role === 'guru')"
-                    class="flex items-center gap-3 px-4 py-3 rounded-2xl border border-emerald-200 bg-emerald-50 mb-6">
-                    <!-- Live dot -->
-                    <span class="relative flex size-2 shrink-0">
-                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75"></span>
-                        <span class="relative inline-flex rounded-full size-2 bg-red-500"></span>
-                    </span>
-                    <!-- Info -->
-                    <div class="flex-1 min-w-0">
-                        <p class="font-bold text-slate-800 text-sm truncate leading-tight">{{ liveSession.mapel }}
-                            <span class="text-slate-400 font-normal text-xs ml-1">· {{ liveSession.class_name }}</span>
-                        </p>
-                        <p class="text-[10px] text-emerald-600 font-semibold">{{ liveSession.startStr }}–{{ liveSession.endStr }} · Sisa {{ liveSession.remaining }} mnt</p>
+            <!-- LIVE SESSIONS (Admin & Guru only) -->
+            <div v-if="liveSessions.length > 0 && (userSession.role === 'admin' || userSession.role === 'guru')" class="mb-6">
+                <!-- Scroll container: full-width snap on mobile, 3-col-peek on desktop -->
+                <div ref="liveScrollEl"
+                    class="flex gap-3 overflow-x-auto pb-1 no-scrollbar snap-x snap-mandatory md:snap-none scroll-smooth"
+                    @scroll="onLiveScroll">
+                    <div v-for="(s, i) in liveSessions" :key="i"
+                        class="flex-shrink-0 w-full md:w-[calc(33.333%-8px)] snap-center flex items-center gap-3 px-4 py-3 rounded-2xl border border-emerald-200 bg-emerald-50">
+                        <!-- Live dot -->
+                        <span class="relative flex size-2 shrink-0">
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75"></span>
+                            <span class="relative inline-flex rounded-full size-2 bg-red-500"></span>
+                        </span>
+                        <!-- Info -->
+                        <div class="flex-1 min-w-0">
+                            <p class="font-bold text-slate-800 text-sm truncate leading-tight">{{ s.mapel }}
+                                <span class="text-slate-400 font-normal text-xs ml-1">· {{ s.class_name }}</span>
+                            </p>
+                            <p class="text-[10px] text-slate-500 font-medium truncate">{{ s.teacher }} · <span class="text-emerald-600 font-semibold">{{ s.startStr }}–{{ s.endStr }} · Sisa {{ s.remaining }} mnt</span></p>
+                        </div>
+                        <!-- CTA -->
+                        <button @click="$emit('navigate', 'absensi')"
+                            class="shrink-0 flex items-center gap-1 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-[11px] font-bold px-3 py-1.5 rounded-xl shadow-sm transition">
+                            <span class="material-symbols-outlined text-sm">edit_document</span>
+                            Absensi
+                        </button>
                     </div>
-                    <!-- CTA -->
-                    <button @click="$emit('navigate', 'absensi')"
-                        class="shrink-0 flex items-center gap-1 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-[11px] font-bold px-3 py-1.5 rounded-xl shadow-sm transition">
-                        <span class="material-symbols-outlined text-sm">edit_document</span>
-                        Absensi
-                    </button>
                 </div>
-            </transition>
+                <!-- Dot indicators (mobile only, only when >1 session) -->
+                <div v-if="liveSessions.length > 1" class="flex justify-center gap-1.5 mt-2 md:hidden">
+                    <span v-for="(s, i) in liveSessions" :key="i"
+                        class="rounded-full transition-all duration-300"
+                        :class="liveActiveIndex === i ? 'w-4 h-1.5 bg-emerald-500' : 'size-1.5 bg-slate-200'">
+                    </span>
+                </div>
+            </div>
 
             <!-- Top Santri Leaderboard (Visible to All Roles) -->
             <div class="bg-white p-5 rounded-3xl border card-shadow mb-6">
