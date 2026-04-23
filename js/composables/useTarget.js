@@ -56,8 +56,9 @@ function useTarget(uiData, DB, modalState, refreshUI) {
                        rDate >= startOfMonth && rDate <= now && r._deleted !== true;
             });
 
-            const currentSabaq = sMonthRecords.filter(r => r.setoran_type === 'Sabaq').reduce((sum, r) => sum + (parseFloat(r.pages) || 0), 0);
-            const currentManzil = sMonthRecords.filter(r => r.setoran_type === 'Manzil' || r.setoran_type === 'Sabqi').reduce((sum, r) => sum + (parseFloat(r.pages) || 0), 0);
+            // v37: Use counted (0 if grade C). Fallback to pages for legacy records.
+            const currentSabaq = sMonthRecords.filter(r => r.setoran_type === 'Sabaq').reduce((sum, r) => sum + (parseFloat(r.counted ?? r.pages) || 0), 0);
+            const currentManzil = sMonthRecords.filter(r => r.setoran_type === 'Manzil' || r.setoran_type === 'Sabqi').reduce((sum, r) => sum + (parseFloat(r.counted ?? r.pages) || 0), 0);
             const currentTilawah = sMonthRecords.filter(r => r.setoran_type === 'Tilawah' || r.setoran_type === 'Binadzor').reduce((sum, r) => sum + (parseFloat(r.pages) || 0), 0);
 
             return {

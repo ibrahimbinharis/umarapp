@@ -184,8 +184,9 @@ const useRekap = (uiData, userSession) => {
                 kelas: s.kelas,
 
                 show_sabaq: rekapSettings.visibility.sabaq,
-                sabaq_act: parseFloat(mySetoran.filter(x => x.setoran_type === 'Sabaq').reduce((acc, curr) => acc + (parseFloat(curr.pages) || 0), 0).toFixed(1)),
-                sabqi_act: parseFloat(mySetoran.filter(x => x.setoran_type === 'Sabqi').reduce((acc, curr) => acc + (parseFloat(curr.pages) || 0), 0).toFixed(1)),
+                // v37: Use counted (0 if grade C). Fallback to pages for legacy records.
+                sabaq_act: parseFloat(mySetoran.filter(x => x.setoran_type === 'Sabaq').reduce((acc, curr) => acc + (parseFloat(curr.counted ?? curr.pages) || 0), 0).toFixed(1)),
+                sabqi_act: parseFloat(mySetoran.filter(x => x.setoran_type === 'Sabqi').reduce((acc, curr) => acc + (parseFloat(curr.counted ?? curr.pages) || 0), 0).toFixed(1)),
                 sabaq_total: parseFloat(perf.sabaq.actual.toFixed(1)),
                 sabaq_tgt: perf.sabaq.target,
 

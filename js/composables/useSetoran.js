@@ -336,7 +336,11 @@ function useSetoran(uiData, DB, refreshData, userSession, appConfig) {
             );
 
         const current = monthlyRecords.reduce((acc, curr) => {
-            const val = type === 'Sabaq' ? (parseFloat(curr.counted) || 0) : (parseFloat(curr.pages) || 0);
+            // Sabaq, Sabqi, Robt, Manzil: use 'counted' (= 0 if grade C / score < 60)
+            // Tilawah: use raw 'pages' (no grading system, counts every page read)
+            const val = (type === 'Sabaq' || type === 'Sabqi' || type === 'Robt' || type === 'Manzil')
+                ? (parseFloat(curr.counted) || 0)
+                : (parseFloat(curr.pages) || 0);
             return acc + val;
         }, 0);
 
@@ -763,7 +767,11 @@ function useSetoran(uiData, DB, refreshData, userSession, appConfig) {
             .filter(s => {
                 const isMatch = s.santri_id === setoranForm.santri_id && s.setoran_type === sourceType;
                 if (!isMatch) return false;
-                
+
+                // v37: Exclude grade C records (score < 60) — wajib mengulang
+                const sc = parseFloat(s.score) || 0;
+                if (sc < 60) return false;
+
                 // v37: Safe filtering (only include records before or at the current setoran time)
                 const sDate = new Date((s.setoran_date || '2000-01-01') + 'T' + (s.setoran_time || '00:00'));
                 return sDate <= currentRefDate;
@@ -817,6 +825,32 @@ function useSetoran(uiData, DB, refreshData, userSession, appConfig) {
         updateGrade();
     };
 
+    /**
+     * Warning: Last prerequisite record for the current type is grade C
+     * Sabqi → checks last Sabaq; Robt → checks last Sabqi
+     */
+    const gradeCWarning = computed(() => {
+        if (!setoranForm.santri_id) return null;
+        const type = setoranForm.setoran_type;
+        if (type !== 'Sabqi' && type !== 'Robt') return null;
+
+        const checkType = type === 'Sabqi' ? 'Sabaq' : 'Sabqi';
+        const last = (uiData.setoran || [])
+            .filter(s => s.santri_id === setoranForm.santri_id && s.setoran_type === checkType)
+            .sort((a, b) => {
+                const da = new Date((a.setoran_date || '2000-01-01') + 'T' + (a.setoran_time || '00:00'));
+                const db = new Date((b.setoran_date || '2000-01-01') + 'T' + (b.setoran_time || '00:00'));
+                return db - da;
+            })[0];
+
+        if (!last) return null;
+        if ((parseFloat(last.score) || 0) < 60) {
+            return type === 'Sabqi'
+                ? `Peringatan: ${checkType} terakhir mendapat nilai C (${last.score}). Santri dianjurkan mengulang ${checkType} terlebih dahulu.`
+                : `Peringatan: ${checkType} terakhir mendapat nilai C (${last.score}). Santri dianjurkan mengulang ${checkType} terlebih dahulu.`;
+        }
+        return null;
+    });
 
     onMounted(() => {
         document.addEventListener('click', closeAllMenus);
@@ -1253,6 +1287,7 @@ function useSetoran(uiData, DB, refreshData, userSession, appConfig) {
         lastRecordForType,
         applyLastRecord,
         santriTargetProgress,
+        gradeCWarning,
         getJuzPageCount,
 
         // Surah Search (v37)

@@ -218,7 +218,7 @@ const RiwayatView = {
         };
     },
     template: `
-    <div class="fade-in space-y-4 pb-24">
+    <div class="fade-in space-y-4 pb-12">
         <div class="px-2 flex items-center justify-between">
             <div>
                 <h2 class="text-2xl font-bold text-slate-900">Riwayat</h2>
@@ -313,7 +313,7 @@ const RiwayatView = {
 
 
 
-        <div class="bg-white rounded-xl border shadow-sm overflow-hidden mb-20 mx-2">
+        <div class="bg-white rounded-xl border shadow-sm overflow-hidden mb-4 mx-2">
             <!-- Bulk Action Bar (Strictly Admin/Guru) -->
             <div v-if="userSession && riwayatState.selectedIds.length > 0 && (userSession.role === 'admin' || userSession.role === 'guru')"
                 class="p-2 pl-4 bg-red-50 border-b border-red-100 flex items-center justify-between gap-2 animate-fade-in">
@@ -459,7 +459,11 @@ const RiwayatView = {
                                     -{{ item.points || 0 }} Poin
                                 </div>
                                 
-                                <span class="text-[9px] font-bold text-slate-400 whitespace-nowrap block mt-0.5">{{ formatDateLong(item.created_at || item.timestamp) }}</span>
+                                <span class="text-[9px] font-bold text-slate-400 whitespace-nowrap block mt-0.5">
+                                    {{ formatDateLong(item.created_at || item.timestamp) }}
+                                    <span v-if="item.setoran_time" class="opacity-70"> • {{ item.setoran_time }}</span>
+                                    <span v-else-if="item.created_at" class="opacity-70"> • {{ item.created_at.slice(11,16) }}</span>
+                                </span>
                             </div>
                             
                             <button v-if="userSession && (userSession.role === 'admin' || userSession.role === 'guru' || ((userSession.role === 'santri' || userSession.role === 'wali') && appConfig.isHolidayMode))" 

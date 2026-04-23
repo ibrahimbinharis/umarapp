@@ -106,7 +106,7 @@
 
                     <template v-else>
                         <button v-for="menu in myMenus" :key="menu.id" @click="navigateTo(menu.id)"
-                            class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium text-sm"
+                            class="w-full flex items-center gap-3 px-4 py-2 rounded-xl transition-all font-medium text-sm"
                             :class="currentView === menu.id ? 'bg-primary text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'">
                             <span class="material-symbols-outlined">{{ menu.icon }}</span>
                             {{ menu.label }}
@@ -377,18 +377,16 @@
                     <div v-if="currentView === 'input'" class="h-full w-full">
                         <setoran-view :setoran-form="setoranForm" :setoran-santri-search="setoranSantriSearch"
                             @update:setoran-santri-search="setoranSantriSearch = $event"
-                            :surah-search="surahSearch"
-                            @update:surah-search="surahSearch = $event"
                             :is-setoran-santri-dropdown-open="isSetoranSantriDropdownOpen"
                             @update:is-setoran-santri-dropdown-open="isSetoranSantriDropdownOpen = $event"
                             :setoran-filtered-santri-options="setoranFilteredSantriOptions"
                             :setoran-selected-santri-name="setoranSelectedSantriName" :surah-list="surahList"
-                            :filtered-surah-list="filteredSurahList"
                             :surah-hints="surahHints" :auto-calc-info="autoCalcInfo" :recent-setoran="recentSetoran"
                             :is-menu-open="isMenuOpen" :is-clock-running="isClockRunning"
                             :last-record-for-type="lastRecordForType" :santri-target-progress="santriTargetProgress"
                             :setoran-editing-id="setoranEditingId"
                             :user-session="userSession" :app-config="appConfig"
+                            :grade-c-warning="gradeCWarning"
                             @update:is-clock-running="isClockRunning = $event"
                             @select-setoran-santri="selectSetoranSantri" @change-setoran-type="changeSetoranType"
                             @sync-surah="syncSurah" @validate-ayat="validateAyat" @toggle-manzil-mode="toggleManzilMode"
@@ -1848,7 +1846,7 @@
 
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js?v=3.39').then(reg => {
+                navigator.serviceWorker.register('sw.js?v=3.40').then(reg => {
                     console.log('SW Registered!', reg);
 
                     // 1. Check if update is already waiting (e.g. from previous visit)

@@ -16,8 +16,7 @@ const SetoranView = {
         'setoranEditingId',
         'appConfig',
         'userSession',
-        'surahSearch',
-        'filteredSurahList'
+        'gradeCWarning'
     ],
     emits: [
         'update:setoranSantriSearch',
@@ -39,22 +38,49 @@ const SetoranView = {
         'toggle-menu',
         'reset-setoran',
         'cancel-edit',
-        'update:surahSearch',
         'apply-last-record'
     ],
     setup(props, { emit }) {
+        const { ref, computed } = Vue;
+
         // Helper to emit search update
         const updateSearch = (e) => {
             emit('update:setoranSantriSearch', e.target.value);
         };
 
-        const updateSurahSearch = (e) => {
-            emit('update:surahSearch', e.target.value);
-        };
-
         // Local UI states for Surah Search
         const isSurahFromOpen = ref(false);
         const isSurahToOpen = ref(false);
+
+        // Get Surah Name helper
+        const getSurahName = (no) => {
+            const s = props.surahList.find(i => i.no === no);
+            return s ? `${s.no}. ${s.latin}` : '-- Pilih Surat --';
+        };
+
+        // Local Surah Search Logic
+        const surahSearch = ref('');
+        const localFilteredSurahList = computed(() => {
+            if (!surahSearch.value) return props.surahList || [];
+            const q = surahSearch.value.toLowerCase().trim();
+            return (props.surahList || []).filter(s => 
+                s.latin.toLowerCase().includes(q) || 
+                String(s.no) === q
+            );
+        });
+
+        // Reset search when opening/closing
+        const toggleSurahFrom = () => {
+            isSurahFromOpen.value = !isSurahFromOpen.value;
+            isSurahToOpen.value = false;
+            surahSearch.value = '';
+        };
+
+        const toggleSurahTo = () => {
+            isSurahToOpen.value = !isSurahToOpen.value;
+            isSurahFromOpen.value = false;
+            surahSearch.value = '';
+        };
 
         const selectSurah = (target, surah) => {
             if (target === 'from') {
@@ -67,26 +93,23 @@ const SetoranView = {
                 emit('validate-ayat', 'to');
                 isSurahToOpen.value = false;
             }
-            emit('update:surahSearch', ''); // Reset search
-        };
-
-        // Get Surah Name helper
-        const getSurahName = (no) => {
-            const s = props.surahList.find(i => i.no === no);
-            return s ? `${s.no}. ${s.latin}` : '-- Pilih Surat --';
+            surahSearch.value = ''; // Reset search
         };
 
         return {
             updateSearch,
-            updateSurahSearch,
             isSurahFromOpen,
             isSurahToOpen,
             selectSurah,
-            getSurahName
+            getSurahName,
+            surahSearch,
+            localFilteredSurahList,
+            toggleSurahFrom,
+            toggleSurahTo
         }
     },
     template: `
-    <div class="fade-in pb-48">
+    <div class="fade-in pb-24">
         <!-- Holiday Mode Banner (Added v36) -->
         <div v-if="appConfig?.isHolidayMode" 
             class="mx-1 mb-6 p-4 rounded-2xl bg-gradient-to-br from-orange-400 to-amber-500 text-white shadow-lg relative overflow-hidden group">
@@ -230,6 +253,12 @@ const SetoranView = {
                     <span class="material-symbols-outlined text-slate-300 text-sm">info</span>
                     <p class="text-[10px] italic text-slate-400 font-medium tracking-tight">Belum ada catatan {{ setoranForm.setoran_type }} khusus bulan ini.</p>
                 </div>
+
+                <!-- Grade C Warning Banner -->
+                <div v-if="gradeCWarning" class="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-xl animate-in fade-in slide-in-from-top-1 duration-300">
+                    <span class="material-symbols-outlined text-amber-500 text-base shrink-0 mt-0.5">warning</span>
+                    <p class="text-[10px] font-bold text-amber-800 leading-snug">{{ gradeCWarning }}</p>
+                </div>
             </div>
 
             <!-- Type Tabs -->
@@ -251,7 +280,7 @@ const SetoranView = {
                     <!-- Surah From Dropdown -->
                     <div class="relative">
                         <label class="text-xs font-bold text-slate-400">Dari Surat</label>
-                        <button @click="isSurahFromOpen = !isSurahFromOpen; isSurahToOpen = false"
+                        <button @click="toggleSurahFrom"
                             class="w-full p-2 border rounded-xl text-sm font-bold bg-white text-left flex justify-between items-center transition hover:border-blue-300">
                             <span class="truncate">{{ getSurahName(setoranForm.surah_from) }}</span>
                             <span class="material-symbols-outlined text-slate-400 text-sm transition-transform" :class="{'rotate-180': isSurahFromOpen}">expand_more</span>
@@ -260,28 +289,28 @@ const SetoranView = {
                         <div v-if="isSurahFromOpen" class="absolute left-0 right-0 top-full mt-1 bg-white border rounded-xl shadow-xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
                             <!-- Local Search inside Dropdown -->
                             <div class="p-2 border-b">
-                                <input :value="surahSearch" @input="updateSurahSearch" 
+                                <input v-model="surahSearch" 
                                     class="w-full p-2 text-xs border rounded-lg outline-none focus:ring-2 focus:ring-primary/10"
                                     placeholder="Cari surat..." @click.stop autofocus>
                             </div>
                             <div class="max-h-56 overflow-y-auto custom-scrollbar">
-                                <div v-for="s in filteredSurahList" :key="s.no" 
+                                <div v-for="s in localFilteredSurahList" :key="s.no" 
                                     @click="selectSurah('from', s)"
                                     class="px-3 py-2 text-xs font-bold hover:bg-blue-50 cursor-pointer border-b border-slate-50 last:border-0"
                                     :class="setoranForm.surah_from === s.no ? 'text-primary bg-blue-50/50' : 'text-slate-700'">
                                     {{ s.no }}. {{ s.latin }}
                                 </div>
-                                <div v-if="filteredSurahList.length === 0" class="p-4 text-center text-slate-400 text-[10px] italic">Tidak ditemukan</div>
+                                <div v-if="localFilteredSurahList.length === 0" class="p-4 text-center text-slate-400 text-[10px] italic">Tidak ditemukan</div>
                             </div>
                         </div>
                         <!-- Backdrop -->
-                        <div v-if="isSurahFromOpen" @click="isSurahFromOpen = false; $emit('update:surahSearch', '')" class="fixed inset-0 z-40"></div>
+                        <div v-if="isSurahFromOpen" @click="isSurahFromOpen = false; surahSearch = ''" class="fixed inset-0 z-40"></div>
                     </div>
 
                     <!-- Surah To Dropdown -->
                     <div class="relative">
                         <label class="text-xs font-bold text-slate-400">Sampai Surat</label>
-                        <button @click="isSurahToOpen = !isSurahToOpen; isSurahFromOpen = false"
+                        <button @click="toggleSurahTo"
                             class="w-full p-2 border rounded-xl text-sm font-bold bg-white text-left flex justify-between items-center transition hover:border-blue-300">
                             <span class="truncate">{{ getSurahName(setoranForm.surah_to) }}</span>
                             <span class="material-symbols-outlined text-slate-400 text-sm transition-transform" :class="{'rotate-180': isSurahToOpen}">expand_more</span>
@@ -289,21 +318,21 @@ const SetoranView = {
 
                         <div v-if="isSurahToOpen" class="absolute left-0 right-0 top-full mt-1 bg-white border rounded-xl shadow-xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
                             <div class="p-2 border-b">
-                                <input :value="surahSearch" @input="updateSurahSearch" 
+                                <input v-model="surahSearch" 
                                     class="w-full p-2 text-xs border rounded-lg outline-none focus:ring-2 focus:ring-primary/10"
                                     placeholder="Cari surat..." @click.stop autofocus>
                             </div>
                             <div class="max-h-56 overflow-y-auto custom-scrollbar">
-                                <div v-for="s in filteredSurahList" :key="s.no" 
+                                <div v-for="s in localFilteredSurahList" :key="s.no" 
                                     @click="selectSurah('to', s)"
                                     class="px-3 py-2 text-xs font-bold hover:bg-blue-50 cursor-pointer border-b border-slate-50 last:border-0"
                                     :class="setoranForm.surah_to === s.no ? 'text-primary bg-blue-50/50' : 'text-slate-700'">
                                     {{ s.no }}. {{ s.latin }}
                                 </div>
-                                <div v-if="filteredSurahList.length === 0" class="p-4 text-center text-slate-400 text-[10px] italic">Tidak ditemukan</div>
+                                <div v-if="localFilteredSurahList.length === 0" class="p-4 text-center text-slate-400 text-[10px] italic">Tidak ditemukan</div>
                             </div>
                         </div>
-                        <div v-if="isSurahToOpen" @click="isSurahToOpen = false; $emit('update:surahSearch', '')" class="fixed inset-0 z-40"></div>
+                        <div v-if="isSurahToOpen" @click="isSurahToOpen = false; surahSearch = ''" class="fixed inset-0 z-40"></div>
                     </div>
                 </div>
 
@@ -539,7 +568,7 @@ const SetoranView = {
         </div>
 
         <!-- Recent History -->
-        <div class="mt-6 mx-2 mb-20">
+        <div class="mt-6 mx-2 mb-4">
             <h3 class="font-bold text-slate-700 mb-2 px-1">Riwayat Setoran Terbaru</h3>
             <div class="max-h-[400px] overflow-y-auto pr-1 custom-scrollbar space-y-2">
                 <!-- Recent Items -->

@@ -127,8 +127,9 @@ function useDashboard(uiData, userSession, activeChildId, appConfig) {
             // All time pages (Helper for Admin stats)
             const allSetoran = uiData.all_setoran || uiData.setoran || [];
             const myAllSetoran = allSetoran.filter(x => x.santri_id === s._id || x.santri_id === s.santri_id);
-            totalSabaqAllTime += myAllSetoran.filter(x => x.setoran_type === 'Sabaq' || x.setoran_type === 'Sabqi').reduce((acc, curr) => acc + (parseFloat(curr.pages) || 0), 0);
-            totalManzilAllTime += myAllSetoran.filter(x => x.setoran_type === 'Manzil').reduce((acc, curr) => acc + (parseFloat(curr.pages) || 0), 0);
+            // v37: Sabaq, Sabqi, Manzil use counted (0 if grade C). Tilawah uses raw pages.
+            totalSabaqAllTime += myAllSetoran.filter(x => x.setoran_type === 'Sabaq' || x.setoran_type === 'Sabqi').reduce((acc, curr) => acc + (parseFloat(curr.counted ?? curr.pages) || 0), 0);
+            totalManzilAllTime += myAllSetoran.filter(x => x.setoran_type === 'Manzil').reduce((acc, curr) => acc + (parseFloat(curr.counted ?? curr.pages) || 0), 0);
         });
 
         dashboardStats.totalSantri = allSantris.length;
