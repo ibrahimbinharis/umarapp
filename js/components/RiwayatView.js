@@ -51,7 +51,10 @@ const RiwayatView = {
         const calendarWeeks = computed(() => {
             const firstDay = new Date(viewYear.value, viewMonth.value, 1).getDay();
             const daysInMonth = new Date(viewYear.value, viewMonth.value + 1, 0).getDate();
-            const todayStr = new Date().toISOString().split('T')[0];
+            
+            // Generate local today string
+            const today = new Date();
+            const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 
             const weeks = [];
             for (let i = 0; i < firstDay; i++) weeks.push(null);
@@ -87,6 +90,7 @@ const RiwayatView = {
             const finalEnd = tempRange.end || tempRange.start;
             props.riwayatState.startDate = tempRange.start;
             props.riwayatState.endDate = finalEnd;
+            props.riwayatState.quickDateFilter = 'custom';
             isCalendarOpen.value = false;
         };
 
@@ -271,6 +275,7 @@ const RiwayatView = {
                     { id: 'setoran', label: 'Setoran' },
                     { id: 'sabaq', label: 'Sabaq' },
                     { id: 'sabqi', label: 'Sabqi' },
+                    { id: 'robt', label: 'Robt' },
                     { id: 'manzil', label: 'Manzil' },
                     { id: 'tilawah', label: 'Tilawah' },
                     { id: 'ujian', label: 'Ujian' },
@@ -292,6 +297,7 @@ const RiwayatView = {
                     riwayatState.category === 'setoran' ? 'Setoran' :
                     riwayatState.category === 'sabaq' ? 'Sabaq' :
                     riwayatState.category === 'sabqi' ? 'Sabqi' :
+                    riwayatState.category === 'robt' ? 'Robt' :
                     riwayatState.category === 'manzil' ? 'Manzil' :
                     riwayatState.category === 'tilawah' ? 'Tilawah' :
                     riwayatState.category === 'ujian' ? 'Ujian' : 'Pelanggaran'

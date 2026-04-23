@@ -556,8 +556,9 @@ const DashboardView = {
             const myName = props.userSession?.full_name;
             const myUsername = props.userSession?.username;
 
-            // For santri/wali: find the santri's kelas to filter jadwal
+            // For santri/wali: find the santri's kelas & gender to filter jadwal
             let santriKelas = null;
+            let santriGender = null;
             if (role === 'santri' || role === 'wali') {
                 let linkedSantri = null;
                 if (role === 'wali' && props.activeChildId) {
@@ -568,6 +569,7 @@ const DashboardView = {
                     linkedSantri = (props.uiData?.santri || [])[0];
                 }
                 santriKelas = linkedSantri?.kelas || linkedSantri?.class_id || null;
+                santriGender = linkedSantri?.gender || 'L';
             }
 
             const todayJadwal = jadwalList.filter(j => j.day === today);
@@ -580,7 +582,15 @@ const DashboardView = {
                     if (j.teacher !== myName && j.username !== myUsername) continue;
                 } else {
                     // Santri/Wali: sesi kelas mereka ATAU sesi umum (berlaku semua)
-                    if (!santriKelas || (j.class_name !== santriKelas && j.class_name !== 'Umum')) {
+                    const jClass = (j.class_name || '').toLowerCase().trim();
+                    const sClass = (santriKelas || '').toLowerCase().trim();
+
+                    if (!santriKelas || (jClass !== sClass && jClass !== 'umum')) {
+                        continue;
+                    }
+
+                    // Strict Gender Check (Always filter by gender)
+                    if ((j.gender || 'L') !== santriGender) {
                         continue;
                     }
                 }

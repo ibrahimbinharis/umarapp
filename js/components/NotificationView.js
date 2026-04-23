@@ -93,7 +93,7 @@ const NotificationView = {
     template: `
     <div class="view-container bg-white min-h-screen pb-24">
         <!-- Header -->
-        <div class="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-slate-100 safe-top">
+        <div class="bg-white border-b border-slate-100 safe-top">
             <div class="flex items-center justify-between px-4 py-3">
                 <div class="flex items-center gap-3">
                     <button @click="$emit('back')" class="p-2 -ml-2 rounded-full hover:bg-slate-100 transition active:scale-95 text-slate-600">

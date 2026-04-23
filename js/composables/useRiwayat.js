@@ -29,6 +29,17 @@ const useRiwayat = (uiData, DB, refreshData, modules = {}, currentView, userSess
         }
     }, { immediate: true });
 
+    // --- AUTO-RESET PAGINATION (v37) ---
+    Vue.watch([
+        () => riwayatState.search,
+        () => riwayatState.startDate,
+        () => riwayatState.endDate,
+        () => riwayatState.category,
+        () => riwayatState.santriId
+    ], () => {
+        riwayatState.page = 1;
+    });
+
     // --- COMPUTED ---
     const riwayatList = computed(() => {
         // Gabungkan Setoran, Ujian, dan Pelanggaran
@@ -73,7 +84,7 @@ const useRiwayat = (uiData, DB, refreshData, modules = {}, currentView, userSess
         if (riwayatState.category && riwayatState.category !== 'all') {
             // Support filtering by main category or sub-category (setoran_type)
             const cat = riwayatState.category.toLowerCase();
-            if (['sabaq', 'sabqi', 'manzil', 'tilawah'].includes(cat)) {
+            if (['sabaq', 'sabqi', 'robt', 'manzil', 'tilawah'].includes(cat)) {
                 // Filter by setoran_type
                 merged = merged.filter(i =>
                     i.__cat === 'setoran' &&
@@ -196,6 +207,7 @@ const useRiwayat = (uiData, DB, refreshData, modules = {}, currentView, userSess
             setoran: setoran.length,
             sabaq: setoran.filter(s => s.setoran_type && s.setoran_type.toLowerCase() === 'sabaq').length,
             sabqi: setoran.filter(s => s.setoran_type && s.setoran_type.toLowerCase() === 'sabqi').length,
+            robt: setoran.filter(s => s.setoran_type && s.setoran_type.toLowerCase() === 'robt').length,
             manzil: setoran.filter(s => s.setoran_type && s.setoran_type.toLowerCase() === 'manzil').length,
             tilawah: setoran.filter(s => s.setoran_type && s.setoran_type.toLowerCase() === 'tilawah').length,
             ujian: merged.filter(i => i.__cat === 'ujian').length,
