@@ -132,7 +132,7 @@ const LoginView = {
             </div>
         </div>
     `,
-    setup() {
+    setup(props) {
         const canInstall = Vue.ref(false);
         const showPassword = Vue.ref(false);
         const usernameWarning = Vue.ref('');
@@ -140,19 +140,23 @@ const LoginView = {
         const sanitizeUsername = (e) => {
             const raw = e.target.value;
             const hasUpper = /[A-Z]/.test(raw);
-            const hasSpace = /\s/.test(raw);
-            const cleaned = raw.toLowerCase().replace(/\s/g, '');
+            const hasInvalid = /[^a-z0-9._]/i.test(raw); // anything not alphanumeric, dot, or underscore
+            
+            const cleaned = raw.toLowerCase().replace(/[^a-z0-9._]/g, '');
 
-            // Auto-fix value
+            // Auto-fix value directly to DOM and Vue state
             e.target.value = cleaned;
+            if (props.loginForm) {
+                props.loginForm.username = cleaned;
+            }
 
             // Warning
-            if (hasUpper && hasSpace) {
-                usernameWarning.value = '⚠ Huruf kapital dan spasi otomatis dihapus!';
+            if (hasUpper && hasInvalid) {
+                usernameWarning.value = '⚠ Huruf kapital dan karakter tidak valid otomatis dihapus!';
             } else if (hasUpper) {
                 usernameWarning.value = '⚠ Huruf kapital otomatis diubah ke kecil.';
-            } else if (hasSpace) {
-                usernameWarning.value = '⚠ Spasi tidak diperbolehkan, otomatis dihapus.';
+            } else if (hasInvalid) {
+                usernameWarning.value = '⚠ Karakter khusus (spasi, koma, dll) otomatis dihapus.';
             } else {
                 usernameWarning.value = '';
             }

@@ -64,7 +64,7 @@ const useAuth = (currentView, loading) => {
 
         try {
             // Register to Supabase Auth
-            const username = loginForm.username.trim();
+            const username = loginForm.username.trim().toLowerCase();
 
             // v36: Username Validation (No space, no quotes, alphanumeric only)
             const usernameRegex = /^[a-zA-Z0-9._]+$/;

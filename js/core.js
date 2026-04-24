@@ -435,7 +435,7 @@ const DB = {
             // 0. Resolve Username (Bisa login pakai NIG atau Username Custom)
             const { data: profileLookup, error: lookupErr } = await sb.from('users')
                 .select('username, custom_username, password, full_name, role')
-                .or(`username.eq."${inputUsername}",custom_username.eq."${inputUsername}"`)
+                .or(`username.ilike."${inputUsername}",custom_username.ilike."${inputUsername}"`)
                 .maybeSingle();
 
             if (lookupErr) console.warn("Profile lookup warning:", lookupErr);
