@@ -1,4 +1,4 @@
-const CACHE_NAME = "v3.42";
+const CACHE_NAME = "v38.0";
 const ASSETS_TO_CACHE = [
     "./",
     "./index.html",
@@ -8,8 +8,28 @@ const ASSETS_TO_CACHE = [
     "./image/192pxlogo_new.png",
     "./image/512pxlogo_new.png",
 
-    // External Libs
-    "https://cdn.jsdelivr.net/npm/idb-keyval@6/dist/umd.js",
+    // External Libs (Now Local)
+    "./libs/tailwindcss.js",
+    "./libs/supabase-js.js",
+    "./libs/vue.global.js",
+    "./libs/cropper.min.css",
+    "./libs/cropper.min.js",
+    "./libs/xlsx.full.min.js",
+    "./libs/jspdf.umd.min.js",
+    "./libs/jspdf.plugin.autotable.min.js",
+    "./libs/chart.js",
+    "./libs/idb-keyval.umd.js",
+    
+    // Fonts and Icons
+    "./libs/fonts.css",
+    "./libs/icons.css",
+    "./libs/fonts/pjs-300.ttf",
+    "./libs/fonts/pjs-400.ttf",
+    "./libs/fonts/pjs-500.ttf",
+    "./libs/fonts/pjs-600.ttf",
+    "./libs/fonts/pjs-700.ttf",
+    "./libs/fonts/pjs-800.ttf",
+    "./libs/fonts/material-symbols.ttf",
 
     // Core Logic
     "./js/core.js",

@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>E-Umar</title>
     <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="./libs/tailwindcss.js"></script>
     <script>
         tailwind.config = {
             theme: {
@@ -22,20 +22,17 @@
             }
         }
     </script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap"
-        rel="stylesheet">
-    <link rel="stylesheet"
-        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
+    <script src="./libs/supabase-js.js"></script>
+    <script src="./libs/chart.js"></script>
+    <link href="./libs/fonts.css" rel="stylesheet">
+    <link href="./libs/icons.css" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css" rel="stylesheet">
-    <script src="https://unpkg.com/vue@3/dist/vue.global.js" defer></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js" defer></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.1/jspdf.plugin.autotable.min.js" defer></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
+    <link href="./libs/cropper.min.css" rel="stylesheet">
+    <script src="./libs/vue.global.js" defer></script>
+    <script src="./libs/cropper.min.js" defer></script>
+    <script src="./libs/xlsx.full.min.js" defer></script>
+    <script src="./libs/jspdf.umd.min.js" defer></script>
+    <script src="./libs/jspdf.plugin.autotable.min.js" defer></script>
 
     <!-- PWA -->
     <link rel="manifest" href="manifest.json">
@@ -1723,7 +1720,7 @@
 
     <!-- Core Logic -->
     <!-- IndexedDB Wrapper -->
-    <script src="https://cdn.jsdelivr.net/npm/idb-keyval@6/dist/umd.js" defer></script>
+    <script src="./libs/idb-keyval.umd.js" defer></script>
 
     <script src="js/core.js" defer></script>
     <script src="js/utils_date.js" defer></script>
