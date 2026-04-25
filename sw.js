@@ -1,4 +1,4 @@
-const CACHE_NAME = "v3.51";
+const CACHE_NAME = "v3.52";
 const ASSETS_TO_CACHE = [
     "./",
     "./index.html",
@@ -135,6 +135,10 @@ self.addEventListener("activate", (event) => {
 self.addEventListener('message', (event) => {
     if (event.data && event.data.type === 'SKIP_WAITING') {
         self.skipWaiting();
+    }
+    // Tambahan: Jawab pertanyaan versi
+    if (event.data && event.data.type === 'GET_VERSION') {
+        event.ports[0].postMessage({ version: CACHE_NAME });
     }
 });
 
