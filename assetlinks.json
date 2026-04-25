@@ -1,8 +1,0 @@
-[{
-  "relation": ["delegate_permission/common.handle_all_urls"],
-  "target" : {
-    "namespace": "android_app",
-    "package_name": "com.eumar.app",
-    "sha256_cert_fingerprints": ["61:73:C4:61:17:21:A6:5F:80:A5:6E:A9:3D:D6:DB:2F:A6:8C:FC:82:2F:13:97:A2:84:FC:FD:BD:A8:4C:47:E9"]
-  }
-}]
