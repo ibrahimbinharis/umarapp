@@ -26,7 +26,7 @@ createApp({
         const loading = ref(true);
         const isSaving = ref(false); // Global save guard - mirrors window.isSavingGlobal
         const appName = ref(APP_CONFIG.appName);
-        const appVersion = ref(APP_CONFIG.version);
+        const appVersion = ref(localStorage.getItem('app_sw_version') || APP_CONFIG.version);
         const hasSession = localStorage.getItem('tahfidz_session');
         // v37: Filter hash to get base view only (e.g. #uang_saku-detail -> uang_saku)
         const getBaseView = (h) => h ? h.replace('#', '').split('-')[0] : null;
@@ -1306,13 +1306,13 @@ createApp({
                 syncStatus.status = 'success';
                 syncStatus.message = 'Terhubung';
 
-                // AMBIL VERSI DARI SW (Sakti v2)
+                // AMBIL VERSI DARI SW (Sakti v2 - Anti Flicker)
                 if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
                     const messageChannel = new MessageChannel();
                     messageChannel.port1.onmessage = (event) => {
                         if (event.data && event.data.version) {
-                            console.log("Versi Aktif dari SW:", event.data.version);
                             appVersion.value = event.data.version;
+                            localStorage.setItem('app_sw_version', event.data.version);
                         }
                     };
                     navigator.serviceWorker.controller.postMessage({ type: 'GET_VERSION' }, [messageChannel.port2]);
