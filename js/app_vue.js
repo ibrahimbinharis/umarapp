@@ -1327,49 +1327,46 @@ createApp({
         };
 
         const checkUpdate = async () => {
-            loading.value = true;
+            const btn = document.getElementById('btn-update');
+            let originalContent = '';
+            if (btn) {
+                originalContent = btn.innerHTML;
+                btn.innerHTML = `
+                    <div class="flex items-center gap-4 text-slate-700">
+                        <span class="animate-spin material-symbols-outlined text-blue-500">sync</span>
+                        <div class="text-left">
+                            <p class="font-bold text-sm">Mengecek...</p>
+                            <p class="text-[10px] text-slate-400 font-medium">Mohon tunggu sebentar</p>
+                        </div>
+                    </div>
+                `;
+            }
+
             try {
-                // Fresh fetch from server (specifically from app_config row)
-                const { data, error } = await sb.from('settings')
-                    .select('latest_version')
-                    .eq('_id', 'app_config')
-                    .maybeSingle();
+                if (!('serviceWorker' in navigator)) {
+                    window.showAlert("Browser Mas tidak mendukung update otomatis.", "Info", "info");
+                    return;
+                }
+
+                const reg = await navigator.serviceWorker.ready;
                 
-                if (error) throw error;
-                const latest = data ? data.latest_version : null;
-                
-                if (latest && latest !== APP_CONFIG.version) {
-                    showConfirm({
-                        title: 'Update Tersedia 🚀',
-                        message: `Versi baru ${latest} sudah tersedia! (Anda menggunakan ${APP_CONFIG.version}). Perbarui sekarang untuk mendapatkan fitur terbaru dan perbaikan sistem?`,
-                        confirmText: 'Update',
-                        cancelText: 'Nanti',
-                        type: 'info',
-                        onConfirm: () => {
-                            loading.value = true;
-                            // Unregister Service Worker & Hard Reload
-                            if ('serviceWorker' in navigator) {
-                                navigator.serviceWorker.getRegistrations().then(registrations => {
-                                    for (let registration of registrations) {
-                                        registration.unregister();
-                                    }
-                                    // Tambahkan cache buster agar browser ambil file fresh
-                                    const cleanUrl = window.location.origin + window.location.pathname;
-                                    window.location.href = cleanUrl + '?v=' + Date.now();
-                                });
-                            } else {
-                                window.location.reload(true);
-                            }
-                        }
-                    });
+                // Pemicu pengecekan ke server
+                await reg.update();
+
+                // Cek apakah ada yang sedang 'waiting' atau 'installing'
+                const newWorker = reg.waiting || reg.installing;
+
+                if (newWorker) {
+                    window.showToast("Versi baru ditemukan! Mengupdate...", "success");
+                    newWorker.postMessage({ type: 'SKIP_WAITING' });
                 } else {
-                    showToast('Aplikasi sudah versi terbaru (' + APP_CONFIG.version + ')', 'success');
+                    window.showToast("Aplikasi Mas sudah versi terbaru! ✅", "success");
                 }
             } catch (e) {
                 console.error("Check update failed", e);
-                showToast('Gagal mengecek pembaruan', 'warning');
+                window.showToast("Gagal mengecek pembaruan. Pastikan internet aktif.", "warning");
             } finally {
-                loading.value = false;
+                if (btn) btn.innerHTML = originalContent;
             }
         };
 

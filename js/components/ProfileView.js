@@ -346,7 +346,7 @@ const ProfileView = {
                     </button>
 
                     <!-- Cek Update (v37 Standardized) -->
-                    <button @click="checkUpdate" 
+                    <button id="btn-update" @click="checkUpdate" 
                         class="w-full flex items-center justify-between p-5 hover:bg-slate-50/50 transition active:bg-slate-50">
                         <div class="flex items-center gap-4 text-slate-700">
                             <span class="material-symbols-outlined text-slate-400">system_update_alt</span>
