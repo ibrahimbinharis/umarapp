@@ -1,4 +1,4 @@
-const CACHE_NAME = "v3.53";
+const CACHE_NAME = "v3.54";
 const ASSETS_TO_CACHE = [
     "./",
     "./index.html",
@@ -85,11 +85,7 @@ const ASSETS_TO_CACHE = [
 
 // Install Event: Cache all static assets
 self.addEventListener("install", (event) => {
-    // FORCE UPDATE STRATEGY (Bridge to v3.2)
-    // We explicitly call skipWaiting() here to ensuring users on old versions (without the 'Update' UI)
-    // get updated to this version automatically. 
-    // FUTURE VERSIONS: Remove this line to enable the manual 'Update' button flow.
-    self.skipWaiting();
+    self.skipWaiting(); // Langsung aktifkan versi baru sesaat setelah download selesai
 
     event.waitUntil(
         caches.open(CACHE_NAME).then(async (cache) => {

@@ -1852,16 +1852,21 @@
                         showUpdateNotification();
                     }
 
-                    // 2. Listen for new updates found
+                    // OTOMATIS REFRESH SAAT UPDATE SELESAI DOWNLOAD
                     reg.addEventListener('updatefound', () => {
-                        newWorker = reg.installing;
+                        const newWorker = reg.installing;
                         newWorker.addEventListener('statechange', () => {
                             if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                                // New content is available; please refresh.
-                                showUpdateNotification();
+                                // Versi baru sudah terdownload, suruh dia SKIP_WAITING
+                                newWorker.postMessage({ type: 'SKIP_WAITING' });
                             }
                         });
                     });
+
+                    // Cek jika ada yang tertunda (waiting) dari kunjungan sebelumnya
+                    if (reg.waiting) {
+                        reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+                    }
                 }).catch(err => console.log('SW Fail', err));
 
                 // 3. Reload page when new SW takes control
