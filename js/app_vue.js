@@ -1357,10 +1357,10 @@ createApp({
                 const newWorker = reg.waiting || reg.installing;
 
                 if (newWorker) {
-                    window.showToast("Versi baru ditemukan! Mengupdate...", "success");
+                    window.showToast("Versi baru ditemukan. Memperbarui sistem...", "success");
                     newWorker.postMessage({ type: 'SKIP_WAITING' });
                 } else {
-                    window.showToast("Aplikasi Mas sudah versi terbaru! ✅", "success");
+                    window.showToast("Aplikasi E-Umar sudah menggunakan versi terbaru.", "success");
                 }
             } catch (e) {
                 console.error("Check update failed", e);
