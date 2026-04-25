@@ -4,8 +4,8 @@
   "description": "Sistem Manajemen Akademik Ma'had Umar Bin Khattab",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#FFFFFF",
-  "theme_color": "#FFFFFF",
+  "background_color": "#F8FAFC",
+  "theme_color": "#F8FAFC",
   "icons": [
     {
       "src": "image/logo_new.png",
