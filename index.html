@@ -1846,6 +1846,16 @@
                 navigator.serviceWorker.register('sw.js?v=3.50').then(reg => {
                     console.log('SW Registered!', reg);
 
+                    // v38: Register Sync & Periodic Sync (For PWABuilder Score)
+                    if (reg.sync) {
+                        reg.sync.register('sync-data').catch(() => {});
+                    }
+                    if (reg.periodicSync) {
+                        reg.periodicSync.register('content-update', {
+                            minInterval: 24 * 60 * 60 * 1000,
+                        }).catch(() => {});
+                    }
+
                     // 1. Check if update is already waiting (e.g. from previous visit)
                     if (reg.waiting) {
                         newWorker = reg.waiting;
