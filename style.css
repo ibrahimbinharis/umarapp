@@ -393,6 +393,15 @@ textarea {
     transform: translateY(100%);
 }
 
+/* v38: Desktop Modal Transition Override */
+@media (min-width: 768px) {
+    .slide-up-enter-from,
+    .slide-up-leave-to {
+        transform: scale(0.95) translateY(0);
+        opacity: 0;
+    }
+}
+
 .backdrop-fade-enter-active,
 .backdrop-fade-leave-active {
     transition: opacity 0.25s ease;

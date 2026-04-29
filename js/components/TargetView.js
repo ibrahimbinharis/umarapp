@@ -227,26 +227,21 @@ const TargetView = {
                             <h4 class="text-sm font-bold text-slate-800">{{ santriData.find(s => s._id === selectedSantriIds[0])?.full_name }}</h4>
                         </div>
 
-                        <div class="grid grid-cols-2 gap-x-4 gap-y-3">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-3">
                             <div class="space-y-1">
                                 <label class="text-[10px] font-bold text-slate-400 ml-1">Sabaq (Hal/Bulan)</label>
-                                <input type="number" v-model.number="bulkTargetForm.sabaq" 
+                                <input type="number" step="any" v-model.number="bulkTargetForm.sabaq" 
                                     class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold focus:outline-none focus:border-primary transition-all">
                             </div>
                             <div class="space-y-1">
-                                <label class="text-[10px] font-bold text-slate-400 ml-1">Manzil (Hal/Bulan)</label>
-                                <input type="number" v-model.number="bulkTargetForm.manzil" 
-                                    class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold focus:outline-none focus:border-purple-500 transition-all">
+                                <label class="text-[10px] font-bold text-slate-400 ml-1">Manzil (Persen %)</label>
+                                <input type="number" step="any" v-model.number="bulkTargetForm.pct" 
+                                    class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold focus:outline-none focus:border-amber-500 transition-all">
                             </div>
                             <div class="space-y-1">
                                 <label class="text-[10px] font-bold text-slate-400 ml-1">Tilawah (Hal/Bulan)</label>
-                                <input type="number" v-model.number="bulkTargetForm.tilawah" 
+                                <input type="number" step="any" v-model.number="bulkTargetForm.tilawah" 
                                     class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold focus:outline-none focus:border-emerald-500 transition-all">
-                            </div>
-                            <div class="space-y-1">
-                                <label class="text-[10px] font-bold text-slate-400 ml-1">Manzil (Persen %)</label>
-                                <input type="number" v-model.number="bulkTargetForm.pct" 
-                                    class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold focus:outline-none focus:border-amber-500 transition-all">
                             </div>
                         </div>
 

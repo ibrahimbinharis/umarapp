@@ -124,6 +124,28 @@ const UjianView = {
             else props.ujianForm.s_mapel = '';
         };
 
+        const isKhatam = Vue.computed(() => {
+            const id = props.ujianForm.santri_id;
+            if (!id) return false;
+            const s = props.uiData.santri.find(x => x.santri_id === id);
+            if (!s) return false;
+            
+            // v38: Robust Khatam Check (Matches useAnalytics.js)
+            let totalJuz = 0;
+            if (s.hafalan_manual) {
+                const match = s.hafalan_manual.match(/(\d+)/);
+                if (match) totalJuz = parseInt(match[1]);
+            }
+            let prog = {};
+            if (s.hafalan_progress) {
+                try { prog = typeof s.hafalan_progress === 'string' ? JSON.parse(s.hafalan_progress) : s.hafalan_progress; } catch (e) {}
+            }
+            const keys = Object.keys(prog).filter(k => prog[k] && prog[k] !== 'C');
+            if (keys.length > totalJuz) totalJuz = keys.length;
+
+            return totalJuz >= 30;
+        });
+
         return {
             getSantriName,
             formatDate,
@@ -141,7 +163,8 @@ const UjianView = {
             selectedMapelObj,
             openMapelDropdown,
             selectMapel,
-            clearMapel
+            clearMapel,
+            isKhatam
         };
     },
     template: `
@@ -258,14 +281,20 @@ const UjianView = {
                                 class="flex items-center gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-100">
                                 <div class="flex-1 min-w-0">
                                     <div class="flex justify-between items-center mb-2 px-0.5">
-                                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-tight">Capaian Sabaq</span>
-                                        <span class="text-[11px] font-black text-primary">
-                                            {{ selectedSantriBulananStats.sabaq.current }} <span class="text-slate-300 font-medium">/ {{ selectedSantriBulananStats.sabaq.target }} Hal</span>
+                                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-tight">
+                                            {{ isKhatam ? 'Status Santri' : 'Capaian Sabaq' }}
+                                        </span>
+                                        <span class="text-[11px] font-black" :class="isKhatam ? 'text-emerald-600' : 'text-primary'">
+                                            <template v-if="isKhatam">KHATAM</template>
+                                            <template v-else>
+                                                {{ selectedSantriBulananStats.sabaq.current }} <span class="text-slate-300 font-medium">/ {{ selectedSantriBulananStats.sabaq.target }} Hal</span>
+                                            </template>
                                         </span>
                                     </div>
                                     <div class="h-2 w-full bg-slate-200 rounded-full overflow-hidden">
-                                        <div class="h-full bg-primary rounded-full transition-all duration-700"
-                                            :style="{ width: selectedSantriBulananStats.sabaq.percent + '%' }">
+                                        <div class="h-full transition-all duration-700"
+                                            :class="isKhatam ? 'bg-emerald-500 w-full' : 'bg-primary'"
+                                            :style="{ width: isKhatam ? '100%' : selectedSantriBulananStats.sabaq.percent + '%' }">
                                         </div>
                                     </div>
                                 </div>

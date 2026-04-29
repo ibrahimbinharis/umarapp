@@ -24,6 +24,7 @@ const RekapView = {
         const isUploadingLogo = ref(false);
         const isJuzGridOpen = ref(false);
         const isCalendarOpen = ref(false);
+        const showFilterSheet = ref(false);
         const viewMonth = ref(new Date().getMonth());
         const viewYear = ref(new Date().getFullYear());
 
@@ -364,6 +365,16 @@ const RekapView = {
                 Object.assign(tempSettings, JSON.parse(JSON.stringify(props.rekapSettings)));
                 isConfigOpen.value = true;
             },
+            resetFilters: () => {
+                emit('update:rekapKelas', '');
+                emit('update:rekapGender', '');
+                emit('update:rekapSantriId', '');
+                emit('update:rekapSortLimit', 'all');
+                emit('update:rekapSortCategory', 'nilai_akhir');
+                emit('set-range-bulan-ini');
+                window.showToast("Filter dikosongkan", "info");
+            },
+            showFilterSheet,
             toggleMetric: (m) => {
                 if (activeMetric.value === m) activeMetric.value = 'all';
                 else activeMetric.value = m;
@@ -377,173 +388,189 @@ const RekapView = {
         };
     },
     template: `
-    <div class="fade-in space-y-6 pb-24">
-        <div class="px-2 flex justify-between items-start">
-            <div>
-                <h2 class="text-2xl font-bold text-slate-900">Rekap Laporan</h2>
-                <p class="text-xs text-slate-500">Analisa perkembangan santri</p>
+    <div class="fade-in space-y-4 pb-24">
+        <!-- Header with Filter & Settings -->
+        <div class="px-2 pt-2 flex justify-between items-center">
+            <div class="text-left">
+                <h2 class="text-2xl font-black text-slate-900 tracking-tight">Rekap Laporan</h2>
+                <p class="text-[11px] text-slate-500 font-medium">Analisa perkembangan santri</p>
             </div>
-            <button v-if="userSession?.role === 'admin'" @click="openConfig"
-                class="size-10 bg-white border shadow-sm rounded-xl flex items-center justify-center text-slate-600 hover:text-primary transition">
-                <span class="material-symbols-outlined">settings</span>
-            </button>
-        </div>
-
-        <!-- Date Block Filter (Top) -->
-        <div class="px-2 pt-2">
-            <div class="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
-                <div class="flex flex-col gap-3">
-                    <!-- Custom Range Picker Trigger (v37 Premium Style) -->
-                    <div @click="isCalendarOpen = true; tempRange.start = rekapStartDate; tempRange.end = rekapEndDate" 
-                        class="flex items-center justify-center bg-slate-50 border border-slate-200 py-2.5 px-3 rounded-xl cursor-pointer hover:bg-white hover:border-slate-300 transition-all active:scale-95 group shadow-sm">
-                        <div class="text-xs font-medium text-slate-600 flex items-center gap-2">
-                            <span class="font-bold text-slate-800 tracking-tight">{{ formatDateShort(rekapStartDate) }} — {{ formatDateShort(rekapEndDate) }}</span>
-                        </div>
-                    </div>
-
-                    <!-- Extra Filters (Admin & Guru Only) -->
-                    <template v-if="['admin', 'guru'].includes(userSession?.role || '')">
-                        <!-- Filters for Class & Gender -->
-                        <div class="grid grid-cols-2 gap-3">
-                            <div class="relative">
-                                <select :value="rekapKelas" @change="$emit('update:rekapKelas', $event.target.value)" 
-                                    class="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-xl text-xs font-bold appearance-none outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors">
-                                    <option value="">Semua Kelas</option>
-                                    <option v-for="k in kelasOptions" :value="k.name">{{ k.name }}</option>
-                                </select>
-                            </div>
-                            <div class="relative">
-                                <select :value="rekapGender" @change="$emit('update:rekapGender', $event.target.value)" 
-                                    class="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-xl text-xs font-bold appearance-none outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors">
-                                    <option value="">Semua Gender</option>
-                                    <option value="L">Putra</option>
-                                    <option value="P">Putri</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <!-- Ranking & Category Filters -->
-                        <div class="grid grid-cols-2 gap-3 border-t border-slate-50 pt-3 mt-0.5">
-                            <div class="relative group">
-                                <select :value="rekapSortLimit" @change="$emit('update:rekapSortLimit', $event.target.value)" 
-                                    class="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-xl text-xs font-bold appearance-none outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all cursor-pointer">
-                                    <option value="all">-- Semua --</option>
-                                    <option value="top10">10 Terbaik</option>
-                                    <option value="bottom10">10 Terburuk</option>
-                                </select>
-                                <span class="material-symbols-outlined absolute right-3 top-2.5 text-slate-400 pointer-events-none text-xs">unfold_more</span>
-                            </div>
-                            <div class="relative group">
-                                <select :value="rekapSortCategory" @change="$emit('update:rekapSortCategory', $event.target.value)" 
-                                    class="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-xl text-xs font-bold appearance-none outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all cursor-pointer text-slate-700">
-                                    <option value="nilai_akhir">Nilai Akhir</option>
-                                    <option value="sabaq">Sabaq</option>
-                                    <option value="sabqi">Sabqi</option>
-                                    <option value="manzil">Manzil</option>
-                                    <option value="ujian">Ujian</option>
-                                    <option value="pelanggaran">Pelanggaran</option>
-                                </select>
-                                <span class="material-symbols-outlined absolute right-3 top-2.5 text-slate-400 pointer-events-none text-xs">sort</span>
-                            </div>
-                        </div>
-                    </template>
-                </div>
-            </div>
-        </div>
-
-        <!-- Santri Search Dropdown (Middle) -->
-        <div class="px-2">
-            <div class="relative">
-                
-                <!-- Trigger Button -->
-                <button @click="toggleRekapSantriDropdown"
-                    class="w-full p-3 border rounded-xl text-sm font-bold bg-white text-left flex justify-between items-center transition shadow-sm active:scale-[0.99]"
-                    :class="isRekapSantriDropdownOpen ? 'ring-2 ring-blue-500/20 border-blue-500' : 'border-slate-200'">
-                    <span :class="rekapSantriId ? 'text-slate-900' : 'text-slate-400'">
-                        {{ rekapSelectedSantriName }}
-                    </span>
-                    <div class="flex items-center gap-1">
-                        <!-- Clear Selection Button -->
-                        <span v-if="rekapSantriId" @click.stop="selectRekapSantri({ santri_id: '' })" 
-                            class="material-symbols-outlined text-slate-300 hover:text-red-500 transition-colors p-1.5 -mr-1.5 text-lg"
-                            title="Tampilkan Semua">
-                            cancel
-                        </span>
-                        <span class="material-symbols-outlined text-slate-400 transition-transform duration-200" :class="{ 'rotate-180': isRekapSantriDropdownOpen }">expand_more</span>
-                    </div>
+            <div class="flex items-center gap-2">
+                <!-- Filter Button -->
+                <button @click="showFilterSheet = true"
+                    class="size-10 bg-white border border-slate-200 shadow-sm rounded-xl flex items-center justify-center text-slate-600 hover:text-primary transition-all active:scale-95 relative">
+                    <span class="material-symbols-outlined text-xl">tune</span>
+                    <div v-if="rekapKelas || rekapGender || rekapSantriId || activeShortcut !== 'bulan-ini'" 
+                        class="absolute -top-1 -right-1 size-3 bg-red-500 rounded-full border-2 border-white"></div>
                 </button>
+                <!-- Settings Button (Admin) -->
+                <button v-if="userSession?.role === 'admin'" @click="openConfig"
+                    class="size-10 bg-white border border-slate-200 shadow-sm rounded-xl flex items-center justify-center text-slate-600 hover:text-primary transition-all active:scale-95">
+                    <span class="material-symbols-outlined text-xl">settings</span>
+                </button>
+            </div>
+        </div>
 
-                <!-- Dropdown Content -->
-                <div v-if="isRekapSantriDropdownOpen"
-                    class="absolute left-0 right-0 top-full mt-2 bg-white border border-slate-100 rounded-xl shadow-xl z-[100] overflow-hidden animate-in fade-in zoom-in-95 duration-100">
-                    
-                    <!-- Search Input Inside Dropdown -->
-                    <div class="p-2 border-b border-slate-50 bg-slate-50/50">
-                        <div class="flex items-center gap-2 p-2 rounded-xl border border-slate-200 shadow-sm bg-white focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-500 transition-all">
-                            <span class="material-symbols-outlined text-slate-400 ml-2">person_search</span>
-                            <input type="text" 
-                                :value="rekapSearch"
-                                @input="$emit('update:rekapSearch', $event.target.value)"
-                                placeholder="Cari nama santri..." 
-                                class="bg-transparent w-full text-sm font-bold outline-none placeholder:text-slate-400"
-                                @click.stop>
+        <!-- Filter Summary (Small Pill) -->
+        <div v-if="rekapKelas || rekapGender || rekapSantriId" class="px-2 flex gap-2 overflow-x-auto no-scrollbar py-1">
+            <div v-if="rekapKelas" class="bg-blue-50 text-blue-600 px-3 py-1 rounded-full text-[9px] font-black border border-blue-100 whitespace-nowrap flex items-center gap-1">
+                <span class="material-symbols-outlined text-[10px]">class</span> {{ rekapKelas }}
+            </div>
+            <div v-if="rekapGender" class="bg-purple-50 text-purple-600 px-3 py-1 rounded-full text-[9px] font-black border border-purple-100 whitespace-nowrap flex items-center gap-1">
+                <span class="material-symbols-outlined text-[10px]">{{ rekapGender === 'L' ? 'male' : 'female' }}</span> {{ rekapGender === 'L' ? 'Putra' : 'Putri' }}
+            </div>
+            <div v-if="rekapSantriId" class="bg-amber-50 text-amber-600 px-3 py-1 rounded-full text-[9px] font-black border border-amber-100 whitespace-nowrap flex items-center gap-1">
+                <span class="material-symbols-outlined text-[10px]">person</span> Terpilih
+            </div>
+        </div>
+
+        <!-- FILTER BOTTOM SHEET -->
+        <Teleport to="body">
+            <!-- 1. Backdrop Fade (Independent) -->
+            <Transition name="modal-fade">
+                <div v-if="showFilterSheet" class="fixed inset-0 z-[399] bg-transparent md:bg-slate-900/20 md:backdrop-blur-sm" @click="showFilterSheet = false"></div>
+            </Transition>
+
+            <!-- 2. Content Slide/Scale -->
+            <Transition name="slide-up">
+                <div v-if="showFilterSheet" class="fixed inset-0 z-[400] flex items-end md:items-center md:justify-center p-0 md:p-4 pointer-events-none">
+                    <!-- Sheet Content (v38: Desktop Modal Support) -->
+                    <div class="relative w-full md:max-w-lg bg-white rounded-t-[32px] md:rounded-[32px] shadow-[0_-8px_30px_rgba(0,0,0,0.12)] md:shadow-2xl border border-slate-100 overflow-hidden flex flex-col max-h-[90vh] md:max-h-[85vh] transition-all pointer-events-auto">
+                        <!-- Handle (Hide on Desktop) -->
+                        <div class="flex justify-center pt-3 pb-2 cursor-pointer md:hidden" @click="showFilterSheet = false">
+                            <div class="w-12 h-1.5 bg-slate-200 rounded-full"></div>
+                        </div>
+
+                        <!-- Body Sheet (Scrollable) -->
+                        <div class="p-6 space-y-6 overflow-y-auto pb-12 text-left">
                             
-                            <!-- Clear Search Query -->
-                            <button v-if="rekapSearch" 
-                                @click.stop="$emit('update:rekapSearch', '')"
-                                class="size-8 flex items-center justify-center text-slate-300 hover:text-red-500 transition-colors mr-1">
-                                <span class="material-symbols-outlined text-lg">close</span>
-                            </button>
-                        </div>
-                    </div>
+                            <!-- 1. Date Range Section -->
+                            <div class="space-y-3">
+                                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Periode Tanggal</label>
+                                <div @click="isCalendarOpen = true; tempRange.start = rekapStartDate; tempRange.end = rekapEndDate" 
+                                    class="flex items-center justify-between bg-slate-50 border border-slate-200 p-4 rounded-2xl cursor-pointer hover:bg-white hover:border-blue-500 transition-all shadow-sm">
+                                    <div class="flex flex-col">
+                                        <span class="text-[9px] text-slate-400 font-bold uppercase mb-0.5">Rentang Aktif</span>
+                                        <span class="text-sm font-black text-slate-800">{{ formatDateShort(rekapStartDate) }} — {{ formatDateShort(rekapEndDate) }}</span>
+                                    </div>
+                                    <span class="material-symbols-outlined text-blue-500">calendar_month</span>
+                                </div>
+                                
+                                <!-- Shortcuts -->
+                                <div class="flex gap-2 overflow-x-auto no-scrollbar py-1">
+                                    <button v-for="tag in [
+                                        { id: 'bulan-ini', label: 'Bulan Ini' },
+                                        { id: 'realtime', label: 'Hari Ini' },
+                                        { id: 'kemarin', label: 'Kemarin' },
+                                        { id: '7hari', label: '7 Hari lalu' },
+                                        { id: '30hari', label: '30 Hari lalu' }
+                                    ]" :key="tag.id"
+                                        @click="$emit('set-range-' + tag.id)"
+                                        class="px-4 py-2 rounded-full text-[10px] font-bold whitespace-nowrap transition-all border"
+                                        :class="activeShortcut === tag.id ? 'bg-slate-800 text-white border-slate-800 shadow-sm' : 'bg-white text-slate-500 border-slate-200'">
+                                        {{ tag.label }}
+                                    </button>
+                                </div>
+                            </div>
 
-                    <!-- Live Results List -->
-                    <div class="max-h-60 overflow-y-auto custom-scrollbar">
-                        <!-- All Santri Option -->
-                        <div v-if="!rekapSearch" @click="selectRekapSantri({ santri_id: '' })"
-                            class="px-4 py-3 hover:bg-blue-50 cursor-pointer border-b border-slate-50 last:border-0 transition-colors group">
-                            <p class="text-sm font-bold text-slate-400 group-hover:text-primary">-- Semua Santri --</p>
-                        </div>
+                            <!-- 2. Santri Selection (Inside Sheet) -->
+                            <div class="space-y-3">
+                                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Filter Santri Tertentu</label>
+                                <div class="relative">
+                                    <button @click="toggleRekapSantriDropdown"
+                                        class="w-full p-4 border rounded-2xl text-sm font-bold bg-slate-50 text-left flex justify-between items-center transition shadow-sm"
+                                        :class="isRekapSantriDropdownOpen ? 'ring-2 ring-blue-500/20 border-blue-500 bg-white' : 'border-slate-200'">
+                                        <span :class="rekapSantriId ? 'text-slate-900' : 'text-slate-400'">
+                                            {{ rekapSelectedSantriName }}
+                                        </span>
+                                        <span class="material-symbols-outlined text-slate-400">person_search</span>
+                                    </button>
+                                    
+                                    <!-- Embedded Dropdown inside Sheet -->
+                                    <div v-if="isRekapSantriDropdownOpen"
+                                        class="absolute left-0 right-0 top-full mt-2 bg-white border border-slate-100 rounded-2xl shadow-2xl z-[500] overflow-hidden animate-in fade-in zoom-in-95">
+                                        <div class="p-3 border-b border-slate-50 bg-slate-50/50">
+                                            <input type="text" :value="rekapSearch" @input="$emit('update:rekapSearch', $event.target.value)"
+                                                placeholder="Ketik nama santri..." class="w-full bg-white border border-slate-200 p-2.5 rounded-xl text-sm font-bold outline-none focus:border-blue-500">
+                                        </div>
+                                        <div class="max-h-60 overflow-y-auto">
+                                            <div @click="selectRekapSantri({ santri_id: '' })" class="px-4 py-3 hover:bg-blue-50 cursor-pointer text-sm font-bold text-slate-400">-- Semua Santri --</div>
+                                            <div v-for="s in rekapFilteredSantriOptions" :key="s._id" @click="selectRekapSantri(s)"
+                                                class="px-4 py-3 hover:bg-blue-50 cursor-pointer border-b border-slate-50 last:border-0">
+                                                <p class="text-sm font-bold text-slate-800">{{ s.full_name }}</p>
+                                                <p class="text-[10px] text-slate-500 uppercase tracking-tighter">{{ s.kelas || '-' }}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div v-if="isRekapSantriDropdownOpen" @click="$emit('update:isRekapSantriDropdownOpen', false)" class="fixed inset-0 z-[490]"></div>
+                                </div>
+                            </div>
 
-                        <div v-for="s in rekapFilteredSantriOptions" :key="s._id"
-                            @click="selectRekapSantri(s)"
-                            class="px-4 py-3 hover:bg-blue-50 cursor-pointer border-b border-slate-50 last:border-0 transition-colors group">
-                            <p class="text-sm font-bold text-slate-800 group-hover:text-primary">{{ s.full_name }}</p>
-                            <p class="text-[10px] text-slate-500">{{ s.santri_id }} &bull; {{ s.kelas || '-' }}</p>
-                        </div>
-                        
-                        <!-- Empty State -->
-                        <div v-if="rekapFilteredSantriOptions.length === 0"
-                            class="p-4 text-center text-slate-400 text-xs italic">
-                            Santri tidak ditemukan...
+                            <!-- 3. Class & Gender (Admin/Guru Only) -->
+                            <template v-if="['admin', 'guru'].includes(userSession?.role || '')">
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div class="space-y-2">
+                                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Kelas</label>
+                                        <select :value="rekapKelas" @change="$emit('update:rekapKelas', $event.target.value)" 
+                                            class="w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl text-sm font-bold outline-none focus:border-blue-500 transition-all appearance-none">
+                                            <option value="">Semua Kelas</option>
+                                            <option v-for="k in kelasOptions" :value="k.name">{{ k.name }}</option>
+                                        </select>
+                                    </div>
+                                    <div class="space-y-2">
+                                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Gender</label>
+                                        <select :value="rekapGender" @change="$emit('update:rekapGender', $event.target.value)" 
+                                            class="w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl text-sm font-bold outline-none focus:border-blue-500 transition-all appearance-none">
+                                            <option value="">Semua Gender</option>
+                                            <option value="L">Putra</option>
+                                            <option value="P">Putri</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <!-- 4. Sort & Ranking -->
+                                <div class="space-y-3 pt-2">
+                                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Urutan & Ranking</label>
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div class="relative">
+                                            <select :value="rekapSortLimit" @change="$emit('update:rekapSortLimit', $event.target.value)" 
+                                                class="w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl text-sm font-bold outline-none focus:border-blue-500 transition-all appearance-none">
+                                                <option value="all">-- Semua --</option>
+                                                <option value="top10">10 Terbaik</option>
+                                                <option value="bottom10">10 Terburuk</option>
+                                            </select>
+                                            <span class="material-symbols-outlined absolute right-4 top-4 text-slate-400 text-sm">unfold_more</span>
+                                        </div>
+                                        <div class="relative">
+                                            <select :value="rekapSortCategory" @change="$emit('update:rekapSortCategory', $event.target.value)" 
+                                                class="w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl text-sm font-bold outline-none focus:border-blue-500 transition-all appearance-none">
+                                                <option value="nilai_akhir">Nilai Akhir</option>
+                                                <option value="sabaq">Sabaq</option>
+                                                <option value="manzil">Manzil</option>
+                                                <option value="ujian">Ujian</option>
+                                            </select>
+                                            <span class="material-symbols-outlined absolute right-4 top-4 text-slate-400 text-sm">sort</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+
+                            <!-- Action Buttons -->
+                            <div class="flex gap-3 pt-4">
+                                <button @click="resetFilters" 
+                                    class="flex-1 bg-slate-100 text-slate-600 py-4 rounded-2xl font-black text-sm active:scale-95 transition-all">
+                                    Reset
+                                </button>
+                                <button @click="showFilterSheet = false" 
+                                    class="flex-[2] bg-blue-600 text-white py-4 rounded-2xl font-black text-sm shadow-xl shadow-blue-500/20 active:scale-95 transition-all">
+                                    Tampilkan Hasil
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
-
-                <!-- Backdrop to Close -->
-                <div v-if="isRekapSantriDropdownOpen" 
-                    @click="$emit('update:isRekapSantriDropdownOpen', false)" 
-                    class="fixed inset-0 z-[90] cursor-default"></div>
-            </div>
-        </div>
-
-        <!-- Shortcuts (Bottom of Filter Group) -->
-        <div class="px-2 -mt-2">
-            <div class="flex gap-2 pb-2 overflow-x-auto scrollbar-custom scroll-smooth">
-                <button v-for="tag in [
-                    { id: 'bulan-ini', label: 'Bulan Ini' },
-                    { id: 'realtime', label: 'Hari Ini' },
-                    { id: 'kemarin', label: 'Kemarin' },
-                    { id: '7hari', label: '7 Hari lalu' },
-                    { id: '30hari', label: '30 Hari lalu' }
-                ]" :key="tag.id"
-                    @click="$emit('set-range-' + tag.id)"
-                    class="px-4 py-1.5 rounded-full text-[11px] font-bold whitespace-nowrap transition-all border"
-                    :class="activeShortcut === tag.id ? 'bg-slate-800 text-white border-slate-800 shadow-sm' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'">
-                    {{ tag.label }}
-                </button>
-            </div>
-        </div>
+            </Transition>
+        </Teleport>
 
         <!-- Tabs Navigation (Above Content) -->
         <div class="px-2">

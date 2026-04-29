@@ -117,7 +117,21 @@ function useUjian(uiData, DB, userSession, refreshData, quranControls = null, cu
             .filter(d => d.setoran_type === 'Sabaq')
             .reduce((sum, d) => sum + (parseFloat(d.pages) || 0), 0);
 
-        const targetSabaq = parseInt(s.target_sabaq) || 20;
+        // v38: Robust Khatam Check (Matches useAnalytics.js)
+        let totalJuz = 0;
+        if (s.hafalan_manual) {
+            const match = s.hafalan_manual.match(/(\d+)/);
+            if (match) totalJuz = parseInt(match[1]);
+        }
+        let prog = {};
+        if (s.hafalan_progress) {
+            try { prog = typeof s.hafalan_progress === 'string' ? JSON.parse(s.hafalan_progress) : s.hafalan_progress; } catch (e) {}
+        }
+        const keys = Object.keys(prog).filter(k => prog[k] && prog[k] !== 'C');
+        if (keys.length > totalJuz) totalJuz = keys.length;
+        
+        const isKhatam = totalJuz >= 30;
+        const targetSabaq = isKhatam ? 0 : (parseInt(s.target_sabaq) || 20);
 
         return {
             sabaq: {

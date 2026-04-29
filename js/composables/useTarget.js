@@ -14,14 +14,19 @@ function useTarget(uiData, DB, modalState, refreshUI) {
     const selectionMode = ref(false);
 
     const bulkTargetForm = reactive({
-        sabaq: 20,
-        manzil: 20,
-        tilawah: 600,
-        pct: 20
+        sabaq: '',
+        tilawah: '',
+        pct: ''
     });
 
     const targetFilterGender = ref('all');
     const targetFilterKelas = ref('all');
+
+    const clearForm = () => {
+        bulkTargetForm.sabaq = '';
+        bulkTargetForm.tilawah = '';
+        bulkTargetForm.pct = '';
+    };
 
     // ===== COMPUTED =====
 
@@ -42,13 +47,15 @@ function useTarget(uiData, DB, modalState, refreshUI) {
         return santriData.map(s => {
             const defaults = getTargetDefaults(s);
             const sabaq = defaults.isKhatam ? 0 : (s.target_sabaq != null ? s.target_sabaq : defaults.sabaq);
-            let manzil = s.target_manzil != null ? s.target_manzil : defaults.manzil;
+            
+            // v38: Simplified - Always use dynamic calculation for Manzil
+            let manzil = defaults.manzil;
             
             // v37 Unified Rule: Enforce minimal 20 pages globally
-            if (manzil < 20) manzil = 20;
+            if (manzil < 20 && !defaults.isKhatam) manzil = 20;
 
             const tilawah = s.target_tilawah != null ? s.target_tilawah : 600;
-            const pct = s.target_manzil_pct != null ? s.target_manzil_pct : 20;
+            const pct = s.target_manzil_pct != null ? s.target_manzil_pct : defaults.pct;
 
             const sMonthRecords = setoranData.filter(r => {
                 const rDate = new Date(r.setoran_date);
@@ -82,11 +89,19 @@ function useTarget(uiData, DB, modalState, refreshUI) {
     // ===== HELPER FUNCTIONS =====
 
     const getTargetDefaults = (santri) => {
+        // v38: Real-time Juz Calculation (Sync with useAnalytics)
         let totalJuz = 0;
         if (santri.hafalan_manual) {
             const match = santri.hafalan_manual.match(/(\d+)/);
             if (match) totalJuz = parseInt(match[1]);
         }
+        
+        // Check granular progress (highest juz marked)
+        if (santri.hafalan_progress && typeof santri.hafalan_progress === 'object') {
+            const keys = Object.keys(santri.hafalan_progress).filter(k => santri.hafalan_progress[k]);
+            if (keys.length > totalJuz) totalJuz = keys.length;
+        }
+
         const totalPages = totalJuz * 20;
 
         let sabaq = 20;
@@ -97,13 +112,13 @@ function useTarget(uiData, DB, modalState, refreshUI) {
             sabaq = 10;
         }
 
-        const pct = santri.target_manzil_pct || 20;
+        const pct = parseFloat(santri.target_manzil_pct) || 20;
         let manzil = Math.round(totalPages * (pct / 100));
         
         // v37 Unified Rule: Minimal Manzil target is 20 pages
         if (manzil < 20) manzil = 20;
 
-        return { sabaq, manzil, totalPages, isKhatam: totalJuz >= 30 };
+        return { sabaq, manzil, totalPages, isKhatam: totalJuz >= 30, pct };
     };
 
     // ===== METHODS =====
@@ -130,6 +145,7 @@ function useTarget(uiData, DB, modalState, refreshUI) {
     const toggleSelectionMode = () => {
         selectionMode.value = !selectionMode.value;
         selectedSantriIds.value = [];
+        clearForm();
     };
 
     const toggleSantriSelection = (id) => {
@@ -156,13 +172,31 @@ function useTarget(uiData, DB, modalState, refreshUI) {
         try {
             let count = 0;
             for (const id of selectedSantriIds.value) {
-                const updateData = {
-                    target_sabaq: parseInt(bulkTargetForm.sabaq) || 0,
-                    target_manzil: parseInt(bulkTargetForm.manzil) || 0,
-                    target_tilawah: parseInt(bulkTargetForm.tilawah) || 600,
-                    target_manzil_pct: parseFloat(bulkTargetForm.pct) || 20
-                };
-                await DB.update(id, updateData);
+                const updateData = {};
+                
+                // Sabaq: Update only if not empty
+                if (bulkTargetForm.sabaq !== '') {
+                    const val = parseFloat(bulkTargetForm.sabaq);
+                    updateData.target_sabaq = isNaN(val) ? null : val;
+                }
+                
+                // v38: Manzil is now strictly percentage-based, manual page override removed
+
+                // Tilawah: Update only if not empty
+                if (bulkTargetForm.tilawah !== '') {
+                    updateData.target_tilawah = parseFloat(bulkTargetForm.tilawah) || 600;
+                }
+
+                // Percentage: Update only if not empty
+                if (bulkTargetForm.pct !== '') {
+                    updateData.target_manzil_pct = parseFloat(bulkTargetForm.pct) || 20;
+                    // v38: Important - Clear any legacy manual target_manzil to ensure percentage takes over
+                    updateData.target_manzil = null;
+                }
+
+                if (Object.keys(updateData).length > 0) {
+                    await DB.update(id, updateData);
+                }
                 count++;
             }
             
