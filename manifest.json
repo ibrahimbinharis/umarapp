@@ -78,6 +78,23 @@
       "type": "image/jpeg",
       "form_factor": "narrow",
       "label": "Laporan Detail Santri"
+    },
+    {
+      "src": "image/5.png",
+      "sizes": "1920x1080",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Dashboard Desktop E-Umar"
+    },
+    {
+      "src": "image/6.png",
+      "sizes": "1920x1080",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Rekap Laporan Desktop"
     }
-  ]
+  ],
+  "iarc_rating_id": "eumar-academic-001",
+  "prefer_related_applications": false,
+  "related_applications": []
 }
