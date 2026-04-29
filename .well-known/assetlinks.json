@@ -1,1 +1,8 @@
-
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "com.eumar.academic",
+        "sha256_cert_fingerprints": ["A6:DA:1D:B1:FA:94:BF:88:6D:D6:99:77:EB:BE:2F:E6:F8:C6:70:95:BE:74:23:08:29:D6:E2:8D:E8:DF:CB:08"]
+      }
+    }]
