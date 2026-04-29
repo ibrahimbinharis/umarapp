@@ -12,7 +12,7 @@
   },
   "background_color": "#ffffff",
   "theme_color": "#2563eb",
-  "orientation": "portrait",
+  "orientation": "any",
   "categories": ["education", "productivity"],
   "lang": "id",
   "dir": "ltr",
