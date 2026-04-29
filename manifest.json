@@ -6,6 +6,10 @@
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
+  "display_override": ["window-controls-overlay", "tabbed", "minimal-ui"],
+  "launch_handler": {
+    "client_mode": "focus-existing"
+  },
   "background_color": "#ffffff",
   "theme_color": "#2563eb",
   "orientation": "portrait",
@@ -96,5 +100,9 @@
   ],
   "iarc_rating_id": "eumar-academic-001",
   "prefer_related_applications": false,
-  "related_applications": []
+  "related_applications": [],
+  "handle_links": "auto",
+  "edge_side_panel": {
+    "preferred_width": 400
+  }
 }
