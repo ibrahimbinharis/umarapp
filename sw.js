@@ -1,4 +1,4 @@
-const CACHE_NAME = "v3.57";
+const CACHE_NAME = "v3.58";
 const ASSETS_TO_CACHE = [
     "./",
     "./index.html",
@@ -7,6 +7,10 @@ const ASSETS_TO_CACHE = [
     "./image/logo_new.png",
     "./image/192pxlogo_new.png",
     "./image/512pxlogo_new.png",
+    "./image/1.jpg",
+    "./image/2.jpg",
+    "./image/3.jpg",
+    "./image/4.jpg",
 
     // External Libs (Now Local)
     "./libs/tailwindcss.js",

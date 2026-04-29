@@ -49,5 +49,35 @@
       "url": "./index.html#rekap",
       "icons": [{ "src": "image/192pxlogo_new.png", "sizes": "192x192" }]
     }
+  ],
+  "screenshots": [
+    {
+      "src": "image/1.jpg",
+      "sizes": "1080x1920",
+      "type": "image/jpeg",
+      "form_factor": "narrow",
+      "label": "Dashboard E-Umar"
+    },
+    {
+      "src": "image/2.jpg",
+      "sizes": "1080x1920",
+      "type": "image/jpeg",
+      "form_factor": "narrow",
+      "label": "Input Setoran Hafalan"
+    },
+    {
+      "src": "image/3.jpg",
+      "sizes": "1080x1920",
+      "type": "image/jpeg",
+      "form_factor": "narrow",
+      "label": "Rekap Perkembangan Santri"
+    },
+    {
+      "src": "image/4.jpg",
+      "sizes": "1080x1920",
+      "type": "image/jpeg",
+      "form_factor": "narrow",
+      "label": "Laporan Detail Santri"
+    }
   ]
 }
