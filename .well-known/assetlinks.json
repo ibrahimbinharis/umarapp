@@ -3,6 +3,6 @@
       "target": {
         "namespace": "android_app",
         "package_name": "com.eumar.academic",
-        "sha256_cert_fingerprints": ["A6:DA:1D:B1:FA:94:BF:88:6D:D6:99:77:EB:BE:2F:E6:F8:C6:70:95:BE:74:23:08:29:D6:E2:8D:E8:DF:CB:08"]
+        "sha256_cert_fingerprints": ["93:3B:85:AA:09:F3:0D:88:FF:08:AD:9E:5A:19:D5:19:49:2E:4A:0E:EC:77:FB:5A:D4:58:46:C4:09:C4:42:AB"]
       }
     }]
