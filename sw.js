@@ -248,3 +248,18 @@ self.addEventListener('notificationclick', (event) => {
         })
     );
 });
+// --- BACKGROUND SYNC EVENT (v38) ---
+self.addEventListener('sync', (event) => {
+    if (event.tag === 'sync-data') {
+        console.log('[Service Worker] Background Syncing data...');
+        // Logic to sync pending data when connection is restored
+    }
+});
+
+// --- PERIODIC BACKGROUND SYNC EVENT (v38) ---
+self.addEventListener('periodicsync', (event) => {
+    if (event.tag === 'content-update') {
+        console.log('[Service Worker] Periodic Sync: Updating content...');
+        // Logic to pre-fetch updates at quiet times
+    }
+});

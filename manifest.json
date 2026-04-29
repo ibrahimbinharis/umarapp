@@ -1,29 +1,53 @@
 {
-  "name": "e-umar",
-  "short_name": "e-umar",
+  "name": "E-Umar Academic",
+  "short_name": "E-Umar",
   "description": "Sistem Manajemen Akademik Ma'had Umar Bin Khattab",
+  "id": "com.eumar.academic",
   "start_url": "./index.html",
+  "scope": "./",
   "display": "standalone",
-  "background_color": "#F8FAFC",
-  "theme_color": "#F8FAFC",
+  "background_color": "#ffffff",
+  "theme_color": "#2563eb",
+  "orientation": "portrait",
+  "categories": ["education", "productivity"],
+  "lang": "id",
+  "dir": "ltr",
   "icons": [
     {
-      "src": "image/150pxlogo_new.png",
-      "sizes": "150x150",
+      "src": "image/192pxlogo_new.png",
+      "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
       "src": "image/192pxlogo_new.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "maskable"
     },
     {
       "src": "image/512pxlogo_new.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "image/512pxlogo_new.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Input Setoran",
+      "url": "./index.html#input",
+      "icons": [{ "src": "image/192pxlogo_new.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Rekap Laporan",
+      "url": "./index.html#rekap",
+      "icons": [{ "src": "image/192pxlogo_new.png", "sizes": "192x192" }]
     }
   ]
 }
