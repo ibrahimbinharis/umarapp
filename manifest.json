@@ -6,7 +6,7 @@
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
-  "display_override": ["window-controls-overlay", "tabbed", "minimal-ui"],
+  "display_override": ["standalone"],
   "launch_handler": {
     "client_mode": "focus-existing"
   },
