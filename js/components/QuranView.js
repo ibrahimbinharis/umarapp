@@ -34,7 +34,15 @@ const QuranView = {
     },
     data() {
         return {
-            wakeLock: null
+            wakeLock: null,
+            showExamHint: true
+        }
+    },
+    watch: {
+        showExamControls(newVal) {
+            if (newVal) {
+                this.showExamHint = false;
+            }
         }
     },
     async mounted() {
@@ -139,6 +147,22 @@ const QuranView = {
         <exam-counter v-if="ujianForm" :ujian-form="ujianForm" :show-exam-controls="showExamControls"
             @update-salah="updateSalah" @finish-exam="finishExam">
         </exam-counter>
+
+        <!-- Exam Hint Banner (Dismissible Toast style) -->
+        <div v-if="ujianForm && ujianForm.santri_id && !showExamControls && showExamHint"
+            class="fixed bottom-24 left-1/2 transform -translate-x-1/2 z-50 bg-white/50 backdrop-blur-lg text-slate-800 rounded-2xl shadow-2xl border border-slate-200/50 flex items-center justify-between px-4 py-3 gap-3 transition-all animate-in slide-in-from-bottom duration-300 w-[90%] max-w-xs md:max-w-sm">
+            <div class="flex items-center gap-2.5">
+                <span class="material-symbols-outlined text-amber-500 text-lg shrink-0">info</span>
+                <div class="flex flex-col text-left">
+                    <span class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Ujian Aktif</span>
+                    <span class="text-[10.5px] font-semibold leading-normal text-slate-700">Klik tombol <strong class="text-primary font-bold">Input</strong> untuk membuka counter.</span>
+                </div>
+            </div>
+            <button @click="showExamHint = false"
+                class="size-6 rounded-full hover:bg-slate-100 active:scale-95 transition flex items-center justify-center text-slate-400 hover:text-slate-600 shrink-0">
+                <span class="material-symbols-outlined text-sm">close</span>
+            </button>
+        </div>
 
         <!-- Drawer (Jump) -->
         <div v-if="quranState.showDrawer" class="absolute inset-x-0 bottom-0 top-10 bg-transparent z-30" @click.self="quranState.showDrawer=false">

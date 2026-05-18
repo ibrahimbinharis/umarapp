@@ -22,8 +22,20 @@ const UjianView = {
         'toggle-dropdown',
         'cancel-edit'
     ],
-    setup(props) {
+    components: {
+        BasePopup
+    },
+    setup(props, { emit }) {
         const { ref, computed } = Vue;
+
+        const showSaveOptionModal = ref(false);
+        const handleSaveClick = () => {
+            if (['juz', 'semester'].includes(props.ujianForm.tab) && (props.ujianForm.tab === 'juz' || props.ujianForm.s_type === 'quran')) {
+                showSaveOptionModal.value = true;
+            } else {
+                emit('submit-ujian', false);
+            }
+        };
 
         // --- Searchable Dropdown State ---
         const searchQuery = ref('');
@@ -146,6 +158,11 @@ const UjianView = {
             return totalJuz >= 30;
         });
 
+        const totalHafalan = computed(() => {
+            if (!props.ujianForm.santri_id || !props.selectedSantriProgress) return 0;
+            return Object.keys(props.selectedSantriProgress).filter(k => props.selectedSantriProgress[k]).length;
+        });
+
         return {
             getSantriName,
             formatDate,
@@ -162,9 +179,11 @@ const UjianView = {
             filteredMapelOptions,
             selectedMapelObj,
             openMapelDropdown,
-            selectMapel,
             clearMapel,
-            isKhatam
+            isKhatam,
+            totalHafalan,
+            showSaveOptionModal,
+            handleSaveClick
         };
     },
     template: `
@@ -409,6 +428,7 @@ const UjianView = {
                                             ujianForm.s_juz === j ? 'ring-2 ring-offset-1 ring-primary scale-110 z-10' : '',
                                             selectedSantriProgress[j] ? 
                                                 (selectedSantriProgress[j] === 'Centang' ? 'bg-orange-500 text-white border-orange-500' :
+                                                selectedSantriProgress[j] === 'Progress' ? 'bg-amber-500 text-white border-amber-600' :
                                                 ['A+','A'].includes(selectedSantriProgress[j]) ? 'bg-blue-500 text-white border-blue-600' : 
                                                 selectedSantriProgress[j] === 'C' ? 'bg-red-500 text-white border-red-600' : 
                                                 selectedSantriProgress[j] === 'B-' ? 'bg-amber-400 text-white border-amber-500' :
@@ -417,12 +437,25 @@ const UjianView = {
                                         ]">
                                     <span v-if="selectedSantriProgress[j] === 'Centang'"
                                         class="material-symbols-outlined text-base">check_circle</span>
+                                    <span v-else-if="selectedSantriProgress[j] === 'Progress'"
+                                        class="material-symbols-outlined text-base">hourglass_top</span>
                                     <span v-else>{{ j }}</span>
                                     <span
-                                        v-if="selectedSantriProgress[j] && selectedSantriProgress[j] !== 'Centang'"
-                                        class="text-[8px] leading-none opacity-80 mt-[-2px]">{{
+                                        v-if="selectedSantriProgress[j] && !['Centang', 'Progress'].includes(selectedSantriProgress[j])"
+                                        class="text-[8px] leading-none opacity-80 mt-[-2px] uppercase">{{
                                         selectedSantriProgress[j] }}</span>
                                 </button>
+                            </div>
+
+                            <!-- Info Hafalan Summary -->
+                            <div class="mt-4 p-3 bg-white/80 border border-slate-200/80 rounded-xl flex items-center justify-between text-[11px] font-bold text-slate-700 shadow-sm gap-4">
+                                <div class="flex items-center gap-1.5">
+                                    <span>Total Hafalan : <strong class="text-primary font-black">{{ totalHafalan }} Juz</strong></span>
+                                </div>
+                                <div class="h-4 w-px bg-slate-200"></div>
+                                <div class="flex items-center gap-1.5">
+                                    <span>Diujiankan : <strong class="text-emerald-600 font-black">{{ Math.ceil(totalHafalan / 3) }} Juz</strong> <span class="text-[9px] text-slate-400 font-medium">(1/3 dari total)</span></span>
+                                </div>
                             </div>
                         </div>
 
@@ -483,23 +516,37 @@ const UjianView = {
                                     <button v-for="j in 30" :key="j" @click="$emit('select-ujian-juz', j)"
                                         class="size-9 rounded-full text-xs font-bold flex flex-col items-center justify-center transition-all shadow-sm border"
                                         :class="[
-                                              ujianForm.s_juz === j ? 'ring-2 ring-offset-1 ring-primary scale-110 z-10' : '',
-                                              selectedSantriProgress[j] ? 
-                                                 (selectedSantriProgress[j] === 'Centang' ? 'bg-orange-500 text-white border-orange-500' :
-                                                  ['A+','A'].includes(selectedSantriProgress[j]) ? 'bg-blue-500 text-white border-blue-600' : 
-                                                  selectedSantriProgress[j] === 'C' ? 'bg-red-500 text-white border-red-600' : 
-                                                  selectedSantriProgress[j] === 'B-' ? 'bg-amber-400 text-white border-amber-500' :
-                                                  'bg-emerald-500 text-white border-emerald-600') 
-                                                 : 'bg-white text-slate-300 border-slate-200 hover:bg-slate-100'
-                                          ]">
+                                               ujianForm.s_juz === j ? 'ring-2 ring-offset-1 ring-primary scale-110 z-10' : '',
+                                               selectedSantriProgress[j] ? 
+                                                  (selectedSantriProgress[j] === 'Centang' ? 'bg-orange-500 text-white border-orange-500' :
+                                                   selectedSantriProgress[j] === 'Progress' ? 'bg-amber-500 text-white border-amber-600' :
+                                                   ['A+','A'].includes(selectedSantriProgress[j]) ? 'bg-blue-500 text-white border-blue-600' : 
+                                                   selectedSantriProgress[j] === 'C' ? 'bg-red-500 text-white border-red-600' : 
+                                                   selectedSantriProgress[j] === 'B-' ? 'bg-amber-400 text-white border-amber-500' :
+                                                   'bg-emerald-500 text-white border-emerald-600') 
+                                                  : 'bg-white text-slate-300 border-slate-200 hover:bg-slate-100'
+                                           ]">
                                         <span v-if="selectedSantriProgress[j] === 'Centang'"
                                             class="material-symbols-outlined text-base">check_circle</span>
+                                        <span v-else-if="selectedSantriProgress[j] === 'Progress'"
+                                            class="material-symbols-outlined text-base">hourglass_top</span>
                                         <span v-else>{{ j }}</span>
                                         <span
-                                            v-if="selectedSantriProgress[j] && selectedSantriProgress[j] !== 'Centang'"
-                                            class="text-[8px] leading-none opacity-80 mt-[-2px]">{{
+                                            v-if="selectedSantriProgress[j] && !['Centang', 'Progress'].includes(selectedSantriProgress[j])"
+                                            class="text-[8px] leading-none opacity-80 mt-[-2px] uppercase">{{
                                             selectedSantriProgress[j] }}</span>
                                     </button>
+                                </div>
+
+                                <!-- Info Hafalan Summary -->
+                                <div class="mt-4 p-3 bg-white/80 border border-slate-200/80 rounded-xl flex items-center justify-between text-[11px] font-bold text-slate-700 shadow-sm gap-4">
+                                    <div class="flex items-center gap-1.5">
+                                        <span>Total Hafalan : <strong class="text-primary font-black">{{ totalHafalan }} Juz</strong></span>
+                                    </div>
+                                    <div class="h-4 w-px bg-slate-200"></div>
+                                    <div class="flex items-center gap-1.5">
+                                        <span>Diujiankan : <strong class="text-emerald-600 font-black">{{ Math.ceil(totalHafalan / 3) }} Juz</strong> <span class="text-[9px] text-slate-400 font-medium">(1/3 dari total)</span></span>
+                                    </div>
                                 </div>
                             </div>
 
@@ -582,9 +629,10 @@ const UjianView = {
                             class="flex-1 bg-slate-100 text-slate-600 py-3 rounded-xl font-bold shadow-sm text-sm hover:bg-slate-200 transition">
                             Batal
                         </button>
-                        <button @click="$emit('submit-ujian')"
-                            class="flex-[2] bg-primary text-white py-3 rounded-xl font-bold shadow-lg shadow-blue-900/20 hover:bg-blue-800 transition active:scale-95 flex items-center justify-center">
-                            {{ ujianEditingId ? 'Update Data' : 'Simpan Nilai ' + (ujianForm.tab === 'bulanan' ? 'Bulanan' : (ujianForm.tab === 'juz' ? 'Kelulusan' : 'Semester')) }}
+                        <button @click="handleSaveClick"
+                            class="flex-[2] bg-primary text-white py-3 rounded-xl font-bold shadow-lg shadow-blue-900/20 hover:bg-blue-800 transition active:scale-95 flex items-center justify-center gap-1.5 text-sm">
+                            <span class="material-symbols-outlined text-base">save</span>
+                            {{ ujianEditingId ? 'Update Data' : 'Simpan Nilai' }}
                         </button>
                     </div>
                 </div>
@@ -640,7 +688,7 @@ const UjianView = {
                                 <span v-if="u.grade">{{ u.grade }}/</span>{{ u.score }}
                             </div>
                             <div class="text-[8px] font-bold text-slate-400 leading-none">
-                                {{ formatDate(u.date) }}
+                                {{ formatDate(u.date, u.time) }}
                             </div>
                         </div>
 
@@ -742,5 +790,28 @@ const UjianView = {
             </div>
         </Transition>
     </Teleport>
+
+    <!-- ===== PILIHAN PENYIMPANAN MODAL (BasePopup UI Component) ===== -->
+    <base-popup
+        :is-open="showSaveOptionModal"
+        :title="'Simpan Ujian Juz ' + ujianForm.s_juz"
+        :message="'Apakah ujian juz ini sudah selesai atau masih dicicil?'"
+        :icon="''"
+        @close="showSaveOptionModal = false">
+        
+        <!-- Actions Slot -->
+        <template #actions>
+            <button @click="showSaveOptionModal = false; $emit('submit-ujian', false)"
+                class="flex-1 py-3.5 rounded-2xl font-bold text-white transition active:scale-95 shadow-lg bg-primary hover:bg-blue-800 shadow-blue-200 text-xs flex items-center justify-center gap-1.5">
+                <span class="material-symbols-outlined text-sm">check_circle</span>
+                Selesai
+            </button>
+            <button @click="showSaveOptionModal = false; $emit('submit-ujian', true)"
+                class="flex-1 py-3.5 rounded-2xl font-bold text-white transition active:scale-95 shadow-lg bg-amber-500 hover:bg-amber-600 shadow-amber-200 text-xs flex items-center justify-center gap-1.5">
+                <span class="material-symbols-outlined text-sm">hourglass_top</span>
+                Progress
+            </button>
+        </template>
+    </base-popup>
     `
 };

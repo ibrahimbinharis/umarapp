@@ -204,9 +204,27 @@ function useUjian(uiData, DB, userSession, refreshData, quranControls = null, cu
 
         ujianForm.s_juz = juz;
 
-        // Reset score for this new entry
-        ujianForm.s_salah = 0;
-        calcSemesterScore();
+        // Check if there is an active progress exam record for this Juz
+        const progressExam = (uiData.ujian || []).find(u => 
+            u.santri_id === ujianForm.santri_id && 
+            (u.type.includes('Juz') || u.type.includes('Semester')) &&
+            u.meta && parseInt(u.meta.juz) === parseInt(juz) &&
+            (u.is_progress === true || u.meta.is_progress === true || u.grade === 'Progress')
+        );
+
+        if (progressExam) {
+            ujianEditingId.value = progressExam._id;
+            ujianForm.s_salah = progressExam.meta?.salah || 0;
+            ujianForm.s_grade = 'Progress';
+            calcSemesterScore();
+            window.showAlert(`Melanjutkan progres ujian Juz ${juz}. Kesalahan sebelumnya: ${ujianForm.s_salah} baris.`, "Info", "info");
+        } else {
+            // Start fresh
+            ujianEditingId.value = null;
+            ujianForm.s_salah = 0;
+            ujianForm.s_grade = null;
+            calcSemesterScore();
+        }
 
         if (navigateToQuran && juz && navControls && viewRef) {
             // Handle both object and function for backward compatibility
@@ -341,7 +359,7 @@ function useUjian(uiData, DB, userSession, refreshData, quranControls = null, cu
     /**
      * Submit Ujian Data
      */
-    const submitUjian = async () => {
+    const submitUjian = async (isProgressSubmit = false) => {
         if (!ujianForm.santri_id) {
             window.showAlert("Pilih Santri", "Peringatan", "warning");
             return;
@@ -433,9 +451,11 @@ function useUjian(uiData, DB, userSession, refreshData, quranControls = null, cu
                     payload.detail = `Juz ${ujianForm.s_juz}`;
                     payload.meta.juz = ujianForm.s_juz;
                     payload.meta.salah = ujianForm.s_salah;
+                    payload.meta.is_progress = isProgressSubmit ? true : false;
+                    payload.is_progress = isProgressSubmit ? true : false;
 
                     // Determine Grade
-                    let grade = ujianForm.s_grade;
+                    let grade = isProgressSubmit ? 'Progress' : ujianForm.s_grade;
                     if (!grade && ujianForm.s_grade !== null) {
                         grade = getSemesterGrade(payload.score);
                     }
@@ -458,7 +478,7 @@ function useUjian(uiData, DB, userSession, refreshData, quranControls = null, cu
                             prog[ujianForm.s_juz] = grade;
                         }
 
-                        const count = Object.values(prog).filter(v => v && v !== 'C').length;
+                        const count = Object.values(prog).filter(v => v && v !== 'C' && v !== 'Progress').length;
                         const newManual = `${count} Juz`;
 
                         await DB.update(s._id, {
@@ -495,11 +515,20 @@ function useUjian(uiData, DB, userSession, refreshData, quranControls = null, cu
                     window.NotificationService.notifyUjian(santri, payload.detail || payload.type, payload.score, ujianEditingId.value);
                 }
 
-                window.showAlert("Data Ujian Berhasil Diupdate", "Sukses", "info");
+                if (isProgressSubmit) {
+                    window.showAlert("Progres Ujian Berhasil Diupdate", "Sukses", "info");
+                } else {
+                    window.showAlert("Data Ujian Berhasil Diupdate", "Sukses", "info");
+                }
                 ujianEditingId.value = null;
             } else {
                 const res = await DB.create('ujian', payload);
-                window.showAlert("Nilai Ujian Berhasil Disimpan", "Sukses", "info");
+                
+                if (isProgressSubmit) {
+                    window.showAlert("Progres Ujian Berhasil Disimpan", "Sukses", "info");
+                } else {
+                    window.showAlert("Nilai Ujian Berhasil Disimpan", "Sukses", "success");
+                }
 
                 // --- NOTIFICATION TRIGGER (v36) ---
                 const santri = uiData.santri.find(s => s.santri_id === ujianForm.santri_id || s._id === ujianForm.santri_id);
@@ -526,7 +555,7 @@ function useUjian(uiData, DB, userSession, refreshData, quranControls = null, cu
 
         // Toggle Off if clicking SAME item
         if (ujianEditingId.value === item._id) {
-            cancelEdit();
+            cancelUjianEdit();
             return;
         }
 

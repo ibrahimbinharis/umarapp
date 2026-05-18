@@ -98,9 +98,10 @@ const HafalanView = {
                         v-for="j in 30" :key="j"
                         @click="!['wali','santri'].includes(userSession?.role) && $emit('select-juz', j)"
                         class="size-12 sm:size-14 rounded-full border-2 flex flex-col items-center justify-center transition-all bg-slate-50 text-slate-400 border-slate-200"
-                        :class="{
+                         :class="{
                             'hover:scale-110 active:scale-95 hover:border-emerald-300 cursor-pointer': !['wali','santri'].includes(userSession?.role),
                             'cursor-default pointer-events-none': ['wali','santri'].includes(userSession?.role),
+                            'bg-amber-500 text-white shadow-lg shadow-amber-200 border-transparent': selectedSantriProgress[j] === 'Progress',
                             'bg-blue-500 text-white shadow-lg shadow-blue-200 border-transparent': selectedSantriProgress[j] && ['A+','A'].includes(selectedSantriProgress[j]),
                             'bg-emerald-500 text-white shadow-lg shadow-emerald-200 border-transparent': selectedSantriProgress[j] && ['B+','B'].includes(selectedSantriProgress[j]),
                             'bg-amber-400 text-white shadow-lg shadow-amber-200 border-transparent': selectedSantriProgress[j] === 'B-',
@@ -111,12 +112,15 @@ const HafalanView = {
                         <!-- Icon Centang -->
                         <span v-if="selectedSantriProgress[j] === 'Centang'" class="material-symbols-outlined text-2xl font-bold">check</span>
 
+                        <!-- Icon Progress -->
+                        <span v-else-if="selectedSantriProgress[j] === 'Progress'" class="material-symbols-outlined text-xl font-bold">hourglass_top</span>
+
                         <!-- Nomor Juz -->
                         <span v-else class="text-sm sm:text-lg font-bold">{{ j }}</span>
 
                         <!-- Grade Label -->
                         <span
-                            v-if="selectedSantriProgress[j] && selectedSantriProgress[j] !== 'Centang'"
+                            v-if="selectedSantriProgress[j] && !['Centang', 'Progress'].includes(selectedSantriProgress[j])"
                             class="text-[9px] font-black uppercase tracking-tighter opacity-90"
                         >{{ selectedSantriProgress[j] }}</span>
                     </button>

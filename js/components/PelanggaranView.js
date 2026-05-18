@@ -182,7 +182,7 @@ const PelanggaranView = {
                         <div class="min-w-0">
                             <p class="font-bold text-slate-900 leading-tight">{{ getSantriName(p.santri_id) }}</p>
                             <p class="text-xs text-red-500 mt-0.5">{{ p.description }}</p>
-                            <p class="text-[10px] text-slate-400 font-bold mt-2">{{ formatDate(p.date) }}</p>
+                            <p class="text-[10px] text-slate-400 font-bold mt-2">{{ formatDate(p.date, p.time) }}</p>
                         </div>
                         
                         <div class="shrink-0 flex flex-col items-end gap-2">

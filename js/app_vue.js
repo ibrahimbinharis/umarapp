@@ -375,6 +375,13 @@ createApp({
             showExamControls.value = false;
         };
 
+        // Auto-show/hide exam controls on view change
+        watch(currentView, (newView) => {
+            if (newView !== 'quran') {
+                showExamControls.value = false;
+            }
+        });
+
         const handleFileSelect = (event) => {
             const file = event.target.files[0];
             if (!file) return;
@@ -998,13 +1005,25 @@ createApp({
             return s ? s.full_name : 'Santri';
         };
 
-        const formatDate = (iso) => {
+        const formatDate = (iso, timeStrInput = null) => {
             // Enhanced formatter for better UX
             if (!iso) return '-';
 
             try {
-                const date = new Date(iso);
-                if (isNaN(date.getTime())) return iso.split('T')[0]; // Fallback
+                let date;
+                if (typeof iso === 'string' && iso.length === 10) {
+                    const [year, month, day] = iso.split('-').map(Number);
+                    if (timeStrInput) {
+                        const [hour, minute] = timeStrInput.split(':').map(Number);
+                        date = new Date(year, month - 1, day, hour, minute);
+                    } else {
+                        date = new Date(year, month - 1, day);
+                    }
+                } else {
+                    date = new Date(iso);
+                }
+
+                if (isNaN(date.getTime())) return typeof iso === 'string' ? iso.split('T')[0] : '-'; // Fallback
 
                 const today = new Date();
                 const yesterday = new Date(today);
@@ -1019,20 +1038,23 @@ createApp({
                     minute: '2-digit'
                 });
 
+                const hasTime = timeStrInput || (typeof iso === 'string' && iso.includes('T'));
+
                 if (isToday) {
-                    return `Hari ini, ${timeStr}`;
+                    return hasTime ? `Hari ini, ${timeStr}` : 'Hari ini';
                 } else if (isYesterday) {
-                    return `Kemarin, ${timeStr}`;
+                    return hasTime ? `Kemarin, ${timeStr}` : 'Kemarin';
                 } else {
                     // Format: DD/MM/YYYY HH:mm
-                    return date.toLocaleDateString('id-ID', {
+                    const localDate = date.toLocaleDateString('id-ID', {
                         day: '2-digit',
                         month: '2-digit',
                         year: 'numeric'
-                    }) + ', ' + timeStr;
+                    });
+                    return hasTime ? `${localDate}, ${timeStr}` : localDate;
                 }
             } catch (e) {
-                return iso.split('T')[0]; // Fallback to simple format
+                return typeof iso === 'string' ? iso.split('T')[0] : '-'; // Fallback to simple format
             }
         };
 
