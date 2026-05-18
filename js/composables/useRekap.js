@@ -91,6 +91,14 @@ const useRekap = (uiData, userSession) => {
         rekapEndDate.value = toYMD(d);
     };
 
+    const setRangeBulanKemarin = () => {
+        const d = new Date();
+        const start = new Date(d.getFullYear(), d.getMonth() - 1, 1);
+        const end = new Date(d.getFullYear(), d.getMonth(), 0);
+        rekapStartDate.value = toYMD(start);
+        rekapEndDate.value = toYMD(end);
+    };
+
     const setRangeSemua = () => {
         rekapStartDate.value = '';
         rekapEndDate.value = '';
@@ -149,10 +157,62 @@ const useRekap = (uiData, userSession) => {
         "Juli", "Agustus", "September", "Oktober", "November", "Desember"
     ];
 
+    // --- SNAPSHOT & LOCK STATUS COMPUTED ---
+    const activeSnapshot = computed(() => {
+        const start = rekapStartDate.value;
+        const end = rekapEndDate.value;
+        if (!start || !end) return null;
+
+        const [sYear, sMonth, sDay] = start.split('-');
+        const [eYear, eMonth, eDay] = end.split('-');
+
+        // Periksa apakah ini adalah satu bulan penuh (tgl 1 sampai akhir bulan)
+        if (sYear !== eYear || sMonth !== eMonth || sDay !== '01') return null;
+        
+        // Cek apakah tanggal akhir adalah hari terakhir bulan tersebut
+        const lastDayOfMonth = new Date(parseInt(sYear), parseInt(sMonth), 0).getDate();
+        if (parseInt(eDay) !== lastDayOfMonth) return null;
+
+        const snapshotId = `report_snapshot_${sYear}_${sMonth}`;
+        return (uiData.settings || []).find(s => s._id === snapshotId) || null;
+    });
+
+    const isReportLocked = computed(() => !!activeSnapshot.value);
+
     /**
      * Compute Main Rekap Data using Shared Analytics Engine
      */
     const rekapHafalanData = computed(() => {
+        // JIKA LAPORAN DIKUNCI: Muat langsung dari snapshot statis!
+        if (activeSnapshot.value) {
+            const snapData = activeSnapshot.value.raportMetadata?.reports ? activeSnapshot.value.raportMetadata : activeSnapshot.value;
+            let reports = snapData.reports || [];
+            
+            if (rekapKelas.value) reports = reports.filter(r => r.kelas === rekapKelas.value);
+            if (rekapGender.value) reports = reports.filter(r => r.gender === rekapGender.value);
+            if (rekapSantriId.value) {
+                reports = reports.filter(r => r.santri_id === rekapSantriId.value || r.id === rekapSantriId.value || r.nis === rekapSantriId.value);
+            }
+
+            const finalResult = reports.slice().sort((a, b) => {
+                const cat = rekapSortCategory.value;
+                const valA = cat === 'sabaq' ? a.sabaq_act : (cat === 'sabqi' ? a.sabqi_act : (cat === 'ujian' ? a.ujian_avg : (cat === 'manzil' ? a.manzil_act : (cat === 'pelanggaran' ? a.pelanggaran_poin : a.nilai_akhir))));
+                const valB = cat === 'sabaq' ? b.sabaq_act : (cat === 'sabqi' ? b.sabqi_act : (cat === 'ujian' ? b.ujian_avg : (cat === 'manzil' ? b.manzil_act : (cat === 'pelanggaran' ? b.pelanggaran_poin : b.nilai_akhir))));
+                
+                if (cat === 'pelanggaran') {
+                    return valA - valB;
+                }
+                return valB - valA;
+            });
+
+            if (rekapSortLimit.value === 'top10') {
+                return finalResult.slice(0, 10);
+            } else if (rekapSortLimit.value === 'bottom10') {
+                return [...finalResult].reverse().slice(0, 10);
+            }
+            return finalResult;
+        }
+
         let santris = uiData.santri || [];
 
         if (rekapKelas.value) santris = santris.filter(s => s.kelas === rekapKelas.value);
@@ -196,6 +256,9 @@ const useRekap = (uiData, userSession) => {
 
                 show_ujian: rekapSettings.visibility.ujian,
                 ujian_avg: parseFloat(perf.ujian.avg.toFixed(1)),
+
+                show_ujian_semester: rekapSettings.visibility.ujian_semester,
+                ujian_semester_avg: parseFloat(perf.ujian_semester.avg.toFixed(1)),
 
                 show_tilawah: rekapSettings.visibility.tilawah,
                 tilawah_act: parseFloat((perf.tilawah.actual / 20).toFixed(1)),
@@ -376,22 +439,51 @@ const useRekap = (uiData, userSession) => {
         };
 
         const santris = uiData.santri || [];
-        const prevData = santris.map(s => analytics.calculateStudentPerformance(s, prevContext, rekapSettings));
-        const prevAvg = prevData.length > 0 ? {
-            sabaq: prevData.reduce((acc, p) => acc + p.sabaq.actual, 0) / prevData.length,
-            manzil: prevData.reduce((acc, p) => acc + p.manzil.actual, 0) / prevData.length,
-            tilawah: prevData.reduce((acc, p) => acc + p.tilawah.actual, 0) / prevData.length,
-            ujian: prevData.reduce((acc, p) => acc + p.ujian.avg, 0) / prevData.length
-        } : { sabaq: 0, manzil: 0, tilawah: 0, ujian: 0 };
+        
+        // Cek jika bulan lalu terkunci di snapshot
+        const prevSnapshotId = `report_snapshot_${pStart.getFullYear()}_${String(pStart.getMonth() + 1).padStart(2, '0')}`;
+        const prevSnapshot = (uiData.settings || []).find(s => s._id === prevSnapshotId);
+
+        let prevAvg;
+        let prevRankMapGlobal = {};
+
+        const prevSnapData = prevSnapshot ? (prevSnapshot.raportMetadata?.reports ? prevSnapshot.raportMetadata : prevSnapshot) : null;
+        if (prevSnapData && prevSnapData.reports && prevSnapData.reports.length > 0) {
+            const pCount = prevSnapData.reports.length;
+            const pTotal = prevSnapData.reports.reduce((acc, r) => {
+                acc.sabaq += (r.sabaq_total ?? r.sabaq_act ?? 0);
+                acc.manzil += (r.manzil_act ?? 0);
+                acc.tilawah += ((r.tilawah_act || 0) * 20);
+                acc.ujian += (r.ujian_avg ?? 0);
+                return acc;
+            }, { sabaq: 0, manzil: 0, tilawah: 0, ujian: 0 });
+
+            prevAvg = {
+                sabaq: pTotal.sabaq / pCount,
+                manzil: pTotal.manzil / pCount,
+                tilawah: pTotal.tilawah / pCount,
+                ujian: pTotal.ujian / pCount
+            };
+
+            const prevRankList = prevSnapData.reports.slice().sort((a, b) => (b.nilai_akhir || 0) - (a.nilai_akhir || 0));
+            prevRankList.forEach((p, idx) => { prevRankMapGlobal[p.santri_id || p.id] = idx + 1; });
+        } else {
+            // Fallback kalkulasi dinamis bulan lalu
+            const prevData = santris.map(s => analytics.calculateStudentPerformance(s, prevContext, rekapSettings));
+            prevAvg = prevData.length > 0 ? {
+                sabaq: prevData.reduce((acc, p) => acc + p.sabaq.actual, 0) / prevData.length,
+                manzil: prevData.reduce((acc, p) => acc + p.manzil.actual, 0) / prevData.length,
+                tilawah: prevData.reduce((acc, p) => acc + p.tilawah.actual, 0) / prevData.length,
+                ujian: prevData.reduce((acc, p) => acc + p.ujian.avg, 0) / prevData.length
+            } : { sabaq: 0, manzil: 0, tilawah: 0, ujian: 0 };
+
+            const prevRankList = prevData.slice().sort((a, b) => b.total - a.total);
+            prevRankList.forEach((p, idx) => { prevRankMapGlobal[p.santri_id || p.id] = idx + 1; });
+        }
 
         // --- Real-time Rank Support ---
         // Rank movements: Compare current vs prev period rankings
         const topList = [...data].sort((a, b) => b.nilai_akhir - a.nilai_akhir);
-        
-        // Build prev period rank map using prevData already calculated above
-        const prevRankList = prevData.slice().sort((a, b) => b.total - a.total);
-        const prevRankMapGlobal = {};
-        prevRankList.forEach((p, idx) => { prevRankMapGlobal[p.santri_id || p.id] = idx + 1; });
         const currRankMapGlobal = {};
         topList.forEach((p, idx) => { currRankMapGlobal[p.id] = idx + 1; });
 
@@ -474,6 +566,7 @@ const useRekap = (uiData, userSession) => {
         if (rekapSettings.visibility.sabaq) headerRow.push('Sabaq (Hal)');
         if (rekapSettings.visibility.manzil) headerRow.push('Manzil (Hal)');
         if (rekapSettings.visibility.ujian) headerRow.push('Ujian');
+        if (rekapSettings.visibility.ujian_semester) headerRow.push('Uj. Sem');
         if (rekapSettings.visibility.tilawah) headerRow.push('Tilawah (Juz)');
         headerRow.push('Pelanggaran', 'Nilai', 'Predikat');
 
@@ -485,6 +578,7 @@ const useRekap = (uiData, userSession) => {
             }
             if (rekapSettings.visibility.manzil) r.push(`${row.manzil_act}/${row.manzil_tgt}`);
             if (rekapSettings.visibility.ujian) r.push(row.ujian_avg);
+            if (rekapSettings.visibility.ujian_semester) r.push(row.ujian_semester_avg);
             if (rekapSettings.visibility.tilawah) r.push(`${row.tilawah_act}/${row.tilawah_tgt}`);
             r.push(row.pelanggaran_poin, row.nilai_akhir, row.predikat);
             return r;
@@ -501,6 +595,7 @@ const useRekap = (uiData, userSession) => {
             if (rekapSettings.visibility.sabaq) item["Sabaq"] = `${row.sabaq_act}/${row.sabaq_tgt}`;
             if (rekapSettings.visibility.manzil) item["Manzil"] = `${row.manzil_act}/${row.manzil_tgt}`;
             if (rekapSettings.visibility.ujian) item["Ujian"] = row.ujian_avg;
+            if (rekapSettings.visibility.ujian_semester) item["Ujian Semester"] = row.ujian_semester_avg;
             if (rekapSettings.visibility.tilawah) item["Tilawah"] = `${row.tilawah_act}/${row.tilawah_tgt}`;
             item["Poin Pelanggaran"] = row.pelanggaran_poin;
             item["Nilai Akhir"] = row.nilai_akhir;
@@ -698,14 +793,254 @@ const useRekap = (uiData, userSession) => {
         return exportToPDFRaport(dummySantri, customSettings);
     };
 
+    const lockMonthlyReport = async () => {
+        const start = rekapStartDate.value;
+        const end = rekapEndDate.value;
+        if (!start || !end) return;
+
+        const [sYear, sMonth, sDay] = start.split('-');
+        const [eYear, eMonth, eDay] = end.split('-');
+
+        // 1. Validasi harus bulan penuh
+        if (sYear !== eYear || sMonth !== eMonth || sDay !== '01') {
+            return window.showAlert("Rentang tanggal harus satu bulan penuh (tanggal 1 s/d akhir bulan) untuk dikunci.", "Peringatan", "warning");
+        }
+        const lastDayOfMonth = new Date(parseInt(sYear), parseInt(sMonth), 0).getDate();
+        if (parseInt(eDay) !== lastDayOfMonth) {
+            return window.showAlert("Rentang tanggal harus satu bulan penuh untuk dikunci.", "Peringatan", "warning");
+        }
+
+        const snapshotId = `report_snapshot_${sYear}_${sMonth}`;
+        const monthName = monthNames[parseInt(sMonth) - 1];
+
+        window.showConfirm({
+            title: 'Kunci Laporan',
+            message: `Apakah Anda yakin ingin mengunci laporan resmi untuk bulan ${monthName} ${sYear}? Semua target dan skor akhir akan dibekukan secara permanen.`,
+            confirmText: 'Ya, Kunci',
+            type: 'warning',
+            onConfirm: async () => {
+                try {
+                    const rawData = rekapHafalanData.value;
+                    if (!rawData || rawData.length === 0) {
+                        return window.showAlert("Tidak ada data rekap untuk disimpan.", "Kesalahan", "danger");
+                    }
+
+                    const reports = rawData.map(r => ({
+                        id: r.id,
+                        santri_id: r.id,
+                        nis: r.nis,
+                        nama: r.nama,
+                        kelas: r.kelas,
+                        gender: r.gender,
+                        
+                        show_sabaq: r.show_sabaq,
+                        sabaq_act: r.sabaq_act,
+                        sabqi_act: r.sabqi_act,
+                        sabaq_total: r.sabaq_total,
+                        sabaq_tgt: r.sabaq_tgt,
+
+                        show_manzil: r.show_manzil,
+                        manzil_act: r.manzil_act,
+                        manzil_tgt: r.manzil_tgt,
+
+                        show_ujian: r.show_ujian,
+                        ujian_avg: r.ujian_avg,
+
+                        show_ujian_semester: r.show_ujian_semester,
+                        ujian_semester_avg: r.ujian_semester_avg,
+
+                        show_tilawah: r.show_tilawah,
+                        tilawah_act: r.tilawah_act,
+                        tilawah_tgt: r.tilawah_tgt,
+
+                        pelanggaran_poin: r.pelanggaran_poin,
+                        nilai_akhir: r.nilai_akhir,
+                        predikat: r.predikat,
+                        juzCompleted: r.juzCompleted,
+                        hafalan_progress: r.hafalan_progress || {},
+
+                        exam_details: r.exam_details || [],
+                        comparison: r.comparison || {}
+                    }));
+
+                    const payload = {
+                        _id: snapshotId,
+                        __type: 'settings',
+                        _deleted: false,
+                        raportMetadata: {
+                            year: parseInt(sYear),
+                            month: parseInt(sMonth),
+                            locked_at: new Date().toISOString(),
+                            locked_by: userSession.value ? (userSession.value.full_name || userSession.value.username) : 'Sistem',
+                            reports: reports
+                        }
+                    };
+
+                    await DB.updateOrInsert(payload, 'settings');
+                    
+                    // Clean up unlock token since it's locked again
+                    const unlockedId = `report_snapshot_unlocked_${sYear}_${sMonth}`;
+                    await DB.delete(unlockedId);
+
+                    if (window.refreshData) await window.refreshData();
+                    window.showToast(`Laporan ${monthName} ${sYear} berhasil dikunci!`, 'success');
+                } catch (err) {
+                    console.error("Lock error:", err);
+                    window.showAlert("Gagal mengunci: " + err.message, "Error", "danger");
+                }
+            }
+        });
+    };
+
+    const unlockMonthlyReport = async () => {
+        const start = rekapStartDate.value;
+        if (!start) return;
+        const [sYear, sMonth] = start.split('-');
+        const snapshotId = `report_snapshot_${sYear}_${sMonth}`;
+        const monthName = monthNames[parseInt(sMonth) - 1];
+
+        window.showConfirm({
+            title: 'Buka Kunci Laporan',
+            message: `Apakah Anda yakin ingin membuka gembok laporan resmi untuk bulan ${monthName} ${sYear}? Laporan akan kembali dinamis dan dapat berubah.`,
+            confirmText: 'Ya, Buka Kunci',
+            type: 'danger',
+            onConfirm: async () => {
+                try {
+                    await DB.delete(snapshotId);
+
+                    // Save unlock token for past month so it doesn't get auto-locked again
+                    const unlockedId = `report_snapshot_unlocked_${sYear}_${sMonth}`;
+                    await DB.updateOrInsert({
+                        _id: unlockedId,
+                        __type: 'settings',
+                        _deleted: false,
+                        unlocked_at: new Date().toISOString(),
+                        unlocked_by: userSession.value ? (userSession.value.full_name || userSession.value.username) : 'Admin'
+                    }, 'settings');
+
+                    if (window.refreshData) await window.refreshData();
+                    window.showToast(`Gembok laporan ${monthName} ${sYear} berhasil dibuka!`, 'success');
+                } catch (err) {
+                    console.error("Unlock error:", err);
+                    window.showAlert("Gagal membuka gembok: " + err.message, "Error", "danger");
+                }
+            }
+        });
+    };
+
+    // --- AUTO LOCK LOGIC FOR PAST MONTHS ---
+    const isPastMonth = computed(() => {
+        const start = rekapStartDate.value;
+        const end = rekapEndDate.value;
+        if (!start || !end) return false;
+
+        const [sYear, sMonth, sDay] = start.split('-');
+        const [eYear, eMonth, eDay] = end.split('-');
+        if (sYear !== eYear || sMonth !== eMonth || sDay !== '01') return false;
+
+        const lastDayOfMonth = new Date(parseInt(sYear), parseInt(sMonth), 0).getDate();
+        if (parseInt(eDay) !== lastDayOfMonth) return false;
+
+        const d = new Date();
+        const curYear = d.getFullYear();
+        const curMonth = d.getMonth() + 1;
+
+        const selYear = parseInt(sYear);
+        const selMonth = parseInt(sMonth);
+
+        return (selYear < curYear) || (selYear === curYear && selMonth < curMonth);
+    });
+
+    const autoLockPastMonth = async (sYear, sMonth, rawData) => {
+        const snapshotId = `report_snapshot_${sYear}_${sMonth}`;
+        console.log(`[Auto-Lock] Freezing ended month ${sMonth}/${sYear} into frozen snapshot.`);
+
+        const reports = rawData.map(r => ({
+            id: r.id,
+            santri_id: r.id,
+            nis: r.nis,
+            nama: r.nama,
+            kelas: r.kelas,
+            gender: r.gender,
+            
+            show_sabaq: r.show_sabaq,
+            sabaq_act: r.sabaq_act,
+            sabqi_act: r.sabqi_act,
+            sabaq_total: r.sabaq_total,
+            sabaq_tgt: r.sabaq_tgt,
+
+            show_manzil: r.show_manzil,
+            manzil_act: r.manzil_act,
+            manzil_tgt: r.manzil_tgt,
+
+            show_ujian: r.show_ujian,
+            ujian_avg: r.ujian_avg,
+
+            show_ujian_semester: r.show_ujian_semester,
+            ujian_semester_avg: r.ujian_semester_avg,
+
+            show_tilawah: r.show_tilawah,
+            tilawah_act: r.tilawah_act,
+            tilawah_tgt: r.tilawah_tgt,
+
+            pelanggaran_poin: r.pelanggaran_poin,
+            nilai_akhir: r.nilai_akhir,
+            predikat: r.predikat,
+            juzCompleted: r.juzCompleted,
+            hafalan_progress: r.hafalan_progress || {},
+
+            exam_details: r.exam_details || [],
+            comparison: r.comparison || {}
+        }));
+
+        const payload = {
+            _id: snapshotId,
+            __type: 'settings',
+            _deleted: false,
+            raportMetadata: {
+                year: parseInt(sYear),
+                month: parseInt(sMonth),
+                locked_at: new Date().toISOString(),
+                locked_by: 'Sistem (Otomatis)',
+                reports: reports
+            }
+        };
+
+        try {
+            await DB.updateOrInsert(payload, 'settings');
+            if (window.refreshData) await window.refreshData();
+            console.log(`[Auto-Lock] Month ${sMonth}/${sYear} frozen successfully.`);
+        } catch (err) {
+            console.error("Auto-lock error:", err);
+        }
+    };
+
+    watch([isPastMonth, activeSnapshot, rekapHafalanData], () => {
+        if (isPastMonth.value && !activeSnapshot.value) {
+            const start = rekapStartDate.value;
+            if (!start) return;
+            const [sYear, sMonth] = start.split('-');
+            const unlockedId = `report_snapshot_unlocked_${sYear}_${sMonth}`;
+            const isExplicitlyUnlocked = (uiData.settings || []).some(s => s._id === unlockedId);
+
+            if (!isExplicitlyUnlocked) {
+                const rawData = rekapHafalanData.value;
+                if (rawData && rawData.length > 0) {
+                    autoLockPastMonth(sYear, sMonth, rawData);
+                }
+            }
+        }
+    }, { immediate: true, deep: true });
+
     return {
         rekapStartDate, rekapEndDate, rekapKelas, rekapGender,
         rekapSearch, rekapSantriId, isRekapSantriDropdownOpen, 
         rekapSortLimit, rekapSortCategory,
         rekapFilteredSantriOptions, selectRekapSantri,
-        setRangeRealtime, setRangeKemarin, setRange7Hari, setRange30Hari, setRangeBulanIni, setRangeSemua,
+        setRangeRealtime, setRangeKemarin, setRange7Hari, setRange30Hari, setRangeBulanIni, setRangeBulanKemarin, setRangeSemua,
         monthNames, rekapHafalanData, rekapGlobalStats, rekapSettings,
         saveSettings, exportToPDF, exportToExcel, exportToPDFRaport, exportToPDFMockup,
-        rekapTrendData
+        rekapTrendData,
+        isReportLocked, activeSnapshot, lockMonthlyReport, unlockMonthlyReport
     };
 };

@@ -1,4 +1,4 @@
-const CACHE_NAME = "v3.60";
+const CACHE_NAME = "v3.61";
 const ASSETS_TO_CACHE = [
     "./",
     "./index.html",
@@ -83,6 +83,8 @@ const ASSETS_TO_CACHE = [
     "./js/components/PelanggaranView.js",
     "./js/components/TargetView.js",
     "./js/components/HafalanView.js",
+    "./js/components/BaseDropdown.js",
+    "./js/components/BasePopup.js",
 
     // Services
     "./js/services/NotificationService.js",

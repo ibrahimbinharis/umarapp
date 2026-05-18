@@ -478,11 +478,14 @@
                             :kelas-options="uiData.kelas" :rekap-hafalan-data="rekapHafalanData"
                             :rekap-global-stats="rekapGlobalStats" :rekap-settings="rekapSettings"
                             :rekap-trend-data="rekapTrendData" :user-session="userSession" :ui-data="uiData"
+                            :is-report-locked="isReportLocked" :active-snapshot="activeSnapshot"
+                            @lock-monthly-report="lockMonthlyReport" @unlock-monthly-report="unlockMonthlyReport"
                             @export-to-excel="exportToExcel" @export-to-pdf="exportToPDF"
                             @export-to-pdf-raport="exportToPDFRaport" @export-to-pdf-mockup="exportToPDFMockup"
                             @save-settings="saveSettings" @set-range-realtime="setRangeRealtime"
                             @set-range-kemarin="setRangeKemarin" @set-range-7hari="setRange7Hari"
                             @set-range-30hari="setRange30Hari" @set-range-bulan-ini="setRangeBulanIni"
+                            @set-range-bulan-kemarin="setRangeBulanKemarin"
                             @set-range-semua="setRangeSemua"></rekap-view>
                     </div>
                     
@@ -566,7 +569,7 @@
                             :move-calendar="moveCalendar" :select-calendar-date="selectCalendarDate"
                             :apply-custom-range="applyCustomRange" :calendar-weeks="calendarWeeks"
                             :month-names="monthNames" :format-date="formatDate"
-                            :ui-data="uiData"
+                            :ui-data="uiData" :unique-jurnal-mapels="uniqueJurnalMapels"
                             @update:gender-filter="genderFilter = $event" :user-session="userSession"></absensi-view>
                     </div>
 
@@ -1754,6 +1757,9 @@
     <!-- Main App -->
     <!-- Components -->
     <script src="js/components/BasePopup.js" defer></script>
+    <script src="js/components/BaseDropdown.js" defer></script>
+    <script src="js/components/BaseCalendar.js" defer></script>
+    <script src="js/components/BaseFilterDrawer.js" defer></script>
     <script src="js/components/LoginView.js" defer></script>
     <script src="js/components/PelanggaranView.js" defer></script>
     <script src="js/components/DashboardView.js" defer></script>

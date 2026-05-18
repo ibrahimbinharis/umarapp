@@ -20,7 +20,7 @@ const MENU_CONFIG = [
 
 
 
-createApp({
+const app = createApp({
     setup() {
         // --- STATE ---
         const loading = ref(true);
@@ -1477,4 +1477,12 @@ createApp({
         MasterDataHubView,
         InstallView
     }
-}).mount('#app');
+});
+
+// Register Global Base UI Components for universal availability in all templates
+app.component('BaseDropdown', BaseDropdown);
+app.component('BasePopup', BasePopup);
+app.component('BaseCalendar', BaseCalendar);
+app.component('BaseFilterDrawer', BaseFilterDrawer);
+
+app.mount('#app');

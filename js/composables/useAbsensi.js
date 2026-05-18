@@ -46,6 +46,7 @@ function useAbsensi(uiData, DB, modalState, userSession) {
         jurnalStartDate: '',
         jurnalEndDate: '',
         quickJurnalFilter: 'month', // Default to This Month
+        jurnalMapelFilter: '',       // Filter by mapel
         // Calendar State (v37)
         isCalendarOpen: false,
         viewMonth: new Date().getMonth(),
@@ -138,6 +139,26 @@ function useAbsensi(uiData, DB, modalState, userSession) {
     };
 
     /**
+     * Unique mapels present in all jurnals
+     */
+    const uniqueJurnalMapels = computed(() => {
+        const absData = uiData.absensi || [];
+        const jadwalData = uiData.jadwal || [];
+        const mapels = new Set();
+
+        absData.forEach(a => {
+            if (a.jurnal_materi || a.jurnal_catatan) {
+                const jadwalObj = jadwalData.find(j => j._id === a.jadwal_id);
+                if (jadwalObj && jadwalObj.mapel) {
+                    mapels.add(jadwalObj.mapel);
+                }
+            }
+        });
+
+        return Array.from(mapels).sort();
+    });
+
+    /**
      * Timeline History of all jurnals (absensi records with journal content)
      */
     const jurnalList = computed(() => {
@@ -159,6 +180,14 @@ function useAbsensi(uiData, DB, modalState, userSession) {
             const jadwalObj = jadwalData.find(j => j._id === a.jadwal_id);
             return (jadwalObj?.gender || 'L') === genderFilter.value;
         });
+
+        // Apply Mapel Filter
+        if (absensiState.jurnalMapelFilter) {
+            filtered = filtered.filter(a => {
+                const jadwalObj = jadwalData.find(j => j._id === a.jadwal_id);
+                return (jadwalObj?.mapel === absensiState.jurnalMapelFilter);
+            });
+        }
 
         return filtered
             .map(a => {
@@ -553,6 +582,7 @@ function useAbsensi(uiData, DB, modalState, userSession) {
         absensiDayName,
         dailyJadwal,
         jurnalList,
+        uniqueJurnalMapels,
         getAbsensiForJadwal,
         getAbsensiSummary,
 

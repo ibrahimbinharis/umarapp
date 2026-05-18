@@ -10,8 +10,8 @@ function useAnalytics(uiData, userSession) {
 
     // --- SHARED SETTINGS ---
     const defaultScoringSettings = {
-        weights: { sabaq: 50, manzil: 30, ujian: 20, tilawah: 0 },
-        visibility: { sabaq: true, manzil: true, ujian: true, tilawah: false },
+        weights: { sabaq: 50, manzil: 30, ujian: 20, tilawah: 0, ujian_semester: 0 },
+        visibility: { sabaq: true, manzil: true, ujian: true, tilawah: false, ujian_semester: false },
         raportMetadata: {
             institution: "Madrasah Tahfidz Al-Quran",
             address: "Jl. Pendidikan No. 123, Kota Muslim",
@@ -88,6 +88,16 @@ function useAnalytics(uiData, userSession) {
             }
         }
 
+        // 4.5 Actual Ujian Semester (Quran)
+        let avgUjianSemester = 0;
+        if (myUjian.length > 0) {
+            const semQuranRecs = myUjian.filter(u => u.type === 'Ujian Semester (Quran)');
+            if (semQuranRecs.length > 0) {
+                const totalSemScore = semQuranRecs.reduce((acc, curr) => acc + (parseFloat(curr.score) || 0), 0);
+                avgUjianSemester = totalSemScore / semQuranRecs.length;
+            }
+        }
+
         // 5. Actual Tilawah
         const actualTilawah = mySetoran.filter(x => x.setoran_type === 'Tilawah').reduce((acc, curr) => acc + (parseFloat(curr.pages) || 0), 0);
         const targetTilawah = parseInt(santri.target_tilawah) || 600;
@@ -102,8 +112,9 @@ function useAnalytics(uiData, userSession) {
         let scoreManzilWeighted = visibility.manzil ? (targetManzil === 0 ? 100 : (actualManzil / targetManzil) * 100) * (weights.manzil / 100) : 0;
         let scoreUjianWeighted = visibility.ujian ? avgUjian * (weights.ujian / 100) : 0;
         let scoreTilawahWeighted = visibility.tilawah ? (targetTilawah === 0 ? 100 : (actualTilawah / targetTilawah) * 100) * (weights.tilawah / 100) : 0;
+        let scoreUjianSemesterWeighted = visibility.ujian_semester ? avgUjianSemester * ((weights.ujian_semester || 0) / 100) : 0;
 
-        let finalScore = scoreSabaqWeighted + scoreManzilWeighted + scoreUjianWeighted + scoreTilawahWeighted;
+        let finalScore = scoreSabaqWeighted + scoreManzilWeighted + scoreUjianWeighted + scoreTilawahWeighted + scoreUjianSemesterWeighted;
         finalScore -= totalPointsPelanggaran;
         finalScore = Math.round(finalScore * 10) / 10;
 
@@ -124,6 +135,7 @@ function useAnalytics(uiData, userSession) {
             sabaq: { actual: actualSabaq, target: targetSabaq, weighted: scoreSabaqWeighted },
             manzil: { actual: actualManzil, target: targetManzil, weighted: scoreManzilWeighted },
             ujian: { avg: avgUjian, weighted: scoreUjianWeighted },
+            ujian_semester: { avg: avgUjianSemester, weighted: scoreUjianSemesterWeighted },
             tilawah: { actual: actualTilawah, target: targetTilawah, weighted: scoreTilawahWeighted },
             pelanggaran: { points: totalPointsPelanggaran },
 

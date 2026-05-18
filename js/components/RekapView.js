@@ -5,14 +5,17 @@ const RekapView = {
         'rekapTrendData', 'userSession', 'rekapSearch', 'rekapSantriId',
         'isRekapSantriDropdownOpen', 'rekapFilteredSantriOptions', 'selectRekapSantri',
         'rekapSortLimit', 'rekapSortCategory',
-        'uiData'
+        'uiData',
+        'isReportLocked', 'activeSnapshot'
     ],
     emits: [
         'update:rekapStartDate', 'update:rekapEndDate', 'update:rekapKelas', 'update:rekapGender',
         'update:rekapSearch', 'update:rekapSantriId', 'update:isRekapSantriDropdownOpen',
         'update:rekapSortLimit', 'update:rekapSortCategory',
         'export-to-excel', 'export-to-pdf', 'export-to-pdf-raport', 'export-to-pdf-mockup', 'save-settings',
-        'set-range-realtime', 'set-range-kemarin', 'set-range-7hari', 'set-range-30hari', 'set-range-bulan-ini'
+        'set-range-realtime', 'set-range-kemarin', 'set-range-7hari', 'set-range-30hari', 'set-range-bulan-ini',
+        'set-range-bulan-kemarin', 'set-range-semua',
+        'lock-monthly-report', 'unlock-monthly-report'
     ],
     setup(props, { emit }) {
         const { ref, reactive, computed, watch, onMounted, nextTick } = Vue;
@@ -25,78 +28,6 @@ const RekapView = {
         const isJuzGridOpen = ref(false);
         const isCalendarOpen = ref(false);
         const showFilterSheet = ref(false);
-        const viewMonth = ref(new Date().getMonth());
-        const viewYear = ref(new Date().getFullYear());
-
-        const tempRange = reactive({
-            start: props.rekapStartDate,
-            end: props.rekapEndDate
-        });
-
-        const calendarWeeks = computed(() => {
-            const firstDay = new Date(viewYear.value, viewMonth.value, 1).getDay();
-            const daysInMonth = new Date(viewYear.value, viewMonth.value + 1, 0).getDate();
-            const todayStr = new Date().toISOString().split('T')[0];
-
-            const weeks = [];
-            for (let i = 0; i < firstDay; i++) weeks.push(null);
-            for (let d = 1; d <= daysInMonth; d++) {
-                const dateStr = `${viewYear.value}-${String(viewMonth.value + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-                weeks.push({
-                    day: d,
-                    dateStr,
-                    isToday: dateStr === todayStr,
-                    isSelected: dateStr === tempRange.start || dateStr === tempRange.end,
-                    isInRange: tempRange.start && tempRange.end && dateStr > tempRange.start && dateStr < tempRange.end
-                });
-            }
-            return weeks;
-        });
-
-        const handleDateClick = (dateStr) => {
-            if (!tempRange.start || (tempRange.start && tempRange.end)) {
-                tempRange.start = dateStr;
-                tempRange.end = null;
-            } else {
-                if (dateStr < tempRange.start) {
-                    tempRange.start = dateStr;
-                    tempRange.end = null;
-                } else {
-                    tempRange.end = dateStr;
-                }
-            }
-        };
-
-        const applyRange = () => {
-            if (!tempRange.start) return;
-            const finalEnd = tempRange.end || tempRange.start;
-            emit('update:rekapStartDate', tempRange.start);
-            emit('update:rekapEndDate', finalEnd);
-            isCalendarOpen.value = false;
-        };
-
-        const moveMonth = (delta) => {
-            viewMonth.value += delta;
-            if (viewMonth.value > 11) { viewMonth.value = 0; viewYear.value++; }
-            if (viewMonth.value < 0) { viewMonth.value = 11; viewYear.value--; }
-        };
-
-        // --- Back Navigation for Modal (v37) ---
-        const handleCalendarPop = () => {
-            if (isCalendarOpen.value) isCalendarOpen.value = false;
-        };
-
-        watch(isCalendarOpen, (newVal) => {
-            if (newVal) {
-                window.history.pushState({ modal: 'rekap-calendar' }, '');
-                window.addEventListener('popstate', handleCalendarPop);
-            } else {
-                window.removeEventListener('popstate', handleCalendarPop);
-                if (window.history.state && window.history.state.modal === 'rekap-calendar') {
-                    window.history.back();
-                }
-            }
-        });
 
         const parsedJuzProgress = computed(() => {
             const data = props.rekapHafalanData[0]?.hafalan_progress;
@@ -138,33 +69,33 @@ const RekapView = {
             }
         };
 
+        const isFullMonthSelected = computed(() => {
+            const start = props.rekapStartDate;
+            const end = props.rekapEndDate;
+            if (!start || !end) return false;
+            const [sYear, sMonth, sDay] = start.split('-');
+            const [eYear, eMonth, eDay] = end.split('-');
+            if (sYear !== eYear || sMonth !== eMonth || sDay !== '01') return false;
+            const lastDayOfMonth = new Date(parseInt(sYear), parseInt(sMonth), 0).getDate();
+            return parseInt(eDay) === lastDayOfMonth;
+        });
+
         const activeShortcut = computed(() => {
             const start = props.rekapStartDate;
             const end = props.rekapEndDate;
+            if (!start && !end) return 'semua';
             if (!start || !end) return null;
 
             const todayD = new Date();
-            const today = todayD.toISOString().split('T')[0];
 
-            if (start === end && start === today) return 'realtime';
-
-            const yesterdayD = new Date();
-            yesterdayD.setDate(yesterdayD.getDate() - 1);
-            const yesterday = yesterdayD.toISOString().split('T')[0];
-            if (start === end && start === yesterday) return 'kemarin';
-
-            const p7 = new Date();
-            p7.setDate(p7.getDate() - 7);
-            const p7Str = p7.toISOString().split('T')[0];
-            if (end === today && start === p7Str) return '7hari';
-
-            const p30 = new Date();
-            p30.setDate(p30.getDate() - 30);
-            const p30Str = p30.toISOString().split('T')[0];
-            if (end === today && start === p30Str) return '30hari';
-
+            // Bulan Ini: Awal bulan ini
             const startMonth = new Date(todayD.getFullYear(), todayD.getMonth(), 1).toISOString().split('T')[0];
-            if (end === today && start === startMonth) return 'bulan-ini';
+            if (start === startMonth) return 'bulan-ini';
+
+            // Bulan Kemarin: Awal bulan kemarin s/d akhir bulan kemarin
+            const startLastMonth = new Date(todayD.getFullYear(), todayD.getMonth() - 1, 1).toISOString().split('T')[0];
+            const endLastMonth = new Date(todayD.getFullYear(), todayD.getMonth(), 0).toISOString().split('T')[0];
+            if (start === startLastMonth && end === endLastMonth) return 'bulan-kemarin';
 
             return null;
         });
@@ -344,9 +275,10 @@ const RekapView = {
         return {
             isJuzGridOpen, activeTab, activeMetric, totalWeight, tempSettings, isConfigOpen, configTab,
             isUploadingLogo, handleLogoUpload,
-            isCalendarOpen, viewMonth, viewYear, tempRange, calendarWeeks, formatDateShort,
+            isCalendarOpen,
+            formatDateShort,
             rekapSelectedSantriName,
-            handleDateClick, applyRange, moveMonth, activeShortcut,
+            activeShortcut,
             parsedJuzProgress,
             handleSave: async () => {
                 if (totalWeight.value !== 100) return window.showAlert("Total bobot harus 100%", "Warning", "warning");
@@ -384,6 +316,13 @@ const RekapView = {
                     emit('update:rekapSearch', '');
                 }
                 emit('update:isRekapSantriDropdownOpen', !props.isRekapSantriDropdownOpen);
+            },
+            isFullMonthSelected,
+            lockMonthlyReport: () => {
+                emit('lock-monthly-report');
+            },
+            unlockMonthlyReport: () => {
+                emit('unlock-monthly-report');
             }
         };
     },
@@ -409,6 +348,40 @@ const RekapView = {
                     <span class="material-symbols-outlined text-xl">settings</span>
                 </button>
             </div>
+        </div>
+
+        <!-- STATUS BANNER: LOCKED 🔒 -->
+        <div v-if="isReportLocked" class="mx-2 px-4 py-3 bg-slate-900/95 backdrop-blur text-white rounded-2xl shadow-xl border border-slate-800 flex items-center justify-between gap-3 transition-all animate-in slide-in-from-top duration-300">
+            <div class="flex items-center gap-3">
+                <div class="size-9 rounded-xl bg-amber-500/25 border border-amber-500/50 flex items-center justify-center text-amber-400 shrink-0">
+                    <span class="material-symbols-outlined text-lg">lock</span>
+                </div>
+                <div class="flex flex-col text-left">
+                    <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none">Laporan Resmi Terkunci</span>
+                    <span class="text-[10px] text-slate-300 font-medium mt-0.5">Dikunci oleh <strong class="text-white font-bold">{{ activeSnapshot?.raportMetadata?.locked_by || activeSnapshot?.locked_by || 'Sistem' }}</strong> pada {{ formatDateShort((activeSnapshot?.raportMetadata?.locked_at || activeSnapshot?.locked_at || '').split('T')[0]) }}</span>
+                </div>
+            </div>
+            <button v-if="userSession?.role === 'admin'" @click="unlockMonthlyReport"
+                class="px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded-xl text-[10px] font-black tracking-wider uppercase transition active:scale-95 flex items-center gap-1 shrink-0">
+                <span class="material-symbols-outlined text-xs">lock_open</span> Buka Kunci
+            </button>
+        </div>
+
+        <!-- STATUS BANNER: UNLOCKED / LIVE ⚡ -->
+        <div v-if="isFullMonthSelected && !isReportLocked && (userSession?.role === 'admin' || userSession?.role === 'guru')" class="mx-2 px-4 py-3 bg-emerald-500/10 text-emerald-800 rounded-2xl border border-emerald-500/20 flex items-center justify-between gap-3 transition-all animate-in slide-in-from-top duration-300">
+            <div class="flex items-center gap-3">
+                <div class="size-9 rounded-xl bg-emerald-500/20 flex items-center justify-center text-emerald-600 shrink-0">
+                    <span class="material-symbols-outlined text-lg">bolt</span>
+                </div>
+                <div class="flex flex-col text-left">
+                    <span class="text-[9px] font-bold text-emerald-600 uppercase tracking-widest leading-none">Live Preview (Belum Terkunci)</span>
+                    <span class="text-[10px] text-slate-500 mt-0.5">Data bersifat dinamis mengikuti setoran harian guru.</span>
+                </div>
+            </div>
+            <button @click="lockMonthlyReport"
+                class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[10px] font-black tracking-wider uppercase transition active:scale-95 flex items-center gap-1 shrink-0">
+                <span class="material-symbols-outlined text-xs">lock</span> Kunci Laporan
+            </button>
         </div>
 
         <!-- Filter Summary (Small Pill) -->
@@ -446,12 +419,14 @@ const RekapView = {
                             
                             <!-- 1. Date Range Section -->
                             <div class="space-y-3">
-                                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Periode Tanggal</label>
-                                <div @click="isCalendarOpen = true; tempRange.start = rekapStartDate; tempRange.end = rekapEndDate" 
+                                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Periode Rekap</label>
+                                <div @click="isCalendarOpen = true" 
                                     class="flex items-center justify-between bg-slate-50 border border-slate-200 p-4 rounded-2xl cursor-pointer hover:bg-white hover:border-blue-500 transition-all shadow-sm">
                                     <div class="flex flex-col">
                                         <span class="text-[9px] text-slate-400 font-bold uppercase mb-0.5">Rentang Aktif</span>
-                                        <span class="text-sm font-black text-slate-800">{{ formatDateShort(rekapStartDate) }} — {{ formatDateShort(rekapEndDate) }}</span>
+                                        <span class="text-sm font-black text-slate-800">
+                                            {{ rekapStartDate && rekapEndDate ? formatDateShort(rekapStartDate) + ' — ' + formatDateShort(rekapEndDate) : 'Semua Periode' }}
+                                        </span>
                                     </div>
                                     <span class="material-symbols-outlined text-blue-500">calendar_month</span>
                                 </div>
@@ -460,10 +435,8 @@ const RekapView = {
                                 <div class="flex gap-2 overflow-x-auto no-scrollbar py-1">
                                     <button v-for="tag in [
                                         { id: 'bulan-ini', label: 'Bulan Ini' },
-                                        { id: 'realtime', label: 'Hari Ini' },
-                                        { id: 'kemarin', label: 'Kemarin' },
-                                        { id: '7hari', label: '7 Hari lalu' },
-                                        { id: '30hari', label: '30 Hari lalu' }
+                                        { id: 'bulan-kemarin', label: 'Bulan Kemarin' },
+                                        { id: 'semua', label: 'Semua Periode' }
                                     ]" :key="tag.id"
                                         @click="$emit('set-range-' + tag.id)"
                                         class="px-4 py-2 rounded-full text-[10px] font-bold whitespace-nowrap transition-all border"
@@ -614,6 +587,7 @@ const RekapView = {
                                 <th v-if="rekapSettings.visibility.manzil" class="px-4 py-3 text-center">Manzil<br><span
                                         class="text-[9px]">(Hal)</span></th>
                                 <th v-if="rekapSettings.visibility.ujian" class="px-4 py-3 text-center">Ujian</th>
+                                <th v-if="rekapSettings.visibility.ujian_semester" class="px-4 py-3 text-center">Uj. Sem</th>
                                 <th v-if="rekapSettings.visibility.tilawah" class="px-4 py-3 text-center">Tilawah<br><span
                                         class="text-[9px]">(Juz)</span></th>
                                 <th class="px-4 py-3 text-center">Pelanggaran</th>
@@ -651,6 +625,9 @@ const RekapView = {
                                 </td>
                                 <td v-if="row.show_ujian" class="px-4 py-3 text-center font-bold text-indigo-600">
                                     {{ row.ujian_avg }}
+                                </td>
+                                <td v-if="row.show_ujian_semester" class="px-4 py-3 text-center font-bold text-violet-600">
+                                    {{ row.ujian_semester_avg }}
                                 </td>
                                 <td v-if="row.show_tilawah" class="px-4 py-3 text-center">
                                     <div class="font-bold text-amber-500">{{ row.tilawah_act }} / {{
@@ -928,7 +905,9 @@ const RekapView = {
                                                 class="sr-only peer">
                                             <div class="w-10 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
                                         </label>
-                                        <span class="font-bold text-[13px] text-slate-800 capitalize">{{ key }}</span>
+                                        <span class="font-bold text-[13px] text-slate-800">
+                                            {{ { sabaq: 'Sabaq', manzil: 'Manzil', ujian: 'Ujian Bulanan', tilawah: 'Tilawah', ujian_semester: 'Ujian Semester' }[key] || key }}
+                                        </span>
                                     </div>
                                     <div class="flex items-center gap-1">
                                         <input type="number" v-model.number="tempSettings.weights[key]" :disabled="!val"
@@ -1093,72 +1072,16 @@ const RekapView = {
             </div>
         </teleport>
 
-        <!-- PREMIUM DATE RANGE PICKER MODAL (v37) -->
-        <teleport to="body">
-            <div v-if="isCalendarOpen" 
-                class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-300"
-                style="z-index: 10000;"
-                @click.self="isCalendarOpen = false">
-                <div class="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden border border-slate-100 animate-scale-in">
-                    <div class="p-6">
-                        <div class="space-y-4">
-                            <!-- Calendar Header -->
-                            <div class="flex items-center justify-between mb-2">
-                                <button @click="moveMonth(-1)" 
-                                    class="p-1.5 rounded-lg border border-slate-100 bg-slate-50 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition-colors">
-                                    <span class="material-symbols-outlined text-sm">chevron_left</span>
-                                </button>
-                                <div class="text-center flex-1">
-                                    <h3 class="font-black text-slate-800 text-sm tracking-tight">{{ monthNames[viewMonth] }} {{ viewYear }}</h3>
-                                </div>
-                                <button @click="moveMonth(1)" 
-                                    class="p-1.5 rounded-lg border border-slate-100 bg-slate-50 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition-colors">
-                                    <span class="material-symbols-outlined text-sm">chevron_right</span>
-                                </button>
-                            </div>
-
-                            <!-- Calendar Grid -->
-                            <div class="grid grid-cols-7 gap-y-1 gap-x-1">
-                                <div v-for="d in ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab']" :key="d"
-                                    class="text-center text-[10px] font-bold text-slate-400 pb-2">{{ d }}</div>
-                                
-                                <div v-for="(day, idx) in calendarWeeks" :key="idx" 
-                                    @click="day && handleDateClick(day.dateStr)"
-                                    class="h-9 flex items-center justify-center text-xs font-semibold cursor-pointer transition-all relative rounded-lg"
-                                    :class="{
-                                        'pointer-events-none opacity-0': !day,
-                                        'bg-blue-600 text-white shadow-lg z-10': day?.isSelected,
-                                        'bg-blue-50 text-blue-700 font-bold': day?.isInRange,
-                                        'hover:bg-slate-100 text-slate-700': day && !day.isSelected && !day.isInRange
-                                    }">
-                                    <span v-if="day">{{ day.day }}</span>
-                                    <!-- Today Indicator Dot -->
-                                    <div v-if="day?.isToday" class="absolute bottom-1 size-1 rounded-full" 
-                                        :class="day.isSelected ? 'bg-white' : 'bg-blue-500'"></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Footer -->
-                    <div class="p-4 border-t flex flex-col sm:flex-row justify-between items-center gap-4 bg-slate-50">
-                        <div class="text-[11px] font-black text-slate-700 flex flex-col items-center sm:items-start uppercase tracking-tight">
-                            <span>{{ formatDateShort(tempRange.start) }} — {{ formatDateShort(tempRange.end || tempRange.start) }}</span>
-                        </div>
-                        <div class="flex gap-2 w-full sm:w-auto">
-                            <button @click="isCalendarOpen = false"
-                                class="flex-1 sm:flex-none px-4 py-2.5 rounded-xl font-bold text-xs text-slate-500 bg-white border border-slate-200 hover:bg-slate-50 transition active:scale-95">
-                                Batal
-                            </button>
-                            <button @click="applyRange"
-                                class="flex-1 sm:flex-none px-6 py-2.5 bg-blue-600 text-white rounded-xl font-bold text-xs hover:bg-blue-700 transition shadow-md shadow-blue-200 active:scale-95">
-                                Terapkan
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </teleport>
+        <!-- Base Calendar Month Picker -->
+        <base-calendar 
+            :is-open="isCalendarOpen"
+            mode="month"
+            :start-date="rekapStartDate"
+            :end-date="rekapEndDate"
+            @update:start-date="$emit('update:rekapStartDate', $event)"
+            @update:end-date="$emit('update:rekapEndDate', $event)"
+            @close="isCalendarOpen = false">
+        </base-calendar>
 
     </div>
     `

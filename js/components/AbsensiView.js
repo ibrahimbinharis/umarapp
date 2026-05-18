@@ -18,7 +18,8 @@ const AbsensiView = {
         calendarWeeks: { type: Array, required: true },
         monthNames: { type: Array, required: true },
         formatDate: { type: Function, required: true },
-        uiData: { type: Object, required: true }
+        uiData: { type: Object, required: true },
+        uniqueJurnalMapels: { type: Array, required: true }
     },
     emits: ['update:genderFilter'],
     setup(props) {
@@ -334,6 +335,16 @@ const AbsensiView = {
                         class="shrink-0 px-4 py-1.5 rounded-full border text-[11px] font-bold transition active:scale-95 shadow-sm">
                         {{ f.label }}
                     </button>
+                </div>
+
+                <!-- Mapel Filter Dropdown (v38 - BaseDropdown Integration) -->
+                <div v-if="uniqueJurnalMapels && uniqueJurnalMapels.length > 0" class="mt-3 px-4 max-w-[220px]">
+                    <base-dropdown
+                        v-model="absensiState.jurnalMapelFilter"
+                        :options="uniqueJurnalMapels"
+                        placeholder="Semua Mapel"
+                        :clearable="true"
+                    />
                 </div>
 
                 <!-- Custom Calendar Picker (Modal Popup) -->

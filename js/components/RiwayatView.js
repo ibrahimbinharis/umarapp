@@ -228,11 +228,17 @@ const RiwayatView = {
                 <h2 class="text-2xl font-bold text-slate-900">Riwayat</h2>
                 <p class="text-xs text-slate-500">Murojaah, Ziyadah & Ujian</p>
             </div>
-            <!-- Filter Icon Removed (v37) - Replaced by Capsules -->
+            <!-- Toggle Filter Button with Active Count Badge -->
+            <button @click="riwayatState.isFilterOpen = !riwayatState.isFilterOpen"
+                class="relative size-9 rounded-xl border border-slate-100 bg-white hover:bg-slate-50 text-slate-500 flex items-center justify-center transition-all duration-200 active:scale-95 shadow-sm shrink-0">
+                <span class="material-symbols-outlined text-lg" :class="{'text-blue-600': riwayatState.isFilterOpen}">tune</span>
+                <span v-if="activeFilterCount > 0" class="absolute -top-1.5 -right-1.5 size-4 rounded-full bg-blue-600 text-white text-[9px] font-black flex items-center justify-center shadow-sm">
+                    {{ activeFilterCount }}
+                </span>
+            </button>
         </div>
 
-        <!-- Santri Search Dropdown (Like Setoran/Input) -->
-        <!-- Search Bar (Replaced Dropdown v37) -->
+        <!-- Search Bar (Always Outside Drawer) -->
         <div class="px-2" v-if="!(userSession.role === 'santri' || userSession.role === 'wali')">
             <div class="bg-white p-2 rounded-xl border border-slate-200 mb-2 flex items-center gap-2 transition focus-within:ring-2 focus-within:ring-primary/20 shadow-sm">
                 <span class="material-symbols-outlined text-slate-400 ml-2">search</span>
@@ -247,52 +253,69 @@ const RiwayatView = {
                 </button>
             </div>
         </div>
-        
-        <!-- Quick Period & Category Shortcuts (Capsules) -->
-        <div class="px-2 pt-2 pb-2 mt-4 space-y-3">
-            <!-- Row 1: Period -->
-            <div class="flex gap-2 overflow-x-auto scrollbar-custom scroll-smooth pb-2">
-                <button v-for="tag in [
-                    { id: '', label: 'Semua' },
-                    { id: 'today', label: 'Hari Ini' },
-                    { id: 'yesterday', label: 'Kemarin' },
-                    { id: 'last7', label: '7 Hari' },
-                    { id: 'month', label: 'Bulan Ini' },
-                    { id: 'last30', label: '30 Hari' },
-                    { id: 'custom', label: 'Custom' }
-                ]" :key="tag.id"
-                    @click="tag.id === 'custom' ? isCalendarOpen = true : setQuickDateFilter(tag.id)"
-                    class="px-4 py-1.5 rounded-full text-[11px] font-bold whitespace-nowrap transition-all border"
-                    :class="riwayatState.quickDateFilter === tag.id ? 'bg-slate-800 text-white border-slate-800 shadow-sm' : 'bg-white text-slate-500 border-slate-100 hover:bg-slate-50'">
-                    {{ tag.label }}
-                </button>
-            </div>
 
-            <!-- Row 2: Category (Simplified, no more modal needed!) -->
-            <div class="flex gap-2 overflow-x-auto scrollbar-custom scroll-smooth pb-2">
-                <button v-for="cat in [
-                    { id: '', label: 'Semua' },
-                    { id: 'setoran', label: 'Setoran' },
-                    { id: 'sabaq', label: 'Sabaq' },
-                    { id: 'sabqi', label: 'Sabqi' },
-                    { id: 'robt', label: 'Robt' },
-                    { id: 'manzil', label: 'Manzil' },
-                    { id: 'tilawah', label: 'Tilawah' },
-                    { id: 'ujian', label: 'Ujian' },
-                    { id: 'pelanggaran', label: 'Pelanggaran' }
-                ]" :key="cat.id"
-                    @click="riwayatState.category = cat.id"
-                    class="px-4 py-1.5 rounded-full text-[11px] font-bold whitespace-nowrap transition-all border"
-                    :class="riwayatState.category === cat.id ? 'bg-blue-600 text-white border-blue-600 shadow-sm' : 'bg-white text-slate-500 border-slate-100 hover:bg-slate-50'">
-                    {{ cat.label }}
-                </button>
-            </div>
+        <!-- Premium Filter Drawer (Collapsible Chips only) -->
+        <div class="px-2">
+            <base-filter-drawer :show="riwayatState.isFilterOpen">
+                <!-- Quick Period & Category Shortcuts (Capsules) -->
+                <div class="space-y-3 w-full">
+                    <!-- Row 1: Period -->
+                    <div class="flex flex-col gap-1">
+                        <div class="flex gap-2 overflow-x-auto scrollbar-custom scroll-smooth pb-1">
+                            <button v-for="tag in [
+                                { id: '', label: 'Semua' },
+                                { id: 'today', label: 'Hari Ini' },
+                                { id: 'yesterday', label: 'Kemarin' },
+                                { id: 'last7', label: '7 Hari' },
+                                { id: 'month', label: 'Bulan Ini' },
+                                { id: 'last30', label: '30 Hari' },
+                                { id: 'custom', label: 'Custom' }
+                            ]" :key="tag.id"
+                                @click="tag.id === 'custom' ? isCalendarOpen = true : setQuickDateFilter(tag.id)"
+                                class="px-3.5 py-1.5 rounded-full text-[10px] font-bold whitespace-nowrap transition-all border"
+                                :class="riwayatState.quickDateFilter === tag.id ? 'bg-slate-800 text-white border-slate-800 shadow-sm' : 'bg-slate-50 text-slate-500 border-slate-100 hover:bg-slate-100'">
+                                {{ tag.label }}
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Row 2: Category -->
+                    <div class="flex flex-col gap-1">
+                        <div class="flex gap-2 overflow-x-auto scrollbar-custom scroll-smooth pb-1">
+                            <button v-for="cat in [
+                                { id: '', label: 'Semua' },
+                                { id: 'setoran', label: 'Setoran' },
+                                { id: 'sabaq', label: 'Sabaq' },
+                                { id: 'sabqi', label: 'Sabqi' },
+                                { id: 'robt', label: 'Robt' },
+                                { id: 'manzil', label: 'Manzil' },
+                                { id: 'tilawah', label: 'Tilawah' },
+                                { id: 'ujian', label: 'Ujian' },
+                                { id: 'pelanggaran', label: 'Pelanggaran' }
+                            ]" :key="cat.id"
+                                @click="riwayatState.category = cat.id"
+                                class="px-3.5 py-1.5 rounded-full text-[10px] font-bold whitespace-nowrap transition-all border"
+                                :class="riwayatState.category === cat.id ? 'bg-blue-600 text-white border-blue-600 shadow-sm' : 'bg-slate-50 text-slate-500 border-slate-100 hover:bg-slate-100'">
+                                {{ cat.label }}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Reset All Filters Button -->
+                <div v-if="activeFilterCount > 0" class="pt-2 flex justify-end w-full">
+                    <button @click="resetAllFilters" class="text-[10px] font-bold text-red-500 hover:text-red-600 transition flex items-center gap-1">
+                        <span class="material-symbols-outlined text-[12px]">filter_alt_off</span>
+                        Bersihkan Semua Filter
+                    </button>
+                </div>
+            </base-filter-drawer>
         </div>
 
         <!-- Active Filters Summary (Optional - shows when filters are active) -->
-        <div v-if="activeFilterCount > 0" class="mx-2 text-xs text-slate-500 flex items-center gap-2">
+        <div v-if="activeFilterCount > 0" class="mx-2 text-xs text-slate-500 flex items-center gap-2 flex-wrap">
             <span class="font-bold">Filter aktif:</span>
-            <span v-if="riwayatState.category" class="text-slate-700">
+            <span v-if="riwayatState.category" class="text-slate-700 bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-md text-[10px] font-bold">
                 {{ 
                     riwayatState.category === 'setoran' ? 'Setoran' :
                     riwayatState.category === 'sabaq' ? 'Sabaq' :
@@ -303,26 +326,27 @@ const RiwayatView = {
                     riwayatState.category === 'ujian' ? 'Ujian' : 'Pelanggaran'
                 }}
             </span>
-            <span v-if="riwayatState.quickDateFilter || riwayatState.startDate">
-                <span v-if="riwayatState.quickDateFilter === 'today'">• Hari Ini</span>
-                <span v-else-if="riwayatState.quickDateFilter === 'week'">• Minggu Ini</span>
-                <span v-else-if="riwayatState.quickDateFilter === 'month'">• Bulan Ini</span>
-                <span v-else>• {{ formatDateShort(riwayatState.startDate) }} — {{ formatDateShort(riwayatState.endDate) }}</span>
+            <span v-if="riwayatState.quickDateFilter || riwayatState.startDate" class="text-slate-700 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-md text-[10px] font-bold">
+                <span v-if="riwayatState.quickDateFilter === 'today'">Hari Ini</span>
+                <span v-else-if="riwayatState.quickDateFilter === 'yesterday'">Kemarin</span>
+                <span v-else-if="riwayatState.quickDateFilter === 'week'">Minggu Ini</span>
+                <span v-else-if="riwayatState.quickDateFilter === 'month'">Bulan Ini</span>
+                <span v-else>{{ formatDateShort(riwayatState.startDate) }} — {{ formatDateShort(riwayatState.endDate) }}</span>
             </span>
-            <span v-if="riwayatState.santriId" class="max-w-[120px] truncate">
-                • {{ riwayatSelectedSantriName }}
+            <span v-if="riwayatState.santriId" class="max-w-[120px] truncate text-slate-700 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-md text-[10px] font-bold">
+                {{ riwayatSelectedSantriName }}
             </span>
-            <span v-if="riwayatState.search" class="max-w-[120px] truncate italic text-slate-500">
+            <span v-if="riwayatState.search" class="max-w-[120px] truncate italic text-slate-500 text-[10px]">
                 • "{{ riwayatState.search }}"
             </span>
         </div>
 
 
 
-        <div class="bg-white rounded-xl border shadow-sm overflow-hidden mb-4 mx-2">
-            <!-- Bulk Action Bar (Strictly Admin/Guru) -->
-            <div v-if="userSession && riwayatState.selectedIds.length > 0 && (userSession.role === 'admin' || userSession.role === 'guru')"
-                class="p-2 pl-4 bg-red-50 border-b border-red-100 flex items-center justify-between gap-2 animate-fade-in">
+        <!-- Bulk Action Bar (Strictly Admin/Guru) -->
+        <div v-if="userSession && riwayatState.selectedIds.length > 0 && (userSession.role === 'admin' || userSession.role === 'guru')"
+            class="bg-white rounded-xl border shadow-sm overflow-hidden mb-4 mx-2">
+            <div class="p-2 pl-4 bg-red-50 border-b border-red-100 flex items-center justify-between gap-2 animate-fade-in">
                 <div class="flex items-center gap-2">
                     <button @click="deleteSelected" :disabled="riwayatState.isDeleting"
                         class="text-xs bg-red-600 text-white px-3 py-1.5 rounded-lg font-bold hover:bg-red-700 transition flex items-center gap-1 shadow-sm disabled:opacity-50 disabled:cursor-wait">
